@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "/boodesk-react/static/css/main.95017e0b.css",
+    "main.js": "/boodesk-react/static/js/main.88b89955.js",
+    "static/js/850.d232a8cc.chunk.js": "/boodesk-react/static/js/850.d232a8cc.chunk.js",
+    "static/js/775.531e7702.chunk.js": "/boodesk-react/static/js/775.531e7702.chunk.js",
+    "static/js/453.062fc6be.chunk.js": "/boodesk-react/static/js/453.062fc6be.chunk.js",
+    "index.html": "/boodesk-react/index.html",
+    "main.95017e0b.css.map": "/boodesk-react/static/css/main.95017e0b.css.map",
+    "main.88b89955.js.map": "/boodesk-react/static/js/main.88b89955.js.map",
+    "850.d232a8cc.chunk.js.map": "/boodesk-react/static/js/850.d232a8cc.chunk.js.map",
+    "775.531e7702.chunk.js.map": "/boodesk-react/static/js/775.531e7702.chunk.js.map",
+    "453.062fc6be.chunk.js.map": "/boodesk-react/static/js/453.062fc6be.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.95017e0b.css",
+    "static/js/main.88b89955.js"
+  ]
+}
