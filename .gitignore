@@ -38,6 +38,26 @@ credentials.json
 env_atualizado.txt
 env_completo.txt
 
+# Google OAuth tokens and credentials
+*.pickle
+token.pickle
+google_calendar_token.pickle
+client_secret*.json
+credentials.json
+
+# Large files
+*.exe
+*.pkg
+*.dmg
+build/
+dist/
+
+# Database files
+*.db
+*.db.lock
+*.sqlite
+*.sqlite3
+
 # Python files (if any)
 *.py
 __pycache__/
