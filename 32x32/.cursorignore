@@ -1,0 +1,12 @@
+# Arquivos para ignorar no contexto do Cursor
+*.pyc
+__pycache__/
+*.log
+.env
+*.tmp
+*.temp
+uploads/
+temp/
+node_modules/
+.DS_Store
+Thumbs.db

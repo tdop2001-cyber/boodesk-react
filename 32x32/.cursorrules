@@ -1,0 +1,499 @@
+# 🎯 CONTEXTO BOODESK - CURSOR 94ESSSSSSSS                     4
+
+## 📋 PROJETO: BOODESK - Sistema de Gerenciamento de Tarefas
+
+### 🏗️ ARQUITETURA ATUAL
+- **Frontend**: Tkinter GUI
+- **Backend**: PostgreSQL + Supabase
+- **Storage**: Cloudflare R2 + Supabase Storage
+- **Real-time**: Supabase Realtime
+- **Integrações**: Google Calendar, Email
+
+---
+
+## ✅ INTEGRAÇÕES CONFIGURADAS
+
+### 🔗 SUPABASE (FUNCIONANDO)
+```python
+# Configuração atual em supabase_setup.py
+SUPABASE_URL = "https://takwmhdwydujndqlznqk.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha3dtaGR3eWR1am5kcWx6bnFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODQ3MDMsImV4cCI6MjA3MTM2MDcwM30.XUuRWmLrvNXfCI9PtD-2CR2y3NkxMFKRyQT_gbkuIhE"
+
+# PostgreSQL
+HOST = "db.takwmhdwydujndqlznqk.supabase.co"
+DATABASE = "postgres"
+USER = "postgres"
+PASSWORD = "2412"
+PORT = "5432"
+```
+
+### ☁️ CLOUDFLARE R2 (CONFIGURADO - PRECISA CREDENCIAIS)
+```python
+# Endpoint configurado
+R2_ENDPOINT = "https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com"
+BUCKET_NAME = "boodesk-uploads"
+
+# Precisa configurar:
+# R2_ACCESS_KEY_ID
+# R2_SECRET_ACCESS_KEY
+# CLOUDFLARE_ACCOUNT_ID
+```
+
+---
+
+## 📊 ESTRUTURA DO BANCO DE DADOS
+
+### 🗄️ TABELAS PRINCIPAIS
+```sql
+-- Tabelas existentes no Supabase
+members (id, name, email, phone, role, department, avatar_url, is_active)
+users (id, username, email, password_hash, profile_image, role, created_at)
+boards (id, title, description, owner_id, created_at, updated_at)
+board_members (board_id, user_id, role, joined_at)
+lists (id, board_id, title, position, created_at)
+cards (id, list_id, title, description, position, due_date, priority, created_at)
+card_members (card_id, user_id, role, assigned_at)
+subtasks (id, card_id, title, description, assigned_to, created_by, status, created_at)
+attachments (id, card_id, file_name, file_url, file_size, uploaded_by, uploaded_at)
+comments (id, card_id, user_id, content, created_at)
+activities (id, user_id, action_type, target_type, target_id, details, created_at)
+chats (id, user1_id, user2_id, created_at)
+messages (id, chat_id, sender_id, receiver_id, content, created_at)
+notes (id, user_id, title, content, created_at, updated_at)
+user_preferences (id, user_id, theme, notifications, language, created_at)
+```
+
+---
+
+## 🔧 SISTEMAS IMPLEMENTADOS
+
+### 📤 SISTEMA DE UPLOAD HÍBRIDO
+```python
+# sistema_upload_completo.py
+class SistemaUploadCompleto:
+    def __init__(self, supabase_url, supabase_key):
+        # Configura Supabase e R2 automaticamente
+    
+    def upload_arquivo(self, file_path, folder):
+        # Escolhe automaticamente entre Supabase (<50MB) e R2 (>50MB)
+        # Retorna: {'success': True, 'url': 'url_do_arquivo', 'provider': 'supabase/r2'}
+```
+
+### 👥 SISTEMA DE MEMBROS
+```python
+# Sistema completo de gerenciamento de equipe
+# - CRUD de membros
+# - Upload de avatares
+# - Atribuição a cards
+# - Histórico de atividades
+```
+
+### 📅 INTEGRAÇÃO COM CALENDÁRIO
+```python
+# Integração com Google Calendar
+# - Sincronização de tarefas
+# - Lembretes automáticos
+# - Eventos de equipe
+```
+
+---
+
+## 🚀 PADRÕES DE DESENVOLVIMENTO
+
+### 📁 ORGANIZAÇÃO DE ARQUIVOS
+```
+uploads/
+├── profile_images/     # Fotos de perfil (< 5MB → Supabase)
+├── card_attachments/   # Anexos de cards (< 50MB → Supabase, > 50MB → R2)
+├── documents/          # Documentos (< 50MB → Supabase, > 50MB → R2)
+└── temp/              # Arquivos temporários
+```
+
+### 🔐 SEGURANÇA
+- **Autenticação**: Supabase Auth
+- **Autorização**: Row Level Security (RLS)
+- **Uploads**: Validação de tipo e tamanho
+- **Dados**: Criptografia em trânsito e repouso
+
+### 🎨 INTERFACE
+- **Tema**: Moderno e responsivo
+- **Cores**: Azul (#2563eb), Verde (#10b981), Vermelho (#ef4444)
+- **Ícones**: Material Design
+- **Layout**: Grid responsivo
+
+---
+
+## ⚡ COMANDOS RÁPIDOS PARA TESTE
+
+### 🔗 Testar Supabase
+```python
+from supabase_setup import supabase_config
+conn = supabase_config.get_connection()
+print("✅ Supabase OK" if conn else "❌ Erro")
+```
+
+### 📤 Testar Upload
+```python
+from sistema_upload_completo import SistemaUploadCompleto
+sistema = SistemaUploadCompleto(supabase_url, supabase_key)
+resultado = sistema.upload_arquivo("teste.txt", "testes")
+print(f"Upload: {resultado['success']} via {resultado['provider']}")
+```
+
+### 👥 Testar Membros
+```python
+# Verificar sistema de membros
+cursor = conn.cursor()
+cursor.execute("SELECT COUNT(*) FROM members")
+print(f"Membros: {cursor.fetchone()[0]}")
+```
+
+---
+
+## 🎯 REGRAS DE DESENVOLVIMENTO
+
+### ✅ SEMPRE FAZER
+1. **Usar integrações existentes** (Supabase + R2)
+2. **Validar uploads** (tipo, tamanho, segurança)
+3. **Implementar RLS** para novas tabelas
+4. **Testar conexões** antes de deploy
+5. **Documentar mudanças** no código
+6. **Implementar isolamento por usuário** (RLS obrigatório)
+7. **Validar permissões** em todas as operações
+8. **Separar dados por usuário** automaticamente
+9. **Verificar widgets antes de configurá-los** (evitar erros NoneType)
+10. **Usar get_connection() em vez de connection direto**
+11. **Não chamar create_widgets() durante inicialização da classe**
+
+### ❌ NUNCA FAZER
+1. **Upload local** (sempre na nuvem)
+2. **JSON local** (usar Supabase)
+3. **Hardcode credenciais** (usar .env)
+4. **Ignorar validações** de segurança
+5. **Quebrar compatibilidade** existente
+6. **Expor dados de outros usuários**
+7. **Ignorar controle de acesso**
+8. **Permitir acesso sem autenticação**
+9. **Acessar widgets sem verificar se existem**
+10. **Usar self.db.connection diretamente**
+11. **Chamar create_widgets() durante __init__**
+
+---
+
+## 🎨 PADRÕES DE INTERFACE - TELAS DE CONFIGURAÇÃO
+
+### ✅ SEMPRE USAR
+1. **Layout**: `pack()` em vez de `grid()` para telas de configuração
+2. **Container**: Frame principal com `pack(fill='both', expand=True, padx=20, pady=20)`
+3. **Seções**: `LabelFrame` para agrupar configurações relacionadas
+4. **Espaçamento**: `pady=(0, 15)` entre seções, `pady=(20, 0)` antes de botões
+5. **Botões**: Sempre no final, alinhados à direita com `pack(side='right')`
+6. **Estilo**: Usar `Accent.TButton` para botões principais
+
+### 📋 ESTRUTURA PADRÃO
+```python
+def create_tab_name(self):
+    frame = self.tab_name
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Seção 1
+    section1_frame = ttk.LabelFrame(main_container, text="Título da Seção", padding=10)
+    section1_frame.pack(fill='x', pady=(0, 15))
+    
+    # Widgets da seção...
+    
+    # Seção 2
+    section2_frame = ttk.LabelFrame(main_container, text="Outra Seção", padding=10)
+    section2_frame.pack(fill='x', pady=(0, 15))
+    
+    # Widgets da seção...
+    
+    # Botão de atualizar
+    button_frame = ttk.Frame(main_container)
+    button_frame.pack(fill='x', pady=(20, 0))
+    
+    ttk.Button(button_frame, text="Atualizar", command=self.save_settings, 
+               style='Accent.TButton').pack(side='right')
+```
+
+### 🔧 CONFIGURAÇÕES JSON
+1. **Função auxiliar**: Sempre usar `_get_safe_dict_setting()` para configurações JSON
+2. **Tratamento**: Converter strings JSON para dicionários automaticamente
+3. **Fallback**: Valores padrão em caso de erro na deserialização
+4. **Salvamento**: Sempre salvar dicionários completos, não strings
+
+### 🎯 REGRAS OBRIGATÓRIAS
+- ❌ NUNCA usar `grid()` em telas de configuração
+- ❌ NUNCA acessar `self.app.settings["key"].items()` diretamente
+- ✅ SEMPRE usar `pack()` para layout
+- ✅ SEMPRE usar `_get_safe_dict_setting()` para JSON
+- ✅ SEMPRE incluir botão "Atualizar" no final
+- ✅ SEMPRE usar `LabelFrame` para organizar seções
+
+---
+
+## 🔐 SISTEMA DE ISOLAMENTO POR USUÁRIO
+
+### 👤 **ISOLAMENTO OBRIGATÓRIO**
+- **Usuário comum**: Vê apenas seus próprios dados
+- **Admin**: Acesso amplo a todos os dados
+- **RLS**: Row Level Security em todas as tabelas
+- **Autenticação**: Obrigatória para todas as operações
+
+### 📊 **VISUALIZAÇÃO POR USUÁRIO**
+
+#### **👤 USUÁRIO COMUM**
+```sql
+-- Quadros: Apenas onde participa
+SELECT * FROM boards WHERE id IN (
+    SELECT board_id FROM board_members WHERE user_id = auth.uid()
+)
+
+-- Cards: Apenas onde participa
+SELECT * FROM cards WHERE id IN (
+    SELECT card_id FROM card_members WHERE user_id = auth.uid()
+)
+
+-- Subtasks: Vê todas do card, mas só edita as suas
+SELECT * FROM subtasks WHERE card_id IN (
+    SELECT card_id FROM card_members WHERE user_id = auth.uid()
+)
+-- Edição: Apenas subtasks criadas pelo usuário
+```
+
+#### **👑 ADMIN**
+```sql
+-- Acesso completo a todos os dados
+SELECT * FROM boards
+SELECT * FROM cards  
+SELECT * FROM subtasks
+SELECT * FROM users
+```
+
+### 💬 **CHATS E MENSAGENS**
+```sql
+-- Usuário vê apenas:
+-- 1. Chats onde participa
+-- 2. Suas próprias mensagens
+-- 3. Mensagens direcionadas a ele
+
+-- Chats privados
+SELECT * FROM chats WHERE 
+    user1_id = auth.uid() OR user2_id = auth.uid()
+
+-- Mensagens do usuário
+SELECT * FROM messages WHERE 
+    sender_id = auth.uid() OR receiver_id = auth.uid()
+```
+
+### 📁 **UPLOADS E ARQUIVOS**
+```sql
+-- Usuário vê apenas:
+-- 1. Seus próprios uploads
+-- 2. Uploads de cards onde participa (somente leitura)
+-- 3. Uploads compartilhados com ele
+
+-- Uploads pessoais
+SELECT * FROM attachments WHERE 
+    uploaded_by = auth.uid()
+
+-- Uploads de cards (somente leitura)
+SELECT * FROM attachments WHERE 
+    card_id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())
+```
+
+### 📝 **ANOTAÇÕES E DADOS INDIVIDUAIS**
+```sql
+-- Usuário vê apenas suas anotações
+SELECT * FROM notes WHERE 
+    user_id = auth.uid()
+
+-- Dados pessoais
+SELECT * FROM user_preferences WHERE 
+    user_id = auth.uid()
+
+-- Histórico pessoal
+SELECT * FROM activities WHERE 
+    user_id = auth.uid()
+```
+
+### 🎯 **REGRAS DE ACESSO**
+
+#### **✅ PERMITIDO (USUÁRIO COMUM)**
+- Ver quadros onde participa
+- Ver cards onde participa  
+- Ver subtasks de companheiros (somente leitura)
+- Editar suas próprias subtasks
+- Ver suas mensagens e chats
+- Ver seus uploads
+- Ver suas anotações
+- Ver seu histórico
+
+#### **❌ PROIBIDO (USUÁRIO COMUM)**
+- Ver quadros de outros usuários
+- Ver cards onde não participa
+- Editar subtasks de outros
+- Ver mensagens de outros
+- Ver uploads de outros
+- Ver anotações de outros
+- Acessar dados de outros usuários
+
+#### **👑 ADMIN (ACESSO TOTAL)**
+- Ver todos os quadros
+- Ver todos os cards
+- Editar qualquer subtask
+- Ver todas as mensagens
+- Ver todos os uploads
+- Ver todas as anotações
+- Gerenciar usuários
+- Acessar logs do sistema
+
+---
+
+## 🔒 IMPLEMENTAÇÃO RLS (ROW LEVEL SECURITY)
+
+### **📋 POLÍTICAS OBRIGATÓRIAS**
+
+#### **1. TABELA USERS**
+```sql
+-- Usuário vê apenas seu próprio perfil
+CREATE POLICY "users_own_profile" ON users
+    FOR ALL USING (id = auth.uid());
+
+-- Admin vê todos os usuários
+CREATE POLICY "admin_all_users" ON users
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    );
+```
+
+#### **2. TABELA BOARDS**
+```sql
+-- Usuário vê quadros onde participa
+CREATE POLICY "boards_user_access" ON boards
+    FOR ALL USING (
+        id IN (SELECT board_id FROM board_members WHERE user_id = auth.uid())
+        OR owner_id = auth.uid()
+    );
+```
+
+#### **3. TABELA CARDS**
+```sql
+-- Usuário vê cards onde participa
+CREATE POLICY "cards_user_access" ON cards
+    FOR ALL USING (
+        id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())
+        OR list_id IN (
+            SELECT list_id FROM lists WHERE board_id IN (
+                SELECT board_id FROM board_members WHERE user_id = auth.uid()
+            )
+        )
+    );
+```
+
+#### **4. TABELA SUBTASKS**
+```sql
+-- Usuário vê todas as subtasks do card, mas só edita as suas
+CREATE POLICY "subtasks_view_access" ON subtasks
+    FOR SELECT USING (
+        card_id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "subtasks_edit_own" ON subtasks
+    FOR UPDATE USING (created_by = auth.uid());
+```
+
+#### **5. TABELA MESSAGES**
+```sql
+-- Usuário vê apenas suas mensagens
+CREATE POLICY "messages_user_access" ON messages
+    FOR ALL USING (
+        sender_id = auth.uid() OR receiver_id = auth.uid()
+    );
+```
+
+#### **6. TABELA ATTACHMENTS**
+```sql
+-- Usuário vê seus uploads e uploads de cards onde participa
+CREATE POLICY "attachments_user_access" ON attachments
+    FOR ALL USING (
+        uploaded_by = auth.uid()
+        OR card_id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())
+    );
+```
+
+### **🔧 FUNÇÃO DE VERIFICAÇÃO DE PERMISSÕES**
+```sql
+-- Função para verificar se usuário é admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = auth.uid() AND role = 'admin'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Função para verificar acesso ao card
+CREATE OR REPLACE FUNCTION has_card_access(card_id_param INTEGER)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM card_members 
+        WHERE card_id = card_id_param AND user_id = auth.uid()
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+---
+
+## 🔧 DEPENDÊNCIAS ESSENCIAIS
+```bash
+pip install supabase boto3 python-dotenv pillow psycopg2-binary
+```
+
+## 📚 DOCUMENTAÇÃO COMPLETA
+- **Manual**: `MANUAL_DESENVOLVIMENTO_BOODESK.md`
+- **Guia**: `GUIA_INTEGRACOES_EXISTENTES.md`
+- **Resumo**: `RESUMO_INTEGRACOES.md`
+- **Instalação**: `README_INSTALACAO.md`
+
+---
+
+## 🎯 FOCO ATUAL
+- **Prioridade 1**: Testar tela de configurações (botões no topo)
+- **Prioridade 2**: Configurar credenciais R2
+- **Prioridade 3**: Testar sistema híbrido completo
+- **Prioridade 4**: Implementar funcionalidades avançadas
+- **Prioridade 5**: Otimizar performance
+
+## 🐛 CORREÇÕES DE BUGS RECENTES
+
+### ✅ PROBLEMAS RESOLVIDOS
+1. **IndentationError no database_postgres.py** - Código duplicado removido
+2. **AttributeError 'tk' na BoodeskApp** - create_widgets() movido para momento correto
+3. **DatabasePostgres sem método connection** - Adicionado get_connection()
+4. **NoneType errors em widgets** - Verificações de existência implementadas
+5. **JSON deserialization errors** - Configurações corrigidas no banco
+
+### 🔧 PADRÕES DE CORREÇÃO
+```python
+# SEMPRE verificar widgets antes de usar
+if hasattr(self, 'widget_name') and self.widget_name is not None:
+    self.widget_name.config(text="texto")
+
+# SEMPRE usar get_connection() em vez de connection
+self.calendar_manager = CalendarEventManager(self.db.get_connection())
+
+# NUNCA chamar create_widgets() durante __init__
+# Deve ser chamado após inicialização completa
+```
+
+---
+
+**💡 DICA**: Sempre consulte os manuais na pasta `BOODESK_MANUAIS` no Desktop para detalhes completos!

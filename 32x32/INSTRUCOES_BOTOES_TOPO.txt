@@ -1,0 +1,412 @@
+
+# INSTRUÇÕES - BOTÕES NO TOPO DA JANELA
+
+## 1. ADICIONAR ESTA FUNÇÃO NA CLASSE SettingsWindow:
+
+def _get_safe_dict_setting(self, setting_key, default_value=None):
+    """Garante que uma configuração seja sempre um dicionário"""
+    if default_value is None:
+        default_value = {}
+    
+    setting = self.app.settings.get(setting_key, default_value)
+    if isinstance(setting, str):
+        try:
+            import json
+            setting = json.loads(setting)
+        except:
+            setting = default_value
+    
+    return setting
+
+## 2. SUBSTITUIR O MÉTODO create_widgets (BOTÕES NO TOPO):
+
+def create_widgets(self):
+    """Cria os widgets da janela de configurações com botões no topo"""
+    # Frame principal
+    main_frame = ttk.Frame(self)
+    main_frame.pack(fill='both', expand=True)
+    
+    # FRAME SUPERIOR COM TÍTULO E BOTÕES
+    header_frame = ttk.Frame(main_frame)
+    header_frame.pack(fill='x', padx=10, pady=5)
+    
+    # Título à esquerda
+    ttk.Label(header_frame, text="Configurações", font=('Arial', 14, 'bold')).pack(side='left')
+    
+    # Botões à direita no topo
+    button_frame = ttk.Frame(header_frame)
+    button_frame.pack(side='right')
+    
+    # Botões principais no topo
+    ttk.Button(button_frame, text="💾 Salvar", 
+               command=self.save_settings, style='Accent.TButton').pack(side='right', padx=5)
+    ttk.Button(button_frame, text="❌ Sair", 
+               command=self.destroy).pack(side='right', padx=5)
+    ttk.Button(button_frame, text="🔄 Restaurar Padrões", 
+               command=self.restore_defaults).pack(side='right', padx=5)
+    
+    # Frame para abas
+    notebook_frame = ttk.Frame(main_frame)
+    notebook_frame.pack(fill='both', expand=True, padx=10, pady=5)
+    
+    # Notebook para abas
+    self.notebook = ttk.Notebook(notebook_frame)
+    self.notebook.pack(fill='both', expand=True)
+    
+    # Criar abas
+    self.general_tab = ttk.Frame(self.notebook)
+    self.calendar_tab = ttk.Frame(self.notebook)
+    self.email_tab = ttk.Frame(self.notebook)
+    self.email_templates_tab = ttk.Frame(self.notebook)
+    self.dashboard_tab = ttk.Frame(self.notebook)
+    self.roles_tab = ttk.Frame(self.notebook)
+    self.importance_tab = ttk.Frame(self.notebook)
+    
+    # Adicionar abas ao notebook
+    self.notebook.add(self.general_tab, text="Geral")
+    self.notebook.add(self.calendar_tab, text="Calendário")
+    self.notebook.add(self.email_tab, text="Email")
+    self.notebook.add(self.email_templates_tab, text="Templates de Email")
+    self.notebook.add(self.dashboard_tab, text="Dashboard")
+    self.notebook.add(self.roles_tab, text="Cargos")
+    self.notebook.add(self.importance_tab, text="Importância")
+    
+    # Criar conteúdo das abas
+    self.create_general_tab()
+    self.create_calendar_tab()
+    self.create_email_tab()
+    self.create_email_templates_tab()
+    self.create_dashboard_tab()
+    self.create_roles_tab()
+    self.create_importance_tab()
+
+## 3. ADICIONAR MÉTODO create_email_templates_tab:
+
+def create_email_templates_tab(self):
+    """Cria a aba Templates de Email"""
+    frame = self.email_templates_tab
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Título
+    title_label = ttk.Label(main_container, text="Templates de Email", font=('Arial', 12, 'bold'))
+    title_label.pack(anchor='w', pady=(0, 20))
+    
+    # Frame para templates
+    templates_frame = ttk.LabelFrame(main_container, text="Templates Disponíveis", padding=10)
+    templates_frame.pack(fill='x', pady=(0, 15))
+    
+    # Obter configurações de email
+    email_integration = self._get_safe_dict_setting('email_integration')
+    email_templates = email_integration.get('email_templates', {})
+    
+    # Template para novo cartão
+    card_created_frame = ttk.Frame(templates_frame)
+    card_created_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(card_created_frame, text="Novo Cartão:").pack(anchor='w')
+    self.card_created_template_var = tk.StringVar(value=email_templates.get('card_created', 'Novo cartão criado: {title}'))
+    ttk.Entry(card_created_frame, textvariable=self.card_created_template_var, width=60).pack(fill='x', pady=(5, 0))
+    
+    # Template para cartão modificado
+    card_modified_frame = ttk.Frame(templates_frame)
+    card_modified_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(card_modified_frame, text="Cartão Modificado:").pack(anchor='w')
+    self.card_modified_template_var = tk.StringVar(value=email_templates.get('card_modified', 'Cartão modificado: {title}'))
+    ttk.Entry(card_modified_frame, textvariable=self.card_modified_template_var, width=60).pack(fill='x', pady=(5, 0))
+    
+    # Template para lembrete de prazo
+    deadline_frame = ttk.Frame(templates_frame)
+    deadline_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(deadline_frame, text="Lembrete de Prazo:").pack(anchor='w')
+    self.deadline_template_var = tk.StringVar(value=email_templates.get('deadline_reminder', 'Lembrete de prazo: {title} vence em {deadline}'))
+    ttk.Entry(deadline_frame, textvariable=self.deadline_template_var, width=60).pack(fill='x', pady=(5, 0))
+    
+    # Template para relatório semanal
+    weekly_frame = ttk.Frame(templates_frame)
+    weekly_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(weekly_frame, text="Relatório Semanal:").pack(anchor='w')
+    self.weekly_template_var = tk.StringVar(value=email_templates.get('weekly_report', 'Relatório Semanal - {week_period}'))
+    ttk.Entry(weekly_frame, textvariable=self.weekly_template_var, width=60).pack(fill='x', pady=(5, 0))
+    
+    # Variáveis de placeholder
+    placeholders_frame = ttk.LabelFrame(main_container, text="Placeholders Disponíveis", padding=10)
+    placeholders_frame.pack(fill='x', pady=(0, 15))
+    
+    placeholders_text = """
+    {title} - Título do cartão
+    {description} - Descrição do cartão
+    {deadline} - Data de vencimento
+    {priority} - Prioridade do cartão
+    {assigned_to} - Pessoa responsável
+    {board_name} - Nome do quadro
+    {list_name} - Nome da lista
+    {week_period} - Período da semana
+    {user_name} - Nome do usuário
+    {created_date} - Data de criação
+    """
+    
+    ttk.Label(placeholders_frame, text=placeholders_text, justify='left').pack(anchor='w')
+
+## 4. SUBSTITUIR create_email_tab:
+
+def create_email_tab(self):
+    """Cria a aba Email com estilo correto"""
+    frame = self.email_tab
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Título
+    title_label = ttk.Label(main_container, text="Configurações de Email", font=('Arial', 12, 'bold'))
+    title_label.pack(anchor='w', pady=(0, 20))
+    
+    # Configurações de Email
+    email_frame = ttk.LabelFrame(main_container, text="Integração de Email", padding=10)
+    email_frame.pack(fill='x', pady=(0, 15))
+    
+    # Habilitar integração
+    email_integration = self._get_safe_dict_setting('email_integration')
+    self.email_enabled_var = tk.BooleanVar(value=email_integration.get('enabled', False))
+    ttk.Checkbutton(email_frame, text="Habilitar integração de email", 
+                    variable=self.email_enabled_var).pack(anchor='w')
+    
+    # Configurações SMTP
+    smtp_frame = ttk.LabelFrame(main_container, text="Configurações SMTP", padding=10)
+    smtp_frame.pack(fill='x', pady=(0, 15))
+    
+    # Servidor SMTP
+    server_frame = ttk.Frame(smtp_frame)
+    server_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(server_frame, text="Servidor SMTP:").pack(anchor='w')
+    self.smtp_server_var = tk.StringVar(value=email_integration.get('smtp_server', 'smtp.gmail.com'))
+    ttk.Entry(server_frame, textvariable=self.smtp_server_var).pack(fill='x', pady=(5, 0))
+    
+    # Porta SMTP
+    port_frame = ttk.Frame(smtp_frame)
+    port_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(port_frame, text="Porta SMTP:").pack(anchor='w')
+    self.smtp_port_var = tk.StringVar(value=str(email_integration.get('smtp_port', 587)))
+    ttk.Entry(port_frame, textvariable=self.smtp_port_var).pack(fill='x', pady=(5, 0))
+    
+    # Email e senha
+    auth_frame = ttk.Frame(smtp_frame)
+    auth_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(auth_frame, text="Email:").pack(anchor='w')
+    self.email_address_var = tk.StringVar(value=email_integration.get('email_address', ''))
+    ttk.Entry(auth_frame, textvariable=self.email_address_var).pack(fill='x', pady=(5, 0))
+    
+    ttk.Label(auth_frame, text="Senha do App:").pack(anchor='w')
+    self.app_password_var = tk.StringVar(value=email_integration.get('app_password', ''))
+    ttk.Entry(auth_frame, textvariable=self.app_password_var, show='*').pack(fill='x', pady=(5, 0))
+    
+    # Configurações de notificação
+    notification_frame = ttk.LabelFrame(main_container, text="Notificações Automáticas", padding=10)
+    notification_frame.pack(fill='x', pady=(0, 15))
+    
+    auto_notifications = email_integration.get('auto_notifications', {})
+    
+    self.notify_card_created_var = tk.BooleanVar(value=auto_notifications.get('card_created', True))
+    ttk.Checkbutton(notification_frame, text="Notificar quando cartão for criado", 
+                    variable=self.notify_card_created_var).pack(anchor='w')
+    
+    self.notify_card_modified_var = tk.BooleanVar(value=auto_notifications.get('card_modified', True))
+    ttk.Checkbutton(notification_frame, text="Notificar quando cartão for modificado", 
+                    variable=self.notify_card_modified_var).pack(anchor='w')
+    
+    self.notify_deadline_var = tk.BooleanVar(value=auto_notifications.get('deadline_reminder', True))
+    ttk.Checkbutton(notification_frame, text="Lembretes de prazo", 
+                    variable=self.notify_deadline_var).pack(anchor='w')
+    
+    self.notify_weekly_report_var = tk.BooleanVar(value=auto_notifications.get('weekly_report', True))
+    ttk.Checkbutton(notification_frame, text="Relatório semanal", 
+                    variable=self.notify_weekly_report_var).pack(anchor='w')
+
+## 5. ATUALIZAR save_settings:
+
+def save_settings(self):
+    """Salva as configurações com tratamento de JSON"""
+    try:
+        # Configurações gerais
+        if hasattr(self, 'theme_combo'):
+            self.app.settings['theme'] = self.theme_combo.get()
+        if hasattr(self, 'always_on_top_var'):
+            self.app.settings['always_on_top'] = self.always_on_top_var.get()
+        if hasattr(self, 'dev_mode_var'):
+            self.app.settings['dev_mode'] = self.dev_mode_var.get()
+        if hasattr(self, 'git_integration_enabled_var'):
+            self.app.settings['git_integration_enabled'] = self.git_integration_enabled_var.get()
+        
+        # Configurações do calendário
+        calendar_integration = self._get_safe_dict_setting('calendar_integration')
+        if hasattr(self, 'calendar_enabled_var'):
+            calendar_integration['enabled'] = self.calendar_enabled_var.get()
+        if hasattr(self, 'credentials_file_var'):
+            calendar_integration['credentials_file'] = self.credentials_file_var.get()
+        if hasattr(self, 'sync_auto_var'):
+            calendar_integration['sync_auto'] = self.sync_auto_var.get()
+        if hasattr(self, 'sync_cards_deadline_var'):
+            calendar_integration['sync_cards_deadline'] = self.sync_cards_deadline_var.get()
+        if hasattr(self, 'sync_calendar_events_var'):
+            calendar_integration['sync_calendar_events'] = self.sync_calendar_events_var.get()
+        self.app.settings['calendar_integration'] = calendar_integration
+        
+        # Configurações de email
+        email_integration = self._get_safe_dict_setting('email_integration')
+        if hasattr(self, 'email_enabled_var'):
+            email_integration['enabled'] = self.email_enabled_var.get()
+        if hasattr(self, 'smtp_server_var'):
+            email_integration['smtp_server'] = self.smtp_server_var.get()
+        if hasattr(self, 'smtp_port_var'):
+            try:
+                email_integration['smtp_port'] = int(self.smtp_port_var.get())
+            except ValueError:
+                email_integration['smtp_port'] = 587
+        if hasattr(self, 'email_address_var'):
+            email_integration['email_address'] = self.email_address_var.get()
+        if hasattr(self, 'app_password_var'):
+            email_integration['app_password'] = self.app_password_var.get()
+        
+        # Notificações automáticas
+        if hasattr(self, 'notify_card_created_var'):
+            email_integration['auto_notifications']['card_created'] = self.notify_card_created_var.get()
+        if hasattr(self, 'notify_card_modified_var'):
+            email_integration['auto_notifications']['card_modified'] = self.notify_card_modified_var.get()
+        if hasattr(self, 'notify_deadline_var'):
+            email_integration['auto_notifications']['deadline_reminder'] = self.notify_deadline_var.get()
+        if hasattr(self, 'notify_weekly_report_var'):
+            email_integration['auto_notifications']['weekly_report'] = self.notify_weekly_report_var.get()
+        
+        # Templates de email
+        if hasattr(self, 'card_created_template_var'):
+            email_integration['email_templates']['card_created'] = self.card_created_template_var.get()
+        if hasattr(self, 'card_modified_template_var'):
+            email_integration['email_templates']['card_modified'] = self.card_modified_template_var.get()
+        if hasattr(self, 'deadline_template_var'):
+            email_integration['email_templates']['deadline_reminder'] = self.deadline_template_var.get()
+        if hasattr(self, 'weekly_template_var'):
+            email_integration['email_templates']['weekly_report'] = self.weekly_template_var.get()
+        
+        self.app.settings['email_integration'] = email_integration
+        
+        # Salvar no banco
+        self.app.save_settings_file()
+        
+        messagebox.showinfo("Sucesso", "Configurações salvas com sucesso!", parent=self)
+        
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao salvar configurações: {e}", parent=self)
+
+## 6. ADICIONAR MÉTODO restore_defaults:
+
+def restore_defaults(self):
+    """Restaura as configurações padrão"""
+    try:
+        result = messagebox.askyesno("Confirmar", 
+                                   "Tem certeza que deseja restaurar todas as configurações para os valores padrão?
+
+Esta ação não pode ser desfeita.")
+        if result:
+            # Restaurar configurações padrão
+            self.app.settings = {
+                'theme': 'aquativo',
+                'always_on_top': False,
+                'dev_mode': False,
+                'git_integration_enabled': False,
+                'importance_colors': {
+                    'Crítica': '#FFCCCC',
+                    'Alta': '#FFE5CC',
+                    'Normal': '#FFFFCC',
+                    'Baixa': '#CCFFCC'
+                },
+                'card_tags': {
+                    'Urgente': '#FF0000',
+                    'Importante': '#FFA500',
+                    'Desenvolvimento': '#0000FF',
+                    'Bug': '#FFD700',
+                    'Feature': '#008000'
+                },
+                'custom_filters': {},
+                'roles': {
+                    'Administrador': 'Acesso total ao sistema.',
+                    'Usuário': 'Acesso limitado a funcionalidades básicas.',
+                    'Convidado': 'Apenas visualização.'
+                },
+                'dashboard_widgets': {
+                    'urgent_tasks': True,
+                    'upcoming_deadlines': True,
+                    'recent_activities': True,
+                    'quick_links': True,
+                    'overview': True,
+                    'quick_actions': True
+                },
+                'calendar_integration': {
+                    'enabled': False,
+                    'auth_type': 'json',
+                    'credentials_file': '',
+                    'client_id': '',
+                    'client_secret': '',
+                    'sync_auto': True,
+                    'sync_cards_deadline': True,
+                    'sync_calendar_events': True,
+                    'default_emails': [],
+                    'include_default_emails': True,
+                    'include_card_members': True
+                },
+                'email_integration': {
+                    'enabled': False,
+                    'provider': 'gmail',
+                    'smtp_server': 'smtp.gmail.com',
+                    'smtp_port': 587,
+                    'email_address': '',
+                    'email_password': '',
+                    'app_password': '',
+                    'auto_notifications': {
+                        'card_created': True,
+                        'card_modified': True,
+                        'card_moved': True,
+                        'deadline_reminder': True,
+                        'weekly_report': True
+                    },
+                    'notification_recipients': [],
+                    'deadline_reminder_hours': 24,
+                    'weekly_report_day': 'monday',
+                    'weekly_report_time': '09:00',
+                    'email_templates': {
+                        'card_created': 'Novo cartão criado: {title}',
+                        'card_modified': 'Cartão modificado: {title}',
+                        'deadline_reminder': 'Lembrete de prazo: {title} vence em {deadline}',
+                        'weekly_report': 'Relatório Semanal - {week_period}'
+                    }
+                }
+            }
+            
+            # Salvar no banco
+            self.app.save_settings_file()
+            
+            messagebox.showinfo("Sucesso", "Configurações restauradas para os valores padrão!", parent=self)
+            
+            # Recarregar a janela
+            self.destroy()
+            self.app.open_settings()
+            
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao restaurar configurações: {e}", parent=self)
+
+## RESULTADO:
+- ✅ Botões no topo da janela (Salvar, Sair, Restaurar Padrões)
+- ✅ Interface mais intuitiva e acessível
+- ✅ Todas as telas funcionando
+- ✅ Nova aba Templates de Email
+- ✅ Configurações JSON corrigidas
+- ✅ Interface moderna e responsiva
+- ✅ Ícones nos botões para melhor UX

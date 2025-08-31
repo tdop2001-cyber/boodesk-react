@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Daily Standup",
+    "title": "Daily Standup - Equipe",
+    "duration": 15,
+    "platform": "google_meet",
+    "timezone": "America/Sao_Paulo",
+    "description": "Reunião diária para alinhamento da equipe"
+  },
+  {
+    "name": "Sprint Planning",
+    "title": "Sprint Planning",
+    "duration": 60,
+    "platform": "google_meet",
+    "timezone": "America/Sao_Paulo",
+    "description": "Planejamento da sprint com toda a equipe"
+  },
+  {
+    "name": "Sprint Review",
+    "title": "Sprint Review",
+    "duration": 45,
+    "platform": "google_meet",
+    "timezone": "America/Sao_Paulo",
+    "description": "Apresentação dos resultados da sprint"
+  },
+  {
+    "name": "Retrospectiva",
+    "title": "Sprint Retrospectiva",
+    "duration": 30,
+    "platform": "google_meet",
+    "timezone": "America/Sao_Paulo",
+    "description": "Reflexão sobre a sprint e melhorias"
+  },
+  {
+    "name": "Reunião Cliente",
+    "title": "Reunião com Cliente",
+    "duration": 60,
+    "platform": "zoom",
+    "timezone": "America/Sao_Paulo",
+    "description": "Reunião para apresentação ou alinhamento com cliente"
+  },
+  {
+    "name": "Code Review",
+    "title": "Code Review",
+    "duration": 30,
+    "platform": "google_meet",
+    "timezone": "America/Sao_Paulo",
+    "description": "Revisão de código em equipe"
+  }
+]

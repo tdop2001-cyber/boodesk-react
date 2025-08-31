@@ -1,0 +1,17 @@
+
+# Configurações para downloads
+<FilesMatch "\.(exe|AppImage|deb|dmg|pkg)$">
+    Header set Content-Disposition "attachment"
+    Header set Cache-Control "no-cache"
+</FilesMatch>
+
+# Configurações para JSON
+<FilesMatch "\.json$">
+    Header set Content-Type "application/json"
+    Header set Cache-Control "no-cache"
+</FilesMatch>
+
+# Permitir CORS
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type"

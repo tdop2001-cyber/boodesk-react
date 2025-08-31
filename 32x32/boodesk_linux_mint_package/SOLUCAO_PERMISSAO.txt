@@ -1,0 +1,74 @@
+🔧 SOLUÇÃO PARA PERMISSÃO NEGADA NO LINUX MINT
+===============================================
+
+❌ PROBLEMA:
+"Permissão negada" ao tentar executar INSTALAR.sh
+
+✅ SOLUÇÃO:
+
+1️⃣ ABRIR TERMINAL NO LINUX MINT:
+   - Pressione Ctrl + Alt + T
+   - Ou procure por "Terminal" no menu
+
+2️⃣ NAVEGAR ATÉ A PASTA:
+   cd /media/seu_usuario/nome_do_pen/boodesk_linux_mint_package
+   
+   (Substitua "seu_usuario" e "nome_do_pen" pelos valores corretos)
+
+3️⃣ VERIFICAR ARQUIVOS:
+   ls -la
+   
+   Você deve ver algo como:
+   -rw-r--r-- 1 user user 14M BoodeskApp
+   -rw-r--r-- 1 user user 2K INSTALAR.sh
+
+4️⃣ DAR PERMISSÃO DE EXECUÇÃO:
+   chmod +x INSTALAR.sh
+   chmod +x BoodeskApp
+   chmod +x install_linux_mint.sh
+   chmod +x test_linux_mint.sh
+   chmod +x verificar_permissoes.sh
+
+5️⃣ VERIFICAR PERMISSÕES:
+   ls -la
+   
+   Agora deve mostrar:
+   -rwxr-xr-x 1 user user 14M BoodeskApp
+   -rwxr-xr-x 1 user user 2K INSTALAR.sh
+
+6️⃣ EXECUTAR A INSTALAÇÃO:
+   ./INSTALAR.sh
+
+🚀 ALTERNATIVA RÁPIDA:
+
+Se preferir, execute diretamente:
+   chmod +x BoodeskApp
+   ./BoodeskApp
+
+📋 COMANDOS COMPLETOS:
+
+# Navegar até a pasta
+cd /media/seu_usuario/nome_do_pen/boodesk_linux_mint_package
+
+# Verificar arquivos
+ls -la
+
+# Dar permissões
+chmod +x *.sh
+chmod +x BoodeskApp
+
+# Executar
+./INSTALAR.sh
+
+💡 DICA:
+Se não souber o nome do pen drive, use:
+   ls /media/seu_usuario/
+   
+Isso mostrará todos os dispositivos conectados.
+
+🔍 VERIFICAÇÃO AUTOMÁTICA:
+Execute o script de verificação:
+   chmod +x verificar_permissoes.sh
+   ./verificar_permissoes.sh
+
+Este script irá verificar todos os arquivos e mostrar o que precisa ser corrigido.

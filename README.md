@@ -1,46 +1,164 @@
-# Getting Started with Create React App
+# 🚀 Boodesk React - Sistema Kanban Avançado
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Um sistema completo de gerenciamento de projetos com Kanban, subtarefas, integração com Google Calendar e armazenamento em nuvem.
 
-## Available Scripts
+## ✨ Funcionalidades
 
-In the project directory, you can run:
+- 📋 **Kanban Board** - Quadros visuais para gerenciamento de tarefas
+- ✅ **Subtarefas** - Sistema completo de subtarefas com prioridades
+- 📅 **Google Calendar** - Integração com calendário do Google
+- ☁️ **Cloudflare R2** - Armazenamento de arquivos em nuvem
+- 🔐 **Supabase** - Banco de dados PostgreSQL em nuvem
+- 🎨 **Interface Moderna** - Design responsivo com Tailwind CSS
+- 🔄 **Sincronização em Tempo Real** - Atualizações automáticas
+- 📊 **Dashboard** - Métricas e relatórios em tempo real
 
-### `npm start`
+## 🛠️ Tecnologias
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL)
+- **Storage**: Cloudflare R2
+- **Calendar**: Google Calendar API
+- **Deploy**: GitHub Pages
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 🚀 Deploy
 
-### `npm test`
+### GitHub Pages
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+O projeto está configurado para deploy automático no GitHub Pages.
 
-### `npm run build`
+1. **Fazer push para o GitHub:**
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. **Deploy:**
+```bash
+npm run deploy
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Configurar GitHub Pages:**
+   - Vá para Settings > Pages
+   - Source: Deploy from a branch
+   - Branch: gh-pages
+   - Folder: / (root)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🔧 Configuração Local
 
-### `npm run eject`
+### Pré-requisitos
+- Node.js 16+
+- npm ou yarn
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Instalação
+```bash
+# Clonar o repositório
+git clone https://github.com/thall/boodesk-react.git
+cd boodesk-react
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Instalar dependências
+npm install
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+# Configurar variáveis de ambiente
+cp .env.example .env
+# Editar .env com suas credenciais
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+# Executar em desenvolvimento
+npm start
+```
 
-## Learn More
+### Variáveis de Ambiente
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Crie um arquivo `.env` na raiz do projeto:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```env
+# Supabase
+REACT_APP_SUPABASE_URL=sua_url_do_supabase
+REACT_APP_SUPABASE_ANON_KEY=sua_chave_anonima
+
+# Cloudflare R2
+REACT_APP_R2_ACCESS_KEY_ID=sua_access_key
+REACT_APP_R2_SECRET_ACCESS_KEY=sua_secret_key
+REACT_APP_R2_BUCKET=seu_bucket
+REACT_APP_R2_ENDPOINT=sua_url_endpoint
+```
+
+## 📁 Estrutura do Projeto
+
+```
+src/
+├── components/          # Componentes React
+│   ├── CardDetailModal.tsx
+│   ├── SubtaskManager.tsx
+│   └── ...
+├── contexts/           # Contextos React
+│   ├── AuthContext.tsx
+│   ├── ThemeContext.tsx
+│   └── ...
+├── pages/             # Páginas da aplicação
+│   ├── KanbanBoard.tsx
+│   ├── Dashboard.tsx
+│   └── ...
+├── services/          # Serviços e APIs
+│   └── database.ts
+├── types/             # Definições TypeScript
+│   └── index.ts
+└── utils/             # Utilitários
+    └── databaseMigration.ts
+```
+
+## 🎯 Funcionalidades Principais
+
+### Kanban Board
+- Criação e gerenciamento de quadros
+- Drag & drop de cards
+- Filtros e busca
+- Templates de quadros
+
+### Subtarefas
+- Criação de subtarefas detalhadas
+- Prioridades e categorias
+- Progresso visual
+- Integração com cards
+
+### Integrações
+- **Google Calendar**: Criação automática de eventos
+- **Cloudflare R2**: Upload e gerenciamento de arquivos
+- **Supabase**: Banco de dados em tempo real
+
+## 🔒 Segurança
+
+- Autenticação via Supabase
+- Controle de permissões
+- Variáveis de ambiente seguras
+- HTTPS obrigatório
+
+## 📈 Performance
+
+- Lazy loading de componentes
+- Otimização de imagens
+- Cache inteligente
+- Compressão de assets
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+- 📧 Email: suporte@boodesk.com
+- 📖 Documentação: [docs.boodesk.com](https://docs.boodesk.com)
+- 🐛 Issues: [GitHub Issues](https://github.com/thall/boodesk-react/issues)
+
+---
+
+**Desenvolvido com ❤️ pela equipe Boodesk**

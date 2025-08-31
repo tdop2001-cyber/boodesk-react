@@ -1,0 +1,13 @@
+# Dependências para o Sistema de Atualizações - Boodesk
+
+# Dependências existentes
+supabase>=1.0.0
+requests>=2.28.0
+boto3>=1.26.0
+
+# Dependências para atualizações
+psutil>=5.9.0
+hashlib  # Incluído no Python padrão
+tempfile  # Incluído no Python padrão
+shutil  # Incluído no Python padrão
+threading  # Incluído no Python padrão

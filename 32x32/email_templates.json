@@ -1,0 +1,18 @@
+{
+  "card_created": {
+    "subject": "Nova Tarefa Criada: {card_title}",
+    "body": "Olá {member_name},\n\nUma nova tarefa foi criada e você foi designado como responsável:\n\n**Tarefa:** {card_title}\n**Quadro:** {board_name}\n**Lista:** {list_name}\n**Descrição:** {card_description}\n**Prazo:** {due_date}\n**Importância:** {importance}\n\nAcesse o sistema para mais detalhes.\n\nAtenciosamente,\nSistema Boodesk"
+  },
+  "card_modified": {
+    "subject": "Tarefa Atualizada: {card_title}",
+    "body": "Olá {member_name},\n\nA tarefa \"{card_title}\" foi atualizada:\n\n**Alterações:**\n{changes}\n\n**Detalhes Atuais:**\n- Quadro: {board_name}\n- Lista: {list_name}\n- Prazo: {due_date}\n- Importância: {importance}\n\nAcesse o sistema para mais detalhes.\n\nAtenciosamente,\nSistema Boodesk"
+  },
+  "deadline_reminder": {
+    "subject": "Lembrete de Prazo: {card_title}",
+    "body": "Olá {member_name},\n\nEste é um lembrete sobre a tarefa que vence em breve:\n\n**Tarefa:** {card_title}\n**Quadro:** {board_name}\n**Lista:** {list_name}\n**Prazo:** {due_date}\n**Importância:** {importance}\n\nPor favor, verifique o status desta tarefa.\n\nAtenciosamente,\nSistema Boodesk"
+  },
+  "weekly_report": {
+    "subject": "Relatório Semanal - {week_period}",
+    "body": "Olá {member_name},\n\nAqui está seu relatório semanal de produtividade:\n\n**Resumo da Semana:**\n- Tarefas Concluídas: {completed_tasks}\n- Tarefas Pendentes: {pending_tasks}\n- Tempo Total Pomodoro: {total_pomodoro_time}\n- Produtividade: {productivity_score}%\n\n**Tarefas Importantes Concluídas:**\n{important_completed_tasks}\n\n**Próximos Prazos:**\n{upcoming_deadlines}\n\nContinue assim!\n\nAtenciosamente,\nSistema Boodesk"
+  }
+}

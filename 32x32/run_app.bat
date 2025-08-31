@@ -1,0 +1,2 @@
+@echo off
+"C:\Users\thall\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe" "C:\Users\thall\Documents\Automatização Relatorios\pomodoro\app2\app_trello_pomodoro\32x32\app2a.py"

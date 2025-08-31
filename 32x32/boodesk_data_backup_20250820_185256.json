@@ -1,0 +1,39 @@
+{
+  "boards": {
+    "Quadro Principal": {
+      "A Fazer": [
+        {
+          "title": "Sua primeira tarefa",
+          "desc": "",
+          "due_date": "",
+          "members": [
+            "Thalles"
+          ],
+          "subject": "-",
+          "goal": "-",
+          "importance": "Normal",
+          "creation_date": "2025-08-20 12:48:38",
+          "card_id": "f5a4be4d-3e91-43e2-8fa2-05d824a843f5",
+          "is_archived": false,
+          "history": [],
+          "git_branch": "",
+          "git_commit": "",
+          "git_pr": ""
+        }
+      ],
+      "Em Progresso": [],
+      "Concluído": []
+    },
+    "workflow": [
+      "A Fazer",
+      "Em Progresso",
+      "Concluído"
+    ]
+  },
+  "finances": {
+    "contas_bancarias": [],
+    "categorias_gasto": [],
+    "meios_pagamento": [],
+    "transacoes": []
+  }
+}

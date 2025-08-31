@@ -1,0 +1,11 @@
+# Dependências para migração PostgreSQL do Boodesk
+# Gerado automaticamente
+
+psycopg2-binary
+pandas
+openpyxl
+bcrypt
+matplotlib
+tkcalendar
+ttkthemes
+Pillow

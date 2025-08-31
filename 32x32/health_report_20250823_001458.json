@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-08-23T00:14:49.881190",
+  "database_tables": true,
+  "missing_images": true,
+  "app_attributes": true,
+  "database_lock": true,
+  "directories": true
+}

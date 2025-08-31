@@ -1,0 +1,259 @@
+-- Migração 003: Sistema de Atualizações Automáticas
+-- Cria tabelas para gerenciar versões e notificações do sistema
+
+-- Tabela para versões do sistema
+CREATE TABLE IF NOT EXISTS versoes_sistema (
+    id SERIAL PRIMARY KEY,
+    versao VARCHAR(20) NOT NULL UNIQUE,
+    data_lancamento TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    changelog TEXT,
+    forcar_atualizacao BOOLEAN DEFAULT FALSE,
+    ativo BOOLEAN DEFAULT TRUE,
+    arquivos JSONB, -- URLs e informações dos arquivos de download
+    plataformas JSONB, -- Plataformas suportadas
+    min_versao VARCHAR(20), -- Versão mínima necessária
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela para notificações do sistema
+CREATE TABLE IF NOT EXISTS notificacoes_sistema (
+    id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50) NOT NULL, -- 'atualizacao_sistema', 'manutencao', 'anuncio'
+    titulo VARCHAR(200) NOT NULL,
+    mensagem TEXT,
+    dados JSONB, -- Dados adicionais específicos do tipo
+    data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    data_expiracao TIMESTAMP WITH TIME ZONE,
+    ativo BOOLEAN DEFAULT TRUE,
+    prioridade INTEGER DEFAULT 1, -- 1=baixa, 2=média, 3=alta, 4=crítica
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela para controle de atualizações por usuário
+CREATE TABLE IF NOT EXISTS atualizacoes_usuarios (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    versao_id INTEGER REFERENCES versoes_sistema(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pendente', -- 'pendente', 'baixando', 'instalando', 'concluida', 'erro'
+    data_verificacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    data_download TIMESTAMP WITH TIME ZONE,
+    data_instalacao TIMESTAMP WITH TIME ZONE,
+    erro_mensagem TEXT,
+    plataforma VARCHAR(20),
+    arquivo_baixado VARCHAR(255),
+    hash_verificado BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, versao_id)
+);
+
+-- Tabela para configurações de atualização
+CREATE TABLE IF NOT EXISTS config_atualizacao (
+    id SERIAL PRIMARY KEY,
+    chave VARCHAR(100) NOT NULL UNIQUE,
+    valor TEXT,
+    descricao TEXT,
+    tipo VARCHAR(20) DEFAULT 'string', -- 'string', 'boolean', 'integer', 'json'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_versoes_sistema_versao ON versoes_sistema(versao);
+CREATE INDEX IF NOT EXISTS idx_versoes_sistema_ativo ON versoes_sistema(ativo);
+CREATE INDEX IF NOT EXISTS idx_versoes_sistema_data_lancamento ON versoes_sistema(data_lancamento);
+
+CREATE INDEX IF NOT EXISTS idx_notificacoes_sistema_tipo ON notificacoes_sistema(tipo);
+CREATE INDEX IF NOT EXISTS idx_notificacoes_sistema_ativo ON notificacoes_sistema(ativo);
+CREATE INDEX IF NOT EXISTS idx_notificacoes_sistema_data_criacao ON notificacoes_sistema(data_criacao);
+
+CREATE INDEX IF NOT EXISTS idx_atualizacoes_usuarios_user_id ON atualizacoes_usuarios(user_id);
+CREATE INDEX IF NOT EXISTS idx_atualizacoes_usuarios_versao_id ON atualizacoes_usuarios(versao_id);
+CREATE INDEX IF NOT EXISTS idx_atualizacoes_usuarios_status ON atualizacoes_usuarios(status);
+
+-- Função para atualizar timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Triggers para atualizar timestamps
+CREATE TRIGGER update_versoes_sistema_updated_at 
+    BEFORE UPDATE ON versoes_sistema 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notificacoes_sistema_updated_at 
+    BEFORE UPDATE ON notificacoes_sistema 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_atualizacoes_usuarios_updated_at 
+    BEFORE UPDATE ON atualizacoes_usuarios 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_config_atualizacao_updated_at 
+    BEFORE UPDATE ON config_atualizacao 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Função para obter versão mais recente
+CREATE OR REPLACE FUNCTION get_latest_version()
+RETURNS TABLE (
+    versao VARCHAR(20),
+    data_lancamento TIMESTAMP WITH TIME ZONE,
+    changelog TEXT,
+    forcar_atualizacao BOOLEAN,
+    arquivos JSONB,
+    plataformas JSONB
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        vs.versao,
+        vs.data_lancamento,
+        vs.changelog,
+        vs.forcar_atualizacao,
+        vs.arquivos,
+        vs.plataformas
+    FROM versoes_sistema vs
+    WHERE vs.ativo = TRUE
+    ORDER BY vs.data_lancamento DESC
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Função para verificar se usuário precisa atualizar
+CREATE OR REPLACE FUNCTION check_user_update_required(user_current_version VARCHAR(20))
+RETURNS TABLE (
+    precisa_atualizar BOOLEAN,
+    forcar_atualizacao BOOLEAN,
+    versao_atual VARCHAR(20),
+    versao_latest VARCHAR(20),
+    changelog TEXT,
+    arquivos JSONB
+) AS $$
+DECLARE
+    latest_version RECORD;
+BEGIN
+    -- Obter versão mais recente
+    SELECT * INTO latest_version FROM get_latest_version();
+    
+    IF latest_version.versao IS NULL THEN
+        RETURN QUERY SELECT FALSE, FALSE, user_current_version, NULL, NULL, NULL;
+        RETURN;
+    END IF;
+    
+    -- Comparar versões
+    IF latest_version.versao > user_current_version THEN
+        RETURN QUERY SELECT 
+            TRUE,
+            latest_version.forcar_atualizacao,
+            user_current_version,
+            latest_version.versao,
+            latest_version.changelog,
+            latest_version.arquivos;
+    ELSE
+        RETURN QUERY SELECT FALSE, FALSE, user_current_version, latest_version.versao, NULL, NULL;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Inserir configurações padrão
+INSERT INTO config_atualizacao (chave, valor, descricao, tipo) VALUES
+('auto_check_updates', 'true', 'Verificar atualizações automaticamente', 'boolean'),
+('check_interval_hours', '24', 'Intervalo em horas para verificar atualizações', 'integer'),
+('download_timeout_seconds', '300', 'Timeout para download em segundos', 'integer'),
+('max_retry_attempts', '3', 'Número máximo de tentativas de download', 'integer'),
+('enable_beta_updates', 'false', 'Permitir atualizações beta', 'boolean'),
+('update_server_url', 'https://takwmhdwydujndqlznqk.supabase.co', 'URL do servidor de atualizações', 'string'),
+('cdn_endpoint', 'https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com', 'Endpoint do CDN', 'string')
+ON CONFLICT (chave) DO NOTHING;
+
+-- Inserir versão inicial (exemplo)
+INSERT INTO versoes_sistema (versao, changelog, forcar_atualizacao, arquivos, plataformas) VALUES
+('2.4.0', 
+ 'Versão inicial do sistema de atualizações automáticas
+- Sistema de deploy na nuvem
+- Atualizações automáticas
+- Integração com Supabase e Cloudflare R2
+- Interface de gerenciamento de versões', 
+ FALSE,
+ '{"windows": {"url": "https://example.com/BoodeskApp_windows.exe", "hash": "sha256_hash", "size": 52428800}}',
+ '{"windows": true, "linux": true, "macos": true}')
+ON CONFLICT (versao) DO NOTHING;
+
+-- Políticas RLS (Row Level Security)
+
+-- Política para versoes_sistema (leitura pública)
+ALTER TABLE versoes_sistema ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "versoes_sistema_public_read" ON versoes_sistema
+    FOR SELECT USING (ativo = TRUE);
+
+CREATE POLICY "versoes_sistema_admin_write" ON versoes_sistema
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Política para notificacoes_sistema (leitura pública)
+ALTER TABLE notificacoes_sistema ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "notificacoes_sistema_public_read" ON notificacoes_sistema
+    FOR SELECT USING (ativo = TRUE);
+
+CREATE POLICY "notificacoes_sistema_admin_write" ON notificacoes_sistema
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Política para atualizacoes_usuarios (usuário vê apenas suas próprias)
+ALTER TABLE atualizacoes_usuarios ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "atualizacoes_usuarios_own_data" ON atualizacoes_usuarios
+    FOR ALL USING (user_id = auth.uid());
+
+CREATE POLICY "atualizacoes_usuarios_admin_read" ON atualizacoes_usuarios
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Política para config_atualizacao (leitura pública, escrita apenas admin)
+ALTER TABLE config_atualizacao ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "config_atualizacao_public_read" ON config_atualizacao
+    FOR SELECT USING (TRUE);
+
+CREATE POLICY "config_atualizacao_admin_write" ON config_atualizacao
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Comentários das tabelas
+COMMENT ON TABLE versoes_sistema IS 'Tabela para gerenciar versões do sistema Boodesk';
+COMMENT ON TABLE notificacoes_sistema IS 'Tabela para notificações do sistema para usuários';
+COMMENT ON TABLE atualizacoes_usuarios IS 'Tabela para controlar atualizações por usuário';
+COMMENT ON TABLE config_atualizacao IS 'Tabela para configurações do sistema de atualizações';
+
+COMMENT ON COLUMN versoes_sistema.arquivos IS 'JSON com URLs e informações dos arquivos de download por plataforma';
+COMMENT ON COLUMN versoes_sistema.plataformas IS 'JSON indicando quais plataformas são suportadas';
+COMMENT ON COLUMN notificacoes_sistema.dados IS 'Dados adicionais específicos do tipo de notificação';
+COMMENT ON COLUMN atualizacoes_usuarios.status IS 'Status da atualização: pendente, baixando, instalando, concluida, erro';
+
+
+
+

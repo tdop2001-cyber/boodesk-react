@@ -1,0 +1,68 @@
+🔧 SOLUÇÃO PARA ERRO "No module named 'ttkthemes'" NO LINUX
+==========================================================
+
+❌ PROBLEMA:
+ModuleNotFoundError: No module named 'ttkthemes'
+
+✅ SOLUÇÃO RÁPIDA:
+
+1️⃣ ABRIR TERMINAL NO LINUX MINT:
+   Ctrl + Alt + T
+
+2️⃣ NAVEGAR ATÉ A PASTA:
+   cd /media/seu_usuario/nome_do_pen/boodesk_linux_mint_package
+
+3️⃣ EXECUTAR CORREÇÃO RÁPIDA:
+   chmod +x corrigir_ttkthemes.sh
+   ./corrigir_ttkthemes.sh
+
+4️⃣ EXECUTAR O APLICATIVO:
+   chmod +x BoodeskApp
+   ./BoodeskApp
+
+🚀 SOLUÇÃO COMPLETA (se a rápida não funcionar):
+
+1️⃣ EXECUTAR INSTALAÇÃO COMPLETA:
+   chmod +x instalar_dependencias_linux.sh
+   ./instalar_dependencias_linux.sh
+
+2️⃣ EXECUTAR O APLICATIVO:
+   ./BoodeskApp
+
+🔧 SOLUÇÃO MANUAL:
+
+Se os scripts não funcionarem, execute manualmente:
+
+# Atualizar pip
+python3 -m pip install --user --upgrade pip
+
+# Instalar ttkthemes
+pip3 install --user --upgrade ttkthemes
+
+# Instalar tkcalendar
+pip3 install --user --upgrade tkcalendar
+
+# Verificar instalação
+python3 -c "import ttkthemes; print('OK')"
+
+# Executar aplicativo
+./BoodeskApp
+
+💡 DICAS IMPORTANTES:
+
+• O ttkthemes é uma biblioteca Python que precisa ser instalada separadamente
+• Use sempre `pip3 install --user` para instalar no usuário atual
+• Se der erro de permissão, use `sudo pip3 install` (não recomendado)
+• O script corrigir_ttkthemes.sh resolve 90% dos casos
+
+📋 VERIFICAÇÃO:
+
+Para verificar se tudo está funcionando:
+   chmod +x verificar_permissoes.sh
+   ./verificar_permissoes.sh
+
+🎯 RESULTADO ESPERADO:
+
+Após executar a correção, o BoodeskApp deve abrir normalmente
+com todos os recursos gráficos funcionando (temas, calendário, etc.)
+

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Ícones PNG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .icon-test {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .icon-test img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+        .icon-test .name {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        .error {
+            color: red;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Carregamento de Ícones PNG</h1>
+    <p>Verificando se os ícones estão sendo carregados corretamente...</p>
+    
+    <div id="icons-container">
+        <!-- Ícones serão inseridos aqui via JavaScript -->
+    </div>
+
+    <script>
+        const icons = [
+            'desenvolvimento',
+            'marketing', 
+            'suporte',
+            'design',
+            'vendas',
+            'rh',
+            'tarefas',
+            'projeto',
+            'produto',
+            'manutencao'
+        ];
+
+        const container = document.getElementById('icons-container');
+
+        icons.forEach(iconName => {
+            const div = document.createElement('div');
+            div.className = 'icon-test';
+            
+            const img = document.createElement('img');
+            img.src = `/img/icons_template/${iconName}.png`;
+            img.alt = iconName;
+            
+            const name = document.createElement('div');
+            name.className = 'name';
+            name.textContent = iconName;
+            
+            const error = document.createElement('div');
+            error.className = 'error';
+            error.style.display = 'none';
+            error.textContent = 'Erro ao carregar';
+            
+            img.onload = () => {
+                console.log(`✅ Ícone carregado: ${iconName}`);
+            };
+            
+            img.onerror = () => {
+                console.error(`❌ Erro ao carregar ícone: ${iconName}`);
+                error.style.display = 'block';
+            };
+            
+            div.appendChild(img);
+            div.appendChild(name);
+            div.appendChild(error);
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>

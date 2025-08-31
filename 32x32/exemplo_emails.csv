@@ -1,0 +1,13 @@
+email,name,category,is_active
+admin@empresa.com,Administrador,Administração,true
+gerente@empresa.com,Gerente de Projetos,Administração,true
+desenvolvedor1@empresa.com,João Silva,Desenvolvimento,true
+desenvolvedor2@empresa.com,Maria Santos,Desenvolvimento,true
+designer@empresa.com,Pedro Costa,Design,true
+teste@empresa.com,Equipe de Teste,Qualidade,true
+suporte@empresa.com,Suporte Técnico,Suporte,true
+relatorios@empresa.com,Relatórios Automáticos,Relatórios,true
+notificacoes@empresa.com,Sistema de Notificações,Notificações,true
+cliente@exemplo.com,Cliente Exemplo,Clientes,false
+
+

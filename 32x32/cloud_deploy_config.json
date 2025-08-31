@@ -1,0 +1,40 @@
+{
+  "cloudflare_r2": {
+    "endpoint": "https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com",
+    "bucket_name": "boodesk-cdn",
+    "executable_name": "boodesk_latest.exe",
+    "version_file": "version.json",
+    "changelog_file": "changelog.txt"
+  },
+  "deploy_settings": {
+    "auto_version_increment": true,
+    "backup_previous_version": true,
+    "notify_users_on_update": true,
+    "require_confirmation": false
+  },
+  "version_info": {
+    "current_version": "2.3.1",
+    "latest_version": "2.4.19",
+    "release_date": "2025-08-28",
+    "download_url": "https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com/boodesk-cdn/boodesk_latest.exe",
+    "file_size": "104516849",
+    "checksum": ""
+  },
+  "update_channels": {
+    "stable": {
+      "enabled": true,
+      "version_prefix": "2.3",
+      "auto_update": true
+    },
+    "beta": {
+      "enabled": false,
+      "version_prefix": "2.4",
+      "auto_update": false
+    },
+    "alpha": {
+      "enabled": false,
+      "version_prefix": "2.5",
+      "auto_update": false
+    }
+  }
+}

@@ -1,0 +1,14 @@
+Dashboard Executivo - Relatório Completo
+==================================================
+
+MÉTRICAS GERAIS:
+Total de Tarefas: 5
+Concluídas: 0
+Pendentes: 5
+Vencidas: 0
+Taxa de Sucesso: 0.0%
+
+PERFORMANCE DA EQUIPE:
+Thais: 0.0% de conclusão
+Thalles: 0.0% de conclusão
+joao: 0.0% de conclusão

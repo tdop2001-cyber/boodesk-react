@@ -1,0 +1,24 @@
+{
+  "version": "1.0.1",
+  "release_date": "2025-08-21T18:56:30.967330",
+  "changelog": "\n    - Correção de bugs críticos\n    - Melhorias na interface\n    - Novas funcionalidades\n    - Otimização de performance\n    ",
+  "downloads": {
+    "windows": {
+      "url": "https://seu-dominio.com/downloads/windows/Boodesk_v1.0.1.exe",
+      "hash": "53587dd20f19d3512ea02dec64c5c46cc97a7a255b8f85c83c2143e7e6d24ab4",
+      "size": 38
+    },
+    "linux": {
+      "url": "https://seu-dominio.com/downloads/linux/Boodesk_v1.0.1.AppImage",
+      "hash": "46c636239bd926db3974552087ff1dd8075d8055f170d0391db6bbf932f426ef",
+      "size": 36
+    },
+    "mac": {
+      "url": "https://seu-dominio.com/downloads/mac/Boodesk_v1.0.1.dmg",
+      "hash": "9d8ca1e5078162514ebf0685541377e920deba5edb6a9c045f6bef890ea2ad31",
+      "size": 34
+    }
+  },
+  "min_version": "1.0.0",
+  "force_update": false
+}

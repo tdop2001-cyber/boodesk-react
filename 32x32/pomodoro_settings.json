@@ -1,0 +1,27 @@
+{
+    "pomodoro": 25,
+    "short_break": 5,
+    "long_break": 15,
+    "cycles": 4,
+    "theme": "aquativo",
+    "unify_subjects": false,
+    "show_card_details_on_board": false,
+    "show_dependency_info": true,
+    "open_on_current_screen": false,
+    "importance_colors": {
+        "Cr\u00edtica": "#FFCCCC",
+        "Alta": "#FFE5CC",
+        "Normal": "#FFFFCC",
+        "Baixa": "#CCFFCC"
+    },
+    "card_tags": {
+        "Urgente": "#FF0000",
+        "Importante": "#FFA500",
+        "Desenvolvimento": "#0000FF",
+        "Bug": "#FFD700",
+        "Feature": "#008000"
+    },
+    "custom_filters": {},
+    "dev_mode": false,
+    "git_integration_enabled": false
+}

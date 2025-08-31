@@ -1,0 +1,240 @@
+
+# CORREÇÕES PARA APLICAR NO app23a.py
+
+# 1. ADICIONAR ESTA FUNÇÃO NA CLASSE SettingsWindow (após _check_admin_permissions):
+
+def _get_safe_dict_setting(self, setting_key, default_value=None):
+    """Garante que uma configuração seja sempre um dicionário"""
+    if default_value is None:
+        default_value = {}
+    
+    setting = self.app.settings.get(setting_key, default_value)
+    if isinstance(setting, str):
+        try:
+            import json
+            setting = json.loads(setting)
+        except:
+            setting = default_value
+    
+    return setting
+
+# 2. SUBSTITUIR TODAS AS REFERÊNCIAS:
+# self.app.settings["roles"].items() → self._get_safe_dict_setting("roles").items()
+# self.app.settings["importance_colors"].items() → self._get_safe_dict_setting("importance_colors").items()
+# self.app.settings["dashboard_widgets"].get( → self._get_safe_dict_setting("dashboard_widgets").get(
+# self.app.settings["calendar_integration"].get( → self._get_safe_dict_setting("calendar_integration").get(
+# self.app.settings["email_integration"].get( → self._get_safe_dict_setting("email_integration").get(
+
+# 3. SUBSTITUIR O MÉTODO create_general_tab:
+
+def create_general_tab(self):
+    """Cria a aba Geral com estilo correto usando pack"""
+    frame = self.general_tab
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Tema do aplicativo
+    theme_frame = ttk.LabelFrame(main_container, text="Tema do Aplicativo", padding=10)
+    theme_frame.pack(fill='x', pady=(0, 15))
+    
+    ttk.Label(theme_frame, text="Tema:").pack(anchor='w')
+    self.theme_combo = ttk.Combobox(theme_frame, values=['aquativo', 'dark', 'light'], state='readonly')
+    self.theme_combo.pack(fill='x', pady=(5, 0))
+    self.theme_combo.set(self.app.settings.get('theme', 'aquativo'))
+    
+    # Configurações gerais
+    general_frame = ttk.LabelFrame(main_container, text="Configurações Gerais", padding=10)
+    general_frame.pack(fill='x', pady=(0, 15))
+    
+    self.always_on_top_var = tk.BooleanVar(value=self.app.settings.get('always_on_top', False))
+    ttk.Checkbutton(general_frame, text="Sempre no topo", variable=self.always_on_top_var).pack(anchor='w')
+    
+    self.dev_mode_var = tk.BooleanVar(value=self.app.settings.get('dev_mode', False))
+    ttk.Checkbutton(general_frame, text="Modo Desenvolvedor (Recursos Ágeis)", variable=self.dev_mode_var).pack(anchor='w')
+    
+    self.git_integration_enabled_var = tk.BooleanVar(value=self.app.settings.get('git_integration_enabled', False))
+    ttk.Checkbutton(general_frame, text="Habilitar Integração Git (Modo Dev)", variable=self.git_integration_enabled_var).pack(anchor='w')
+    
+    # Botão de atualizar
+    button_frame = ttk.Frame(main_container)
+    button_frame.pack(fill='x', pady=(20, 0))
+    
+    ttk.Button(button_frame, text="Atualizar", command=self.save_settings, 
+               style='Accent.TButton').pack(side='right')
+
+# 4. SUBSTITUIR O MÉTODO create_calendar_tab:
+
+def create_calendar_tab(self):
+    """Cria a aba Calendário com estilo correto"""
+    frame = self.calendar_tab
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Configurações do Google Calendar
+    calendar_frame = ttk.LabelFrame(main_container, text="Integração com Google Calendar", padding=10)
+    calendar_frame.pack(fill='x', pady=(0, 15))
+    
+    # Habilitar integração
+    calendar_integration = self._get_safe_dict_setting('calendar_integration')
+    self.calendar_enabled_var = tk.BooleanVar(value=calendar_integration.get('enabled', False))
+    ttk.Checkbutton(calendar_frame, text="Habilitar integração com Google Calendar", 
+                    variable=self.calendar_enabled_var).pack(anchor='w')
+    
+    # Arquivo de credenciais
+    cred_frame = ttk.Frame(calendar_frame)
+    cred_frame.pack(fill='x', pady=(10, 0))
+    
+    ttk.Label(cred_frame, text="Arquivo de Credenciais:").pack(anchor='w')
+    cred_file_frame = ttk.Frame(cred_frame)
+    cred_file_frame.pack(fill='x', pady=(5, 0))
+    
+    self.credentials_file_var = tk.StringVar(value=calendar_integration.get('credentials_file', ''))
+    ttk.Entry(cred_file_frame, textvariable=self.credentials_file_var).pack(side='left', fill='x', expand=True)
+    ttk.Button(cred_file_frame, text="Procurar", command=self.browse_credentials_file).pack(side='right', padx=(5, 0))
+    
+    # Configurações de sincronização
+    sync_frame = ttk.LabelFrame(main_container, text="Configurações de Sincronização", padding=10)
+    sync_frame.pack(fill='x', pady=(0, 15))
+    
+    self.sync_auto_var = tk.BooleanVar(value=calendar_integration.get('sync_auto', True))
+    ttk.Checkbutton(sync_frame, text="Sincronização automática", variable=self.sync_auto_var).pack(anchor='w')
+    
+    self.sync_cards_deadline_var = tk.BooleanVar(value=calendar_integration.get('sync_cards_deadline', True))
+    ttk.Checkbutton(sync_frame, text="Sincronizar prazos dos cards", variable=self.sync_cards_deadline_var).pack(anchor='w')
+    
+    self.sync_calendar_events_var = tk.BooleanVar(value=calendar_integration.get('sync_calendar_events', True))
+    ttk.Checkbutton(sync_frame, text="Sincronizar eventos do calendário", variable=self.sync_calendar_events_var).pack(anchor='w')
+    
+    # Botão de atualizar
+    button_frame = ttk.Frame(main_container)
+    button_frame.pack(fill='x', pady=(20, 0))
+    
+    ttk.Button(button_frame, text="Atualizar", command=self.save_settings, 
+               style='Accent.TButton').pack(side='right')
+
+# 5. SUBSTITUIR O MÉTODO create_email_tab:
+
+def create_email_tab(self):
+    """Cria a aba Email com estilo correto"""
+    frame = self.email_tab
+    
+    # Container principal
+    main_container = ttk.Frame(frame)
+    main_container.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Configurações de Email
+    email_frame = ttk.LabelFrame(main_container, text="Configurações de Email", padding=10)
+    email_frame.pack(fill='x', pady=(0, 15))
+    
+    # Habilitar integração
+    email_integration = self._get_safe_dict_setting('email_integration')
+    self.email_enabled_var = tk.BooleanVar(value=email_integration.get('enabled', False))
+    ttk.Checkbutton(email_frame, text="Habilitar integração de email", 
+                    variable=self.email_enabled_var).pack(anchor='w')
+    
+    # Configurações SMTP
+    smtp_frame = ttk.LabelFrame(main_container, text="Configurações SMTP", padding=10)
+    smtp_frame.pack(fill='x', pady=(0, 15))
+    
+    # Servidor SMTP
+    server_frame = ttk.Frame(smtp_frame)
+    server_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(server_frame, text="Servidor SMTP:").pack(anchor='w')
+    self.smtp_server_var = tk.StringVar(value=email_integration.get('smtp_server', 'smtp.gmail.com'))
+    ttk.Entry(server_frame, textvariable=self.smtp_server_var).pack(fill='x', pady=(5, 0))
+    
+    # Porta SMTP
+    port_frame = ttk.Frame(smtp_frame)
+    port_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(port_frame, text="Porta SMTP:").pack(anchor='w')
+    self.smtp_port_var = tk.StringVar(value=str(email_integration.get('smtp_port', 587)))
+    ttk.Entry(port_frame, textvariable=self.smtp_port_var).pack(fill='x', pady=(5, 0))
+    
+    # Email e senha
+    auth_frame = ttk.Frame(smtp_frame)
+    auth_frame.pack(fill='x', pady=(0, 10))
+    
+    ttk.Label(auth_frame, text="Email:").pack(anchor='w')
+    self.email_address_var = tk.StringVar(value=email_integration.get('email_address', ''))
+    ttk.Entry(auth_frame, textvariable=self.email_address_var).pack(fill='x', pady=(5, 0))
+    
+    ttk.Label(auth_frame, text="Senha do App:").pack(anchor='w')
+    self.app_password_var = tk.StringVar(value=email_integration.get('app_password', ''))
+    ttk.Entry(auth_frame, textvariable=self.app_password_var, show='*').pack(fill='x', pady=(5, 0))
+    
+    # Botão de atualizar
+    button_frame = ttk.Frame(main_container)
+    button_frame.pack(fill='x', pady=(20, 0))
+    
+    ttk.Button(button_frame, text="Atualizar", command=self.save_settings, 
+               style='Accent.TButton').pack(side='right')
+
+# 6. ADICIONAR MÉTODOS AUXILIARES:
+
+def browse_credentials_file(self):
+    """Abre diálogo para selecionar arquivo de credenciais"""
+    from tkinter import filedialog
+    filename = filedialog.askopenfilename(
+        title="Selecionar arquivo de credenciais",
+        filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+    )
+    if filename:
+        self.credentials_file_var.set(filename)
+
+def save_settings(self):
+    """Salva as configurações com tratamento de JSON"""
+    try:
+        # Configurações gerais
+        if hasattr(self, 'theme_combo'):
+            self.app.settings['theme'] = self.theme_combo.get()
+        if hasattr(self, 'always_on_top_var'):
+            self.app.settings['always_on_top'] = self.always_on_top_var.get()
+        if hasattr(self, 'dev_mode_var'):
+            self.app.settings['dev_mode'] = self.dev_mode_var.get()
+        if hasattr(self, 'git_integration_enabled_var'):
+            self.app.settings['git_integration_enabled'] = self.git_integration_enabled_var.get()
+        
+        # Configurações do calendário
+        calendar_integration = self._get_safe_dict_setting('calendar_integration')
+        if hasattr(self, 'calendar_enabled_var'):
+            calendar_integration['enabled'] = self.calendar_enabled_var.get()
+        if hasattr(self, 'credentials_file_var'):
+            calendar_integration['credentials_file'] = self.credentials_file_var.get()
+        if hasattr(self, 'sync_auto_var'):
+            calendar_integration['sync_auto'] = self.sync_auto_var.get()
+        if hasattr(self, 'sync_cards_deadline_var'):
+            calendar_integration['sync_cards_deadline'] = self.sync_cards_deadline_var.get()
+        if hasattr(self, 'sync_calendar_events_var'):
+            calendar_integration['sync_calendar_events'] = self.sync_calendar_events_var.get()
+        self.app.settings['calendar_integration'] = calendar_integration
+        
+        # Configurações de email
+        email_integration = self._get_safe_dict_setting('email_integration')
+        if hasattr(self, 'email_enabled_var'):
+            email_integration['enabled'] = self.email_enabled_var.get()
+        if hasattr(self, 'smtp_server_var'):
+            email_integration['smtp_server'] = self.smtp_server_var.get()
+        if hasattr(self, 'smtp_port_var'):
+            try:
+                email_integration['smtp_port'] = int(self.smtp_port_var.get())
+            except ValueError:
+                email_integration['smtp_port'] = 587
+        if hasattr(self, 'email_address_var'):
+            email_integration['email_address'] = self.email_address_var.get()
+        if hasattr(self, 'app_password_var'):
+            email_integration['app_password'] = self.app_password_var.get()
+        self.app.settings['email_integration'] = email_integration
+        
+        # Salvar no banco
+        self.app.save_settings_file()
+        
+        messagebox.showinfo("Sucesso", "Configurações salvas com sucesso!", parent=self)
+        
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao salvar configurações: {e}", parent=self)

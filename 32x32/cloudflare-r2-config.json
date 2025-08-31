@@ -1,0 +1,160 @@
+{
+  "r2": {
+    "accountId": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+    "accessKeyId": "YOUR_R2_ACCESS_KEY_ID",
+    "secretAccessKey": "YOUR_R2_SECRET_ACCESS_KEY",
+    "bucketName": "boodesk-uploads",
+    "publicUrl": "https://your-domain.com",
+    "endpoint": "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com",
+    
+    "policies": {
+      "maxFileSize": 10485760,
+      "allowedTypes": [
+        "image/jpeg",
+        "image/png", 
+        "image/gif",
+        "image/webp",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/csv",
+        "application/zip",
+        "application/x-rar-compressed"
+      ],
+      "imageProcessing": {
+        "profileImages": {
+          "maxWidth": 300,
+          "maxHeight": 300,
+          "quality": 85,
+          "format": "jpeg"
+        },
+        "cardAttachments": {
+          "maxWidth": 1920,
+          "maxHeight": 1080,
+          "quality": 90,
+          "format": "jpeg"
+        },
+        "boardBackgrounds": {
+          "maxWidth": 1920,
+          "maxHeight": 1080,
+          "quality": 85,
+          "format": "jpeg"
+        }
+      }
+    },
+    
+    "folders": {
+      "profileImages": "profile_images/",
+      "cardAttachments": "card_attachments/",
+      "boardBackgrounds": "board_backgrounds/",
+      "meetingRecordings": "meeting_recordings/",
+      "exports": "exports/",
+      "temp": "temp/"
+    },
+    
+    "cors": {
+      "allowedOrigins": [
+        "https://your-domain.com",
+        "https://app.your-domain.com",
+        "http://localhost:3000",
+        "http://localhost:8000"
+      ],
+      "allowedMethods": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+      "allowedHeaders": [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With"
+      ],
+      "maxAgeSeconds": 3600
+    },
+    
+    "security": {
+      "presignedUrlExpiration": 3600,
+      "maxUploadSize": 10485760,
+      "allowedFileExtensions": [
+        ".jpg", ".jpeg", ".png", ".gif", ".webp",
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+        ".ppt", ".pptx", ".txt", ".csv", ".zip", ".rar"
+      ]
+    }
+  },
+  
+  "supabase": {
+    "url": "https://your-project.supabase.co",
+    "anonKey": "your-anon-key",
+    "serviceRoleKey": "your-service-role-key",
+    "functions": {
+      "uploadHandler": "https://your-project.supabase.co/functions/v1/upload-handler",
+      "imageProcessor": "https://your-project.supabase.co/functions/v1/image-processor",
+      "notificationSender": "https://your-project.supabase.co/functions/v1/notification-sender",
+      "reportGenerator": "https://your-project.supabase.co/functions/v1/report-generator"
+    }
+  },
+  
+  "email": {
+    "smtp": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "secure": true,
+      "user": "your-email@gmail.com",
+      "pass": "your-app-password"
+    },
+    "from": "noreply@boodesk.com",
+    "templates": {
+      "cardCreated": "card_created",
+      "cardUpdated": "card_updated", 
+      "meetingReminder": "meeting_reminder",
+      "weeklyReport": "weekly_report"
+    }
+  },
+  
+  "google": {
+    "calendar": {
+      "credentialsFile": "credentials.json",
+      "scopes": ["https://www.googleapis.com/auth/calendar"],
+      "timezone": "America/Sao_Paulo"
+    }
+  },
+  
+  "app": {
+    "name": "Boodesk",
+    "version": "1.0.0",
+    "environment": "production",
+    "debug": false,
+    "logLevel": "info",
+    "sessionTimeout": 3600,
+    "maxLoginAttempts": 5,
+    "passwordMinLength": 8
+  },
+  
+  "features": {
+    "chat": {
+      "enabled": true,
+      "maxMessageLength": 1000,
+      "fileUploadEnabled": true,
+      "maxFileSize": 5242880
+    },
+    "meetings": {
+      "enabled": true,
+      "googleMeetEnabled": true,
+      "zoomEnabled": true,
+      "teamsEnabled": true,
+      "maxDuration": 480
+    },
+    "notifications": {
+      "email": true,
+      "push": false,
+      "inApp": true
+    },
+    "reports": {
+      "weekly": true,
+      "monthly": true,
+      "custom": true
+    }
+  }
+}

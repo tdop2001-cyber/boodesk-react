@@ -1,0 +1,19 @@
+{
+  "app_name": "BoodeskApp",
+  "version": "2.4.0",
+  "main_file": "app23a.py",
+  "supabase_url": "https://takwmhdwydujndqlznqk.supabase.co",
+  "supabase_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha3dtaGR3eWR1am5kcWx6bnFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODQ3MDMsImV4cCI6MjA3MTM2MDcwM30.XUuRWmLrvNXfCI9PtD-2CR2y3NkxMFKRyQT_gbkuIhE",
+  "r2_endpoint": "https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com",
+  "r2_bucket": "boodesk-cdn",
+  "platforms": {
+    "windows": true,
+    "linux": true,
+    "macos": true
+  },
+  "options": {
+    "force_update": false,
+    "notify_users": true,
+    "create_backup": true
+  }
+}

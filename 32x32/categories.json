@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "name": "Desenvolvimento",
+    "color": "#3498db"
+  },
+  {
+    "id": 2,
+    "name": "Design",
+    "color": "#e74c3c"
+  },
+  {
+    "id": 3,
+    "name": "Marketing",
+    "color": "#f39c12"
+  },
+  {
+    "id": 4,
+    "name": "Vendas",
+    "color": "#27ae60"
+  },
+  {
+    "id": 5,
+    "name": "Suporte",
+    "color": "#9b59b6"
+  }
+]

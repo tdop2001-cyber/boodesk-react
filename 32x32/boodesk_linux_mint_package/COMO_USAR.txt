@@ -1,0 +1,53 @@
+🐧 BOODESKAPP - LINUX MINT
+==========================
+
+📦 CONTEÚDO DO PACOTE:
+- BoodeskApp (executável principal - 14MB)
+- INSTALAR.sh (instalação automática)
+- install_linux_mint.sh (instalação manual)
+- test_linux_mint.sh (teste do sistema)
+- README_LINUX_MINT.md (documentação completa)
+
+🚀 INSTALAÇÃO RÁPIDA (RECOMENDADO):
+1. Abra o Terminal
+2. Navegue até esta pasta: cd /caminho/para/esta/pasta
+3. Execute: chmod +x INSTALAR.sh
+4. Execute: ./INSTALAR.sh
+5. Siga as instruções na tela
+
+🔧 INSTALAÇÃO MANUAL:
+1. Abra o Terminal
+2. Navegue até esta pasta
+3. Execute: chmod +x BoodeskApp
+4. Execute: ./BoodeskApp
+
+🎯 EXECUÇÃO DIRETA:
+- Clique duas vezes no arquivo BoodeskApp
+- Ou clique com botão direito → Executar
+
+📋 REQUISITOS:
+- Linux Mint 20+ (ou Ubuntu 20.04+)
+- 64-bit
+- 50MB de espaço livre
+- Conexão com internet (para dependências)
+
+🔍 TESTE DO SISTEMA:
+Execute: ./test_linux_mint.sh
+
+📖 DOCUMENTAÇÃO COMPLETA:
+Leia: cat README_LINUX_MINT.md
+
+🎉 RECURSOS INCLUÍDOS:
+✅ Interface gráfica moderna
+✅ Temas personalizáveis
+✅ Calendário integrado
+✅ Gráficos e relatórios
+✅ Timer Pomodoro
+✅ Gerenciamento de tarefas
+✅ Backup automático
+
+💡 DICA: Se tiver problemas, execute o script de teste primeiro!
+
+---
+Desenvolvido com ❤️ para Linux Mint
+

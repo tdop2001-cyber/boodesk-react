@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/logo192.png",
+      "dest": "/logo192.png"
+    },
+    {
+      "src": "/logo512.png",
+      "dest": "/logo512.png"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_SUPABASE_URL": "@react_app_supabase_url",
+    "REACT_APP_SUPABASE_ANON_KEY": "@react_app_supabase_anon_key",
+    "REACT_APP_R2_ACCESS_KEY_ID": "@react_app_r2_access_key_id",
+    "REACT_APP_R2_SECRET_ACCESS_KEY": "@react_app_r2_secret_access_key",
+    "REACT_APP_R2_BUCKET": "@react_app_r2_bucket",
+    "REACT_APP_R2_ENDPOINT": "@react_app_r2_endpoint"
+  }
+}

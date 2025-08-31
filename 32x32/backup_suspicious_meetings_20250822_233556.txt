@@ -1,0 +1,197 @@
+BACKUP DE REUNIÕES SUSPEITAS
+==================================================
+Data do backup: 2025-08-22 23:35:56.610648
+Total de reuniões: 32
+
+ID: 32
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:16.008250
+------------------------------
+ID: 31
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:15.228586
+------------------------------
+ID: 30
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:14.430780
+------------------------------
+ID: 29
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:13.727047
+------------------------------
+ID: 28
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:12.931091
+------------------------------
+ID: 27
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/8564949780?pwd=432209
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 17:24:12.218367
+------------------------------
+ID: 26
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:11.499064
+------------------------------
+ID: 25
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:10.712790
+------------------------------
+ID: 24
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:09.967910
+------------------------------
+ID: 23
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:09.268284
+------------------------------
+ID: 22
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:08.533049
+------------------------------
+ID: 21
+Título: aaaa
+Descrição: Platform: zoom, Link: https://zoom.us/j/3473757365?pwd=551377
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 17:24:07.770212
+------------------------------
+ID: 20
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:07.117619
+------------------------------
+ID: 19
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:06.324040
+------------------------------
+ID: 18
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:05.579938
+------------------------------
+ID: 17
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:04.917660
+------------------------------
+ID: 16
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:04.167442
+------------------------------
+ID: 15
+Título: URGENTE
+Descrição: Platform: zoom, Link: https://zoom.us/j/4133317888?pwd=118654
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 17:24:03.195399
+------------------------------
+ID: 14
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:24:02.426323
+------------------------------
+ID: 13
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:24:01.596209
+------------------------------
+ID: 12
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:24:00.844666
+------------------------------
+ID: 11
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:24:00.123896
+------------------------------
+ID: 10
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:23:59.381576
+------------------------------
+ID: 9
+Título: REUNIAO
+Descrição: Platform: zoom, Link: https://zoom.us/j/8305163627?pwd=442754
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 17:23:58.767164
+------------------------------
+ID: 8
+Título: aaaa
+Descrição: 
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 15:21:06.302949
+------------------------------
+ID: 7
+Título: aaaa
+Descrição: 
+Data/Hora: 2025-08-21 15:00:00
+Criado: 2025-08-21 15:21:05.942515
+------------------------------
+ID: 6
+Título: aaaa
+Descrição: 
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 15:21:05.601293
+------------------------------
+ID: 5
+Título: aaaa
+Descrição: 
+Data/Hora: 2025-08-19 21:00:00
+Criado: 2025-08-21 15:21:05.285974
+------------------------------
+ID: 4
+Título: URGENTE
+Descrição: 
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 15:21:04.950166
+------------------------------
+ID: 3
+Título: URGENTE
+Descrição: 
+Data/Hora: 2025-08-19 20:00:00
+Criado: 2025-08-21 15:21:04.618733
+------------------------------
+ID: 2
+Título: REUNIAO
+Descrição: 
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 15:21:04.252115
+------------------------------
+ID: 1
+Título: REUNIAO
+Descrição: 
+Data/Hora: 2025-08-18 17:32:00
+Criado: 2025-08-21 15:21:03.874680
+------------------------------

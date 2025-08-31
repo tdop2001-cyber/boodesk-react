@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "sound_enabled": true,
+  "popup_enabled": true,
+  "advance_notification_minutes": 15,
+  "show_widget": true,
+  "widget_position": "top_right",
+  "notification_duration": 10
+}
