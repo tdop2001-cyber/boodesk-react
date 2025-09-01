@@ -101,10 +101,10 @@ http://localhost:3000/callback
 {
   "type": "service_account",
   "project_id": "boodesk-meet-integration",
-  "client_id": "519128865980-0r6erkvt88vi263e1ut09qj9lorqdo23.apps.googleusercontent.com",
+  "client_id": "YOUR_CLIENT_ID_HERE",
   "oauth2": {
-    "client_id": "519128865980-0r6erkvt88vi263e1ut09qj9lorqdo23.apps.googleusercontent.com",
-    "client_secret": "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",
+    "client_id": "YOUR_CLIENT_ID_HERE",
+    "client_secret": "YOUR_CLIENT_SECRET_HERE",
     "redirect_uris": [
       "http://localhost:3000",
       "http://localhost:3000/callback"
@@ -134,7 +134,7 @@ npm start
 3. Console deve mostrar:
    ```
    ✅ Credenciais OAuth 2.0 do Google Meet encontradas
-   🔑 Client ID: 519128865980-0r6erkvt88vi263e1ut09qj9lorqdo23.apps.googleusercontent.com
+   🔑 Client ID: YOUR_CLIENT_ID_HERE
    🔐 Iniciando autenticação OAuth 2.0 com Google Meet API...
    ✅ Autenticação OAuth 2.0 com Google Meet API bem-sucedida!
    ```
