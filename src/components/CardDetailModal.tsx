@@ -158,7 +158,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
           await db.createSubtask(newSubtaskData);
         } else {
           // Subtarefa existente - atualizar no banco
-          await db.updateSubtask(parseInt(subtask.id || '0'), {
+          await db.updateSubtask(parseInt(subtask.id.toString() || '0'), {
             title: subtask.title || '',
             completed: subtask.completed || false,
             due_date: subtask.dueDate || undefined,
