@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckSquare, 
   Square, 
@@ -23,9 +23,12 @@ import {
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { db } from '../services/database';
+import { useAuth } from '../contexts/AuthContext';
 
+// Interface compatível com o banco de dados
 export interface Subtask {
-  id: string;
+  id: string | number;
   title: string;
   completed: boolean;
   createdAt: Date;
@@ -43,6 +46,15 @@ export interface Subtask {
   importance?: 'low' | 'normal' | 'high' | 'critical';
   category?: string;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  // Campos do banco
+  card_id?: string;
+  status?: string;
+  due_date?: string;
+  estimated_time?: string;
+  actual_time?: string;
+  user_id?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface SubtaskComment {
@@ -57,16 +69,19 @@ interface SubtaskManagerProps {
   onSubtasksChange: (subtasks: Subtask[]) => void;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
+  cardId?: string; // ID do card para salvar no banco
 }
 
 const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   subtasks,
   onSubtasksChange,
   isExpanded = false,
-  onToggleExpanded
+  onToggleExpanded,
+  cardId
 }) => {
   const { addToast } = useToast();
   const { getPriorityColor, getPriorityTextColor } = useSettings();
+  const { user } = useAuth();
 
   const getPriorityLabel = (priority: string): string => {
     switch (priority.toLowerCase()) {
@@ -77,6 +92,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       default: return priority;
     }
   };
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -108,7 +124,73 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   const completedCount = subtasks.filter(subtask => subtask.completed).length;
   const totalCount = subtasks.length;
 
-  const addSubtask = () => {
+  // Salvar subtarefa no banco de dados
+  const saveSubtaskToDatabase = async (subtaskData: Partial<Subtask>): Promise<Subtask | null> => {
+    if (!cardId) {
+      console.error('Card ID não fornecido para salvar subtarefa');
+      return null;
+    }
+
+    try {
+      const newSubtaskData = {
+        card_id: cardId,
+        title: subtaskData.title || '',
+        description: subtaskData.description || '',
+        status: subtaskData.completed ? 'completed' : 'pending',
+        priority: subtaskData.priority || 'medium',
+        importance: subtaskData.importance || 'normal',
+        category: subtaskData.category || 'Geral',
+        due_date: subtaskData.dueDate || undefined,
+        estimated_time: (subtaskData.estimatedTime || 0).toString(),
+        actual_time: (subtaskData.actualTime || 0).toString(),
+        tags: subtaskData.tags || [],
+        completed: subtaskData.completed || false,
+        user_id: user?.id || undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const savedSubtask = await db.createSubtask(newSubtaskData);
+      
+      // Converter para o formato local
+      if (savedSubtask) {
+        return {
+          id: savedSubtask.id,
+          title: savedSubtask.title,
+          completed: savedSubtask.completed,
+          createdAt: new Date(savedSubtask.created_at),
+          description: savedSubtask.description,
+          priority: savedSubtask.priority as 'low' | 'medium' | 'high',
+          importance: savedSubtask.importance as 'low' | 'normal' | 'high' | 'critical',
+          category: savedSubtask.category,
+          dueDate: savedSubtask.due_date,
+          estimatedTime: savedSubtask.estimated_time ? parseInt(savedSubtask.estimated_time) : undefined,
+          actualTime: savedSubtask.actual_time ? parseInt(savedSubtask.actual_time) : undefined,
+          tags: savedSubtask.tags || [],
+          card_id: savedSubtask.card_id,
+          status: savedSubtask.status,
+          due_date: savedSubtask.due_date,
+          estimated_time: savedSubtask.estimated_time,
+          actual_time: savedSubtask.actual_time,
+          user_id: savedSubtask.user_id,
+          created_at: savedSubtask.created_at,
+          updated_at: savedSubtask.updated_at
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Erro ao salvar subtarefa no banco:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro ao salvar',
+        message: 'Não foi possível salvar a subtarefa no banco de dados.'
+      });
+      return null;
+    }
+  };
+
+  const addSubtask = async () => {
     if (!newSubtaskTitle.trim()) {
       addToast({
         type: 'warning',
@@ -119,23 +201,42 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     }
 
     const newSubtask: Subtask = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `temp-${Date.now()}`, // ID temporário
       title: newSubtaskTitle.trim(),
       completed: false,
       createdAt: new Date()
     };
 
+    // Adicionar ao estado local primeiro
     onSubtasksChange([...subtasks, newSubtask]);
     setNewSubtaskTitle('');
-    
-    addToast({
-      type: 'success',
-      title: 'Subtarefa adicionada',
-      message: 'Nova subtarefa criada com sucesso'
-    });
+
+    // Salvar no banco de dados
+    if (cardId) {
+      const savedSubtask = await saveSubtaskToDatabase(newSubtask);
+      if (savedSubtask) {
+        // Atualizar o ID temporário com o ID real do banco
+        const updatedSubtasks = subtasks.map(subtask => 
+          subtask.id === newSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+        );
+        onSubtasksChange(updatedSubtasks);
+        
+        addToast({
+          type: 'success',
+          title: 'Subtarefa criada',
+          message: 'Nova subtarefa criada e salva com sucesso!'
+        });
+      }
+    } else {
+      addToast({
+        type: 'success',
+        title: 'Subtarefa adicionada',
+        message: 'Nova subtarefa criada com sucesso'
+      });
+    }
   };
 
-  const addDetailedSubtask = () => {
+  const addDetailedSubtask = async () => {
     if (!detailForm.title.trim()) {
       addToast({
         type: 'warning',
@@ -146,7 +247,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     }
 
     const newSubtask: Subtask = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `temp-${Date.now()}`, // ID temporário
       title: detailForm.title.trim(),
       description: detailForm.description,
       completed: false,
@@ -163,15 +264,34 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       comments: []
     };
 
+    // Adicionar ao estado local primeiro
     onSubtasksChange([...subtasks, newSubtask]);
     resetDetailForm();
     setShowDetailModal(null);
-    
-    addToast({
-      type: 'success',
-      title: 'Subtarefa detalhada criada',
-      message: 'Nova subtarefa com todas as informações foi criada'
-    });
+
+    // Salvar no banco de dados
+    if (cardId) {
+      const savedSubtask = await saveSubtaskToDatabase(newSubtask);
+      if (savedSubtask) {
+        // Atualizar o ID temporário com o ID real do banco
+        const updatedSubtasks = subtasks.map(subtask => 
+          subtask.id === newSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+        );
+        onSubtasksChange(updatedSubtasks);
+        
+        addToast({
+          type: 'success',
+          title: 'Subtarefa detalhada criada',
+          message: 'Nova subtarefa com todas as informações foi criada e salva!'
+        });
+      }
+    } else {
+      addToast({
+        type: 'success',
+        title: 'Subtarefa detalhada criada',
+        message: 'Nova subtarefa com todas as informações foi criada'
+      });
+    }
   };
 
   const resetDetailForm = () => {
@@ -211,7 +331,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     setShowDetailModal('detail');
   };
 
-  const saveSubtaskDetails = () => {
+  const saveSubtaskDetails = async () => {
     if (!selectedSubtask) return;
 
     const updatedSubtask: Subtask = {
@@ -228,60 +348,102 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       recurrence: detailForm.recurrence
     };
 
-    const updatedSubtasks = subtasks.map(subtask => 
-      subtask.id === selectedSubtask.id ? updatedSubtask : subtask
-    );
-
-    onSubtasksChange(updatedSubtasks);
-    setShowDetailModal(null);
-    setSelectedSubtask(null);
-    
-    addToast({
-      type: 'success',
-      title: 'Subtarefa atualizada',
-      message: 'Detalhes da subtarefa foram salvos com sucesso'
-    });
+    // Salvar no banco de dados
+    if (cardId) {
+      const savedSubtask = await saveSubtaskToDatabase(updatedSubtask);
+      if (savedSubtask) {
+        const updatedSubtasks = subtasks.map(subtask => 
+          subtask.id === selectedSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+        );
+        onSubtasksChange(updatedSubtasks);
+        setShowDetailModal(null);
+        setSelectedSubtask(null);
+        
+        addToast({
+          type: 'success',
+          title: 'Subtarefa atualizada',
+          message: 'Detalhes da subtarefa foram salvos com sucesso'
+        });
+      }
+    } else {
+      const updatedSubtasks = subtasks.map(subtask => 
+        subtask.id === selectedSubtask.id ? updatedSubtask : subtask
+      );
+      onSubtasksChange(updatedSubtasks);
+      setShowDetailModal(null);
+      setSelectedSubtask(null);
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa atualizada',
+        message: 'Detalhes da subtarefa foram salvos com sucesso'
+      });
+    }
   };
 
-  const toggleSubtask = (id: string) => {
+  const toggleSubtask = async (id: string) => {
     const updatedSubtasks = subtasks.map(subtask => {
-      if (subtask.id === id) {
-        return {
+      if (subtask.id.toString() === id) {
+        const updatedSubtask: Subtask = {
           ...subtask,
           completed: !subtask.completed,
           completedAt: !subtask.completed ? new Date() : undefined
         };
+
+        // Salvar no banco de dados
+        if (cardId) {
+          saveSubtaskToDatabase(updatedSubtask).catch(error => {
+            console.error('Erro ao salvar subtarefa:', error);
+          });
+        }
+
+        return updatedSubtask;
       }
       return subtask;
     });
 
     onSubtasksChange(updatedSubtasks);
     
-    const subtask = subtasks.find(s => s.id === id);
-    addToast({
-      type: 'success',
-      title: subtask?.completed ? 'Subtarefa reaberta' : 'Subtarefa concluída',
-      message: subtask?.title
-    });
+    const subtask = subtasks.find(s => s.id.toString() === id);
+    if (subtask) {
+      addToast({
+        type: 'success',
+        title: subtask.completed ? 'Subtarefa concluída' : 'Subtarefa reaberta',
+        message: subtask.completed ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
+      });
+    }
   };
 
-  const deleteSubtask = (id: string) => {
-    const updatedSubtasks = subtasks.filter(subtask => subtask.id !== id);
+  const deleteSubtask = async (id: string) => {
+    // Excluir do banco de dados se for um ID numérico
+    if (cardId) {
+      const numericId = parseInt(id);
+      if (!isNaN(numericId)) {
+        try {
+          await db.deleteSubtask(numericId);
+        } catch (error) {
+          console.error('Erro ao excluir subtarefa do banco:', error);
+        }
+      }
+    }
+
+    // Remover do estado local
+    const updatedSubtasks = subtasks.filter(subtask => subtask.id.toString() !== id);
     onSubtasksChange(updatedSubtasks);
     
     addToast({
-      type: 'info',
-      title: 'Subtarefa removida',
-      message: 'Subtarefa excluída com sucesso'
+      type: 'success',
+      title: 'Subtarefa excluída',
+      message: 'Subtarefa foi removida com sucesso'
     });
   };
 
   const startEditing = (subtask: Subtask) => {
-    setEditingId(subtask.id);
+    setEditingId(subtask.id.toString()); // Ensure it's a string for comparison
     setEditingTitle(subtask.title);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingTitle.trim()) {
       addToast({
         type: 'warning',
@@ -291,22 +453,43 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       return;
     }
 
-    const updatedSubtasks = subtasks.map(subtask => {
-      if (subtask.id === editingId) {
-        return { ...subtask, title: editingTitle.trim() };
-      }
-      return subtask;
-    });
+    const updatedSubtask: Subtask = {
+      ...subtasks.find(s => s.id.toString() === editingId)!, // Find the original subtask
+      title: editingTitle.trim(),
+      updated_at: new Date().toISOString()
+    };
 
-    onSubtasksChange(updatedSubtasks);
-    setEditingId(null);
-    setEditingTitle('');
-    
-    addToast({
-      type: 'success',
-      title: 'Subtarefa atualizada',
-      message: 'Título da subtarefa foi atualizado'
-    });
+    // Salvar no banco de dados
+    if (cardId) {
+      const savedSubtask = await saveSubtaskToDatabase(updatedSubtask);
+      if (savedSubtask) {
+        const updatedSubtasks = subtasks.map(subtask => 
+          subtask.id === updatedSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+        );
+        onSubtasksChange(updatedSubtasks);
+        setEditingId(null);
+        setEditingTitle('');
+        
+        addToast({
+          type: 'success',
+          title: 'Subtarefa atualizada',
+          message: 'Título da subtarefa foi atualizado'
+        });
+      }
+    } else {
+      const updatedSubtasks = subtasks.map(subtask => 
+        subtask.id === updatedSubtask.id ? updatedSubtask : subtask
+      );
+      onSubtasksChange(updatedSubtasks);
+      setEditingId(null);
+      setEditingTitle('');
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa atualizada',
+        message: 'Título da subtarefa foi atualizado'
+      });
+    }
   };
 
   const cancelEdit = () => {
@@ -411,7 +594,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
               >
                 {/* Checkbox */}
                 <button
-                  onClick={() => toggleSubtask(subtask.id)}
+                  onClick={() => toggleSubtask(subtask.id.toString())}
                   className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors mt-0.5"
                 >
                   {subtask.completed ? (
@@ -423,7 +606,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  {editingId === subtask.id ? (
+                  {editingId === subtask.id.toString() ? (
                     <input
                       type="text"
                       value={editingTitle}
@@ -534,7 +717,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
 
                 {/* Actions */}
                 <div className="flex items-start space-x-1 mt-0.5">
-                  {editingId === subtask.id ? (
+                  {editingId === subtask.id.toString() ? (
                     <>
                       <button
                         onClick={saveEdit}
@@ -566,7 +749,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
                         <Edit className="w-4 h-4 text-brand-gray/60" />
                       </button>
                       <button
-                        onClick={() => deleteSubtask(subtask.id)}
+                        onClick={() => deleteSubtask(subtask.id.toString())}
                         className="p-1 rounded-lg hover:bg-red-100 transition-colors"
                         title="Excluir"
                       >

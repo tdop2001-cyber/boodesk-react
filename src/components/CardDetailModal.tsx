@@ -913,6 +913,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                         saveSubtasksToDatabase(updatedSubtasks);
                       }}
                       isExpanded={true}
+                      cardId={card.card_id || card.id.toString()}
                     />
                   )}
 
