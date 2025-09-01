@@ -140,27 +140,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) =>
             </div>
           </form>
 
-          {/* Informações de usuários padrão */}
-          <div className="mt-8 p-4 bg-brand-light-gray/50 rounded-lg">
-            <h3 className="text-sm font-semibold text-brand-gray mb-3 flex items-center">
-              <User className="w-4 h-4 mr-2" />
-              Usuários Padrão
-            </h3>
-            <div className="space-y-2 text-xs text-brand-gray/70">
-              <div className="flex justify-between">
-                <span>Administrador:</span>
-                <span className="font-mono">admin / admin123</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Usuário:</span>
-                <span className="font-mono">user / user123</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Gerente:</span>
-                <span className="font-mono">manager / manager123</span>
-              </div>
-            </div>
-          </div>
+
 
           {/* Botão fechar */}
           {onClose && (
