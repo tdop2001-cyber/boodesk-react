@@ -842,7 +842,7 @@ export class DatabaseService {
       console.log('Database: Configurações recebidas:', settings);
       
       // Verificar se a tabela existe primeiro
-      const { data: tableCheck, error: tableError } = await supabase
+      const { error: tableError } = await supabase
         .from('user_settings')
         .select('id')
         .limit(1);

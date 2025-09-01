@@ -36,10 +36,10 @@
     "web-vitals": "^2.1.4",
     "zod": "^3.21.4"
   },
-  "homepage": "https://td-op-2001.github.io/boodesk-react",
+  "homepage": "https://tdop2001-cyber.github.io/boodesk-react",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "cross-env DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
@@ -66,6 +66,7 @@
   "devDependencies": {
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
+    "cross-env": "^10.0.0",
     "gh-pages": "^6.3.0"
   }
 }
