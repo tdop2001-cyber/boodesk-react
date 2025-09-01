@@ -2085,7 +2085,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className={`w-6 h-6 ${selectedBoardTemplate.color} rounded flex items-center justify-center text-white text-xs overflow-hidden`}>
-                            {selectedBoardTemplate.icon && !selectedBoardTemplate.icon.startsWith('📝') && !selectedBoardTemplate.icon.startsWith('🐛') && !selectedBoardTemplate.icon.startsWith('✨') ? (
+                            {selectedBoardTemplate.icon && typeof selectedBoardTemplate.icon === 'string' && !selectedBoardTemplate.icon.startsWith('📝') && !selectedBoardTemplate.icon.startsWith('🐛') && !selectedBoardTemplate.icon.startsWith('✨') ? (
                               <img 
                                 src={`/img/icons_template/${selectedBoardTemplate.icon}.png`} 
                                 alt={selectedBoardTemplate.icon}
@@ -2207,7 +2207,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                       >
                         <div className="flex items-center space-x-3">
                           <div className={`w-8 h-8 ${template.color} rounded-lg flex items-center justify-center text-white text-sm overflow-hidden`}>
-                            {template.icon && !template.icon.startsWith('📝') && !template.icon.startsWith('🐛') && !template.icon.startsWith('✨') ? (
+                            {template.icon && typeof template.icon === 'string' && !template.icon.startsWith('📝') && !template.icon.startsWith('🐛') && !template.icon.startsWith('✨') ? (
                               <img 
                                 src={`/img/icons_template/${template.icon}.png`} 
                                 alt={template.icon}
@@ -2515,7 +2515,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                     >
                       <div className="flex items-center space-x-3 mb-3">
                         <div className={`w-10 h-10 ${template.color} rounded-lg flex items-center justify-center text-white text-lg overflow-hidden`}>
-                          {template.icon && !template.icon.startsWith('📝') && !template.icon.startsWith('🐛') && !template.icon.startsWith('✨') ? (
+                                                      {template.icon && typeof template.icon === 'string' && !template.icon.startsWith('📝') && !template.icon.startsWith('🐛') && !template.icon.startsWith('✨') ? (
                             <img 
                               src={`/img/icons_template/${template.icon}.png`} 
                               alt={template.icon}
@@ -2876,7 +2876,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                   <div className="p-4 bg-brand-light-gray/30 rounded-xl">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className={`w-8 h-8 ${newBoardTemplate.color} rounded-lg flex items-center justify-center text-white text-sm overflow-hidden`}>
-                        {newBoardTemplate.icon && !newBoardTemplate.icon.startsWith('📝') && !newBoardTemplate.icon.startsWith('🐛') && !newBoardTemplate.icon.startsWith('✨') ? (
+                                                    {newBoardTemplate.icon && typeof newBoardTemplate.icon === 'string' && !newBoardTemplate.icon.startsWith('📝') && !newBoardTemplate.icon.startsWith('🐛') && !newBoardTemplate.icon.startsWith('✨') ? (
                           <img 
                             src={`/img/icons_template/${newBoardTemplate.icon}.png`} 
                             alt={newBoardTemplate.icon}

@@ -169,7 +169,7 @@ const Calendar: React.FC = () => {
         isAllDay: true
       }));
 
-      setEvents(prev => [...prev.filter(e => !e.id.startsWith('boodesk-')), ...taskEvents]);
+      setEvents(prev => [...prev.filter(e => typeof e.id === 'string' && !e.id.startsWith('boodesk-')), ...taskEvents]);
     } catch (error) {
       console.error('Erro ao carregar tarefas do Boodesk:', error);
       addToast({ type: 'error', title: 'Erro', message: 'Erro ao carregar tarefas do Boodesk' });

@@ -142,7 +142,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
       // Para cada subtarefa, verificar se precisa ser criada, atualizada ou deletada
       for (const subtask of updatedSubtasks) {
-        if (subtask.id && subtask.id.startsWith('temp-')) {
+        if (subtask.id && typeof subtask.id === 'string' && subtask.id.startsWith('temp-')) {
           // Nova subtarefa - criar no banco
           const newSubtaskData = {
             card_id: cardId,
