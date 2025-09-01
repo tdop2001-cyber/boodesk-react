@@ -1,0 +1,372 @@
+[33m7d1a5f6[m Initial commit: Boodesk React - Sistema Kanban Avançado
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex 4d29575..1eb772f 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -21,3 +21,34 @@[m
+ npm-debug.log*[m
+ yarn-debug.log*[m
+ yarn-error.log*[m
+[32m+[m
+[32m+[m[32m# Google Calendar Credentials[m
+[32m+[m[32mpublic/credentials.json[m
+[32m+[m
+[32m+[m[32m# Environment files[m
+[32m+[m[32m.env[m
+[32m+[m[32m.env.backup[m
+[32m+[m[32m.env.local[m
+[32m+[m[32m.env.development.local[m
+[32m+[m[32m.env.test.local[m
+[32m+[m[32m.env.production.local[m
+[32m+[m
+[32m+[m[32m# Credentials and sensitive files[m
+[32m+[m[32mcredentials.json[m
+[32m+[m[32menv_atualizado.txt[m
+[32m+[m[32menv_completo.txt[m
+[32m+[m
+[32m+[m[32m# Python files (if any)[m
+[32m+[m[32m*.py[m
+[32m+[m[32m__pycache__/[m
+[32m+[m[32m*.pyc[m
+[32m+[m
+[32m+[m[32m# IDE files[m
+[32m+[m[32m.vscode/[m
+[32m+[m[32m.idea/[m
+[32m+[m[32m*.swp[m
+[32m+[m[32m*.swo[m
+[32m+[m
+[32m+[m[32m# OS files[m
+[32m+[m[32mThumbs.db[m
+[32m+[m[32mdesktop.ini[m
+[1mdiff --git a/32x32/.cursorignore b/32x32/.cursorignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..fe88480[m
+[1m--- /dev/null[m
+[1m+++ b/32x32/.cursorignore[m
+[36m@@ -0,0 +1,12 @@[m
+[32m+[m[32m# Arquivos para ignorar no contexto do Cursor[m
+[32m+[m[32m*.pyc[m
+[32m+[m[32m__pycache__/[m
+[32m+[m[32m*.log[m
+[32m+[m[32m.env[m
+[32m+[m[32m*.tmp[m
+[32m+[m[32m*.temp[m
+[32m+[m[32muploads/[m
+[32m+[m[32mtemp/[m
+[32m+[m[32mnode_modules/[m
+[32m+[m[32m.DS_Store[m
+[32m+[m[32mThumbs.db[m
+[1mdiff --git a/32x32/.cursorrules b/32x32/.cursorrules[m
+[1mnew file mode 100644[m
+[1mindex 0000000..4bfc301[m
+[1m--- /dev/null[m
+[1m+++ b/32x32/.cursorrules[m
+[36m@@ -0,0 +1,499 @@[m
+[32m+[m[32m# 🎯 CONTEXTO BOODESK - CURSOR 94ESSSSSSSS                     4[m
+[32m+[m
+[32m+[m[32m## 📋 PROJETO: BOODESK - Sistema de Gerenciamento de Tarefas[m
+[32m+[m
+[32m+[m[32m### 🏗️ ARQUITETURA ATUAL[m
+[32m+[m[32m- **Frontend**: Tkinter GUI[m
+[32m+[m[32m- **Backend**: PostgreSQL + Supabase[m
+[32m+[m[32m- **Storage**: Cloudflare R2 + Supabase Storage[m
+[32m+[m[32m- **Real-time**: Supabase Realtime[m
+[32m+[m[32m- **Integrações**: Google Calendar, Email[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## ✅ INTEGRAÇÕES CONFIGURADAS[m
+[32m+[m
+[32m+[m[32m### 🔗 SUPABASE (FUNCIONANDO)[m
+[32m+[m[32m```python[m
+[32m+[m[32m# Configuração atual em supabase_setup.py[m
+[32m+[m[32mSUPABASE_URL = "https://takwmhdwydujndqlznqk.supabase.co"[m
+[32m+[m[32mSUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRha3dtaGR3eWR1am5kcWx6bnFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODQ3MDMsImV4cCI6MjA3MTM2MDcwM30.XUuRWmLrvNXfCI9PtD-2CR2y3NkxMFKRyQT_gbkuIhE"[m
+[32m+[m
+[32m+[m[32m# PostgreSQL[m
+[32m+[m[32mHOST = "db.takwmhdwydujndqlznqk.supabase.co"[m
+[32m+[m[32mDATABASE = "postgres"[m
+[32m+[m[32mUSER = "postgres"[m
+[32m+[m[32mPASSWORD = "2412"[m
+[32m+[m[32mPORT = "5432"[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### ☁️ CLOUDFLARE R2 (CONFIGURADO - PRECISA CREDENCIAIS)[m
+[32m+[m[32m```python[m
+[32m+[m[32m# Endpoint configurado[m
+[32m+[m[32mR2_ENDPOINT = "https://d20101af9dd64057603c4871abeb1b0c.r2.cloudflarestorage.com"[m
+[32m+[m[32mBUCKET_NAME = "boodesk-uploads"[m
+[32m+[m
+[32m+[m[32m# Precisa configurar:[m
+[32m+[m[32m# R2_ACCESS_KEY_ID[m
+[32m+[m[32m# R2_SECRET_ACCESS_KEY[m
+[32m+[m[32m# CLOUDFLARE_ACCOUNT_ID[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 📊 ESTRUTURA DO BANCO DE DADOS[m
+[32m+[m
+[32m+[m[32m### 🗄️ TABELAS PRINCIPAIS[m
+[32m+[m[32m```sql[m
+[32m+[m[32m-- Tabelas existentes no Supabase[m
+[32m+[m[32mmembers (id, name, email, phone, role, department, avatar_url, is_active)[m
+[32m+[m[32musers (id, username, email, password_hash, profile_image, role, created_at)[m
+[32m+[m[32mboards (id, title, description, owner_id, created_at, updated_at)[m
+[32m+[m[32mboard_members (board_id, user_id, role, joined_at)[m
+[32m+[m[32mlists (id, board_id, title, position, created_at)[m
+[32m+[m[32mcards (id, list_id, title, description, position, due_date, priority, created_at)[m
+[32m+[m[32mcard_members (card_id, user_id, role, assigned_at)[m
+[32m+[m[32msubtasks (id, card_id, title, description, assigned_to, created_by, status, created_at)[m
+[32m+[m[32mattachments (id, card_id, file_name, file_url, file_size, uploaded_by, uploaded_at)[m
+[32m+[m[32mcomments (id, card_id, user_id, content, created_at)[m
+[32m+[m[32mactivities (id, user_id, action_type, target_type, target_id, details, created_at)[m
+[32m+[m[32mchats (id, user1_id, user2_id, created_at)[m
+[32m+[m[32mmessages (id, chat_id, sender_id, receiver_id, content, created_at)[m
+[32m+[m[32mnotes (id, user_id, title, content, created_at, updated_at)[m
+[32m+[m[32muser_preferences (id, user_id, theme, notifications, language, created_at)[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 🔧 SISTEMAS IMPLEMENTADOS[m
+[32m+[m
+[32m+[m[32m### 📤 SISTEMA DE UPLOAD HÍBRIDO[m
+[32m+[m[32m```python[m
+[32m+[m[32m# sistema_upload_completo.py[m
+[32m+[m[32mclass SistemaUploadCompleto:[m
+[32m+[m[32m    def __init__(self, supabase_url, supabase_key):[m
+[32m+[m[32m        # Configura Supabase e R2 automaticamente[m
+[32m+[m[41m    [m
+[32m+[m[32m    def upload_arquivo(self, file_path, folder):[m
+[32m+[m[32m        # Escolhe automaticamente entre Supabase (<50MB) e R2 (>50MB)[m
+[32m+[m[32m        # Retorna: {'success': True, 'url': 'url_do_arquivo', 'provider': 'supabase/r2'}[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 👥 SISTEMA DE MEMBROS[m
+[32m+[m[32m```python[m
+[32m+[m[32m# Sistema completo de gerenciamento de equipe[m
+[32m+[m[32m# - CRUD de membros[m
+[32m+[m[32m# - Upload de avatares[m
+[32m+[m[32m# - Atribuição a cards[m
+[32m+[m[32m# - Histórico de atividades[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 📅 INTEGRAÇÃO COM CALENDÁRIO[m
+[32m+[m[32m```python[m
+[32m+[m[32m# Integração com Google Calendar[m
+[32m+[m[32m# - Sincronização de tarefas[m
+[32m+[m[32m# - Lembretes automáticos[m
+[32m+[m[32m# - Eventos de equipe[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 🚀 PADRÕES DE DESENVOLVIMENTO[m
+[32m+[m
+[32m+[m[32m### 📁 ORGANIZAÇÃO DE ARQUIVOS[m
+[32m+[m[32m```[m
+[32m+[m[32muploads/[m
+[32m+[m[32m├── profile_images/     # Fotos de perfil (< 5MB → Supabase)[m
+[32m+[m[32m├── card_attachments/   # Anexos de cards (< 50MB → Supabase, > 50MB → R2)[m
+[32m+[m[32m├── documents/          # Documentos (< 50MB → Supabase, > 50MB → R2)[m
+[32m+[m[32m└── temp/              # Arquivos temporários[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 🔐 SEGURANÇA[m
+[32m+[m[32m- **Autenticação**: Supabase Auth[m
+[32m+[m[32m- **Autorização**: Row Level Security (RLS)[m
+[32m+[m[32m- **Uploads**: Validação de tipo e tamanho[m
+[32m+[m[32m- **Dados**: Criptografia em trânsito e repouso[m
+[32m+[m
+[32m+[m[32m### 🎨 INTERFACE[m
+[32m+[m[32m- **Tema**: Moderno e responsivo[m
+[32m+[m[32m- **Cores**: Azul (#2563eb), Verde (#10b981), Vermelho (#ef4444)[m
+[32m+[m[32m- **Ícones**: Material Design[m
+[32m+[m[32m- **Layout**: Grid responsivo[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## ⚡ COMANDOS RÁPIDOS PARA TESTE[m
+[32m+[m
+[32m+[m[32m### 🔗 Testar Supabase[m
+[32m+[m[32m```python[m
+[32m+[m[32mfrom supabase_setup import supabase_config[m
+[32m+[m[32mconn = supabase_config.get_connection()[m
+[32m+[m[32mprint("✅ Supabase OK" if conn else "❌ Erro")[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 📤 Testar Upload[m
+[32m+[m[32m```python[m
+[32m+[m[32mfrom sistema_upload_completo import SistemaUploadCompleto[m
+[32m+[m[32msistema = SistemaUploadCompleto(supabase_url, supabase_key)[m
+[32m+[m[32mresultado = sistema.upload_arquivo("teste.txt", "testes")[m
+[32m+[m[32mprint(f"Upload: {resultado['success']} via {resultado['provider']}")[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 👥 Testar Membros[m
+[32m+[m[32m```python[m
+[32m+[m[32m# Verificar sistema de membros[m
+[32m+[m[32mcursor = conn.cursor()[m
+[32m+[m[32mcursor.execute("SELECT COUNT(*) FROM members")[m
+[32m+[m[32mprint(f"Membros: {cursor.fetchone()[0]}")[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 🎯 REGRAS DE DESENVOLVIMENTO[m
+[32m+[m
+[32m+[m[32m### ✅ SEMPRE FAZER[m
+[32m+[m[32m1. **Usar integrações existentes** (Supabase + R2)[m
+[32m+[m[32m2. **Validar uploads** (tipo, tamanho, segurança)[m
+[32m+[m[32m3. **Implementar RLS** para novas tabelas[m
+[32m+[m[32m4. **Testar conexões** antes de deploy[m
+[32m+[m[32m5. **Documentar mudanças** no código[m
+[32m+[m[32m6. **Implementar isolamento por usuário** (RLS obrigatório)[m
+[32m+[m[32m7. **Validar permissões** em todas as operações[m
+[32m+[m[32m8. **Separar dados por usuário** automaticamente[m
+[32m+[m[32m9. **Verificar widgets antes de configurá-los** (evitar erros NoneType)[m
+[32m+[m[32m10. **Usar get_connection() em vez de connection direto**[m
+[32m+[m[32m11. **Não chamar create_widgets() durante inicialização da classe**[m
+[32m+[m
+[32m+[m[32m### ❌ NUNCA FAZER[m
+[32m+[m[32m1. **Upload local** (sempre na nuvem)[m
+[32m+[m[32m2. **JSON local** (usar Supabase)[m
+[32m+[m[32m3. **Hardcode credenciais** (usar .env)[m
+[32m+[m[32m4. **Ignorar validações** de segurança[m
+[32m+[m[32m5. **Quebrar compatibilidade** existente[m
+[32m+[m[32m6. **Expor dados de outros usuários**[m
+[32m+[m[32m7. **Ignorar controle de acesso**[m
+[32m+[m[32m8. **Permitir acesso sem autenticação**[m
+[32m+[m[32m9. **Acessar widgets sem verificar se existem**[m
+[32m+[m[32m10. **Usar self.db.connection diretamente**[m
+[32m+[m[32m11. **Chamar create_widgets() durante __init__**[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 🎨 PADRÕES DE INTERFACE - TELAS DE CONFIGURAÇÃO[m
+[32m+[m
+[32m+[m[32m### ✅ SEMPRE USAR[m
+[32m+[m[32m1. **Layout**: `pack()` em vez de `grid()` para telas de configuração[m
+[32m+[m[32m2. **Container**: Frame principal com `pack(fill='both', expand=True, padx=20, pady=20)`[m
+[32m+[m[32m3. **Seções**: `LabelFrame` para agrupar configurações relacionadas[m
+[32m+[m[32m4. **Espaçamento**: `pady=(0, 15)` entre seções, `pady=(20, 0)` antes de botões[m
+[32m+[m[32m5. **Botões**: Sempre no final, alinhados à direita com `pack(side='right')`[m
+[32m+[m[32m6. **Estilo**: Usar `Accent.TButton` para botões principais[m
+[32m+[m
+[32m+[m[32m### 📋 ESTRUTURA PADRÃO[m
+[32m+[m[32m```python[m
+[32m+[m[32mdef create_tab_name(self):[m
+[32m+[m[32m    frame = self.tab_name[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Container principal[m
+[32m+[m[32m    main_container = ttk.Frame(frame)[m
+[32m+[m[32m    main_container.pack(fill='both', expand=True, padx=20, pady=20)[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Seção 1[m
+[32m+[m[32m    section1_frame = ttk.LabelFrame(main_container, text="Título da Seção", padding=10)[m
+[32m+[m[32m    section1_frame.pack(fill='x', pady=(0, 15))[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Widgets da seção...[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Seção 2[m
+[32m+[m[32m    section2_frame = ttk.LabelFrame(main_container, text="Outra Seção", padding=10)[m
+[32m+[m[32m    section2_frame.pack(fill='x', pady=(0, 15))[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Widgets da seção...[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Botão de atualizar[m
+[32m+[m[32m    button_frame = ttk.Frame(main_container)[m
+[32m+[m[32m    button_frame.pack(fill='x', pady=(20, 0))[m
+[32m+[m[41m    [m
+[32m+[m[32m    ttk.Button(button_frame, text="Atualizar", command=self.save_settings,[m[41m [m
+[32m+[m[32m               style='Accent.TButton').pack(side='right')[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 🔧 CONFIGURAÇÕES JSON[m
+[32m+[m[32m1. **Função auxiliar**: Sempre usar `_get_safe_dict_setting()` para configurações JSON[m
+[32m+[m[32m2. **Tratamento**: Converter strings JSON para dicionários automaticamente[m
+[32m+[m[32m3. **Fallback**: Valores padrão em caso de erro na deserialização[m
+[32m+[m[32m4. **Salvamento**: Sempre salvar dicionários completos, não strings[m
+[32m+[m
+[32m+[m[32m### 🎯 REGRAS OBRIGATÓRIAS[m
+[32m+[m[32m- ❌ NUNCA usar `grid()` em telas de configuração[m
+[32m+[m[32m- ❌ NUNCA acessar `self.app.settings["key"].items()` diretamente[m
+[32m+[m[32m- ✅ SEMPRE usar `pack()` para layout[m
+[32m+[m[32m- ✅ SEMPRE usar `_get_safe_dict_setting()` para JSON[m
+[32m+[m[32m- ✅ SEMPRE incluir botão "Atualizar" no final[m
+[32m+[m[32m- ✅ SEMPRE usar `LabelFrame` para organizar seções[m
+[32m+[m
+[32m+[m[32m---[m
+[32m+[m
+[32m+[m[32m## 🔐 SISTEMA DE ISOLAMENTO POR USUÁRIO[m
+[32m+[m
+[32m+[m[32m### 👤 **ISOLAMENTO OBRIGATÓRIO**[m
+[32m+[m[32m- **Usuário comum**: Vê apenas seus próprios dados[m
+[32m+[m[32m- **Admin**: Acesso amplo a todos os dados[m
+[32m+[m[32m- **RLS**: Row Level Security em todas as tabelas[m
+[32m+[m[32m- **Autenticação**: Obrigatória para todas as operações[m
+[32m+[m
+[32m+[m[32m### 📊 **VISUALIZAÇÃO POR USUÁRIO**[m
+[32m+[m
+[32m+[m[32m#### **👤 USUÁRIO COMUM**[m
+[32m+[m[32m```sql[m
+[32m+[m[32m-- Quadros: Apenas onde participa[m
+[32m+[m[32mSELECT * FROM boards WHERE id IN ([m
+[32m+[m[32m    SELECT board_id FROM board_members WHERE user_id = auth.uid()[m
+[32m+[m[32m)[m
+[32m+[m
+[32m+[m[32m-- Cards: Apenas onde participa[m
+[32m+[m[32mSELECT * FROM cards WHERE id IN ([m
+[32m+[m[32m    SELECT card_id FROM card_members WHERE user_id = auth.uid()[m
+[32m+[m[32m)[m
+[32m+[m
+[32m+[m[32m-- Subtasks: Vê todas do card, mas só edita as suas[m
+[32m+[m[32mSELECT * FROM subtasks WHERE card_id IN ([m
+[32m+[m[32m    SELECT card_id FROM card_members WHERE user_id = auth.uid()[m
+[32m+[m[32m)[m
+[32m+[m[32m-- Edição: Apenas subtasks criadas pelo usuário[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### **👑 ADMIN**[m
+[32m+[m[32m```sql[m
+[32m+[m[32m-- Acesso completo a todos os dados[m
+[32m+[m[32mSELECT * FROM boards[m
+[32m+[m[32mSELECT * FROM cards[m[41m  [m
+[32m+[m[32mSELECT * FROM subtasks[m
+[32m+[m[32mSELECT * FROM users[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 💬 **CHATS E MENSAGENS**[m
+[32m+[m[32m```sql[m
+[32m+[m[32m-- Usuário vê apenas:[m
+[32m+[m[32m-- 1. Chats onde participa[m
+[32m+[m[32m-- 2. Suas próprias mensagens[m
+[32m+[m[32m-- 3. Mensagens direcionadas a ele[m
+[32m+[m
+[32m+[m[32m-- Chats privados[m
+[32m+[m[32mSELECT * FROM chats WHERE[m[41m [m
+[32m+[m[32m    user1_id = auth.uid() OR user2_id = auth.uid()[m
+[32m+[m
+[32m+[m[32m-- Mensagens do usuário[m
+[32m+[m[32mSELECT * FROM messages WHERE[m[41m [m
+[32m+[m[32m    sender_id = auth.uid() OR receiver_id = auth.uid()[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 📁 **UPLOADS E ARQUIVOS**[m
+[32m+[m[32m```sql[m
+[32m+[m[32m-- Usuário vê apenas:[m
+[32m+[m[32m-- 1. Seus próprios uploads[m
+[32m+[m[32m-- 2. Uploads de cards onde participa (somente leitura)[m
+[32m+[m[32m-- 3. Uploads compartilhados com ele[m
+[32m+[m
+[32m+[m[32m-- Uploads pessoais[m
+[32m+[m[32mSELECT * FROM attachments WHERE[m[41m [m
+[32m+[m[32m    uploaded_by = auth.uid()[m
+[32m+[m
+[32m+[m[32m-- Uploads de cards (somente leitura)[m
+[32m+[m[32mSELECT * FROM attachments WHERE[m[41m [m
+[32m+[m[32m    card_id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### 📝 **ANOTA
