@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, LoginCredentials, RegisterData, ApiResponse } from '../types';
+import { supabase } from '../services/database';
+import { ensureAdminUserExists } from '../utils/createUserInDatabase';
 
 interface AuthContextType {
   user: User | null;
@@ -53,8 +55,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // Simular chamada à API - em produção, isso seria uma chamada real
-      const response = await mockLoginAPI(credentials);
+      // Chamada real à API do Supabase
+      const response = await realLoginAPI(credentials);
       
       if (response.success && response.data) {
         const userData = response.data;
@@ -145,62 +147,71 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Mock API functions - em produção, estas seriam chamadas reais para o backend
-const mockLoginAPI = async (credentials: LoginCredentials): Promise<ApiResponse<User>> => {
-  // Simular delay de rede
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Usuários padrão do sistema (baseado no app23a.py)
-  const defaultUsers = [
-    {
-      id: 1,
-      username: 'admin',
-      email: 'admin@boodesk.com',
-      password_hash: 'admin123',
-      role: 'admin' as const,
-      cargo: 'Administrador',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: 2,
-      username: 'user',
-      email: 'user@boodesk.com',
-      password_hash: 'user123',
-      role: 'user' as const,
-      cargo: 'Usuário',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: 3,
-      username: 'manager',
-      email: 'manager@boodesk.com',
-      password_hash: 'manager123',
-      role: 'manager' as const,
-      cargo: 'Gerente',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-  ];
-
-  const user = defaultUsers.find(
-    u => u.username === credentials.username && u.password_hash === credentials.password
-  );
-
-  if (user) {
-    return {
-      success: true,
-      data: {
-        ...user,
-        is_authenticated: true,
-        login_time: new Date().toISOString(),
-      },
-    };
-  } else {
+// API real para login usando Supabase
+const realLoginAPI = async (credentials: LoginCredentials): Promise<ApiResponse<User>> => {
+  try {
+    // Garantir que o usuário admin existe no banco
+    await ensureAdminUserExists();
+    
+    // Buscar usuário no banco de dados
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', credentials.username)
+      .single();
+    
+    if (error) {
+      console.error('Erro ao buscar usuário:', error);
+      return {
+        success: false,
+        error: 'Usuário não encontrado'
+      };
+    }
+    
+    // Verificar senha (em produção, usar hash real)
+    if (credentials.password === 'admin123' && user.username === 'admin') {
+      return {
+        success: true,
+        data: {
+          ...user,
+          is_authenticated: true,
+          login_time: new Date().toISOString(),
+        },
+      };
+    }
+    
+    if (credentials.password === 'user123' && user.username === 'user') {
+      return {
+        success: true,
+        data: {
+          ...user,
+          is_authenticated: true,
+          login_time: new Date().toISOString(),
+        },
+      };
+    }
+    
+    if (credentials.password === 'manager123' && user.username === 'manager') {
+      return {
+        success: true,
+        data: {
+          ...user,
+          is_authenticated: true,
+          login_time: new Date().toISOString(),
+        },
+      };
+    }
+    
     return {
       success: false,
-      error: 'Usuário ou senha incorretos',
+      error: 'Senha incorreta'
+    };
+    
+  } catch (error) {
+    console.error('Erro no login:', error);
+    return {
+      success: false,
+      error: 'Erro de conexão com o banco'
     };
   }
 };
