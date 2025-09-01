@@ -41,8 +41,7 @@
     "start": "react-scripts start",
     "build": "cross-env DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
