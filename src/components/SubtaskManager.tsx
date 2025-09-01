@@ -764,32 +764,13 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
 
           {/* Add New Subtask */}
           <div className="space-y-3">
-            {/* Quick Add */}
-            <div className="flex items-center space-x-3 p-3 border border-dashed border-brand-light-gray rounded-xl">
-              <button
-                onClick={addSubtask}
-                disabled={!newSubtaskTitle.trim()}
-                className="flex-shrink-0 p-1 rounded-lg bg-brand-blue text-white hover:bg-brand-blue-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <input
-                type="text"
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyPress={(e) => handleKeyPress(e, addSubtask)}
-                placeholder="Adicionar subtarefa rápida..."
-                className="flex-1 p-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              />
-            </div>
-
-            {/* Detailed Add Button */}
+            {/* Add Subtask Button */}
             <button
               onClick={() => openDetailModal()}
               className="w-full flex items-center justify-center space-x-2 p-3 border border-dashed border-brand-blue text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Adicionar Subtarefa Detalhada</span>
+              <span className="text-sm font-medium">Adicionar Subtarefa</span>
             </button>
           </div>
         </>
