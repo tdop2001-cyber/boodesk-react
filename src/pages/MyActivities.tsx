@@ -267,26 +267,75 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     setExpandedItems(newExpanded);
   };
 
-  const toggleSubtaskStatus = (subtaskId: string) => {
-    setActivities(prev => prev.map(activity => {
-      if (activity.id === subtaskId) {
-        return {
-          ...activity,
-          status: activity.status === 'completed' ? 'pending' : 'completed'
-        };
+  const toggleSubtaskStatus = async (subtaskId: string) => {
+    try {
+      // Encontrar a subtarefa e o card pai
+      let subtaskToUpdate: ActivityItem | null = null;
+      let parentCardId: string | null = null;
+
+      for (const activity of activities) {
+        if (activity.subtasks) {
+          const subtask = activity.subtasks.find(s => s.id === subtaskId);
+          if (subtask) {
+            subtaskToUpdate = subtask;
+            parentCardId = activity.id;
+            break;
+          }
+        }
       }
-      if (activity.subtasks) {
-        return {
-          ...activity,
-          subtasks: activity.subtasks.map(subtask => 
-            subtask.id === subtaskId 
-              ? { ...subtask, status: subtask.status === 'completed' ? 'pending' : 'completed' }
-              : subtask
-          )
-        };
+
+      if (!subtaskToUpdate || !parentCardId) {
+        console.error('Subtarefa não encontrada');
+        return;
       }
-      return activity;
-    }));
+
+      const newStatus = subtaskToUpdate.status === 'completed' ? 'pending' : 'completed';
+
+      // Atualizar no banco de dados
+      try {
+        await db.updateSubtask(parseInt(subtaskId), {
+          status: newStatus,
+          completed: newStatus === 'completed'
+        });
+      } catch (error) {
+        console.error('Erro ao atualizar subtarefa no banco:', error);
+        addToast({
+          type: 'error',
+          title: 'Erro ao atualizar',
+          message: 'Não foi possível salvar a alteração da subtarefa.'
+        });
+        return;
+      }
+
+      // Atualizar o estado local
+      setActivities(prev => prev.map(activity => {
+        if (activity.subtasks) {
+          return {
+            ...activity,
+            subtasks: activity.subtasks.map(subtask => 
+              subtask.id === subtaskId 
+                ? { ...subtask, status: newStatus }
+                : subtask
+            )
+          };
+        }
+        return activity;
+      }));
+
+      addToast({
+        type: 'success',
+        title: 'Status atualizado',
+        message: `Subtarefa marcada como ${newStatus === 'completed' ? 'concluída' : 'pendente'}`
+      });
+
+    } catch (error) {
+      console.error('Erro ao atualizar status da subtarefa:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro ao atualizar',
+        message: 'Não foi possível atualizar o status da subtarefa.'
+      });
+    }
   };
 
   const updateSubtaskStatus = (subtaskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
