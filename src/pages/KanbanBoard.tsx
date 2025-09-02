@@ -2445,12 +2445,57 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           card={selectedCard}
           columns={columns}
           allCards={cards}
-          onSave={(updatedCard) => {
-            setCards(cards.map(card => 
-              card.id === updatedCard.id ? updatedCard : card
-            ));
-            setShowCardDetailModal(false);
-            setSelectedCard(null);
+          onSave={async (updatedCard) => {
+            try {
+              // Salvar no banco de dados
+              const success = await db.updateCardById(updatedCard.id, {
+                title: updatedCard.title,
+                description: updatedCard.description,
+                priority: updatedCard.priority,
+                status: updatedCard.status,
+                due_date: updatedCard.due_date,
+                importance: updatedCard.importance,
+                category: updatedCard.category,
+                tags: updatedCard.tags,
+                members: updatedCard.members,
+                dependencies: updatedCard.dependencies,
+                subtasks: updatedCard.subtasks,
+                goal: updatedCard.goal,
+                recurrence: updatedCard.recurrence,
+                git_branch: updatedCard.git_branch,
+                git_commit: updatedCard.git_commit,
+                git_pr: updatedCard.git_pr
+              });
+
+              if (success) {
+                // Atualizar o estado local
+                setCards(cards.map(card => 
+                  card.id === updatedCard.id ? updatedCard : card
+                ));
+                
+                addToast({
+                  type: 'success',
+                  title: 'Card atualizado',
+                  message: 'As alterações foram salvas no banco de dados!'
+                });
+                
+                setShowCardDetailModal(false);
+                setSelectedCard(null);
+              } else {
+                addToast({
+                  type: 'error',
+                  title: 'Erro ao salvar',
+                  message: 'Não foi possível salvar as alterações no banco de dados.'
+                });
+              }
+            } catch (error) {
+              console.error('Erro ao salvar card:', error);
+              addToast({
+                type: 'error',
+                title: 'Erro ao salvar',
+                message: 'Ocorreu um erro ao salvar as alterações.'
+              });
+            }
           }}
           onDelete={(cardId) => {
             confirmDeleteCard(cardId);

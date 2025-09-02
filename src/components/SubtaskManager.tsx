@@ -382,34 +382,51 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   };
 
   const toggleSubtask = async (id: string) => {
-    const updatedSubtasks = subtasks.map(subtask => {
-      if (subtask.id.toString() === id) {
-        const updatedSubtask: Subtask = {
-          ...subtask,
-          completed: !subtask.completed,
-          completedAt: !subtask.completed ? new Date() : undefined
-        };
+    try {
+      const updatedSubtasks = subtasks.map(subtask => {
+        if (subtask.id.toString() === id) {
+          const updatedSubtask: Subtask = {
+            ...subtask,
+            completed: !subtask.completed,
+            completedAt: !subtask.completed ? new Date() : undefined
+          };
 
-        // Salvar no banco de dados
-        if (cardId) {
-          saveSubtaskToDatabase(updatedSubtask).catch(error => {
-            console.error('Erro ao salvar subtarefa:', error);
-          });
+          // Salvar no banco de dados
+          if (cardId && typeof subtask.id === 'number') {
+            db.updateSubtask(subtask.id, {
+              completed: updatedSubtask.completed,
+              status: updatedSubtask.completed ? 'completed' : 'pending'
+            }).catch(error => {
+              console.error('Erro ao salvar subtarefa:', error);
+              addToast({
+                type: 'error',
+                title: 'Erro ao salvar',
+                message: 'Não foi possível salvar a alteração da subtarefa.'
+              });
+            });
+          }
+
+          return updatedSubtask;
         }
+        return subtask;
+      });
 
-        return updatedSubtask;
+      onSubtasksChange(updatedSubtasks);
+      
+      const subtask = subtasks.find(s => s.id.toString() === id);
+      if (subtask) {
+        addToast({
+          type: 'success',
+          title: !subtask.completed ? 'Subtarefa concluída' : 'Subtarefa reaberta',
+          message: !subtask.completed ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
+        });
       }
-      return subtask;
-    });
-
-    onSubtasksChange(updatedSubtasks);
-    
-    const subtask = subtasks.find(s => s.id.toString() === id);
-    if (subtask) {
+    } catch (error) {
+      console.error('Erro ao alternar subtarefa:', error);
       addToast({
-        type: 'success',
-        title: subtask.completed ? 'Subtarefa concluída' : 'Subtarefa reaberta',
-        message: subtask.completed ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível alterar o status da subtarefa.'
       });
     }
   };
