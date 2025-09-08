@@ -92,7 +92,13 @@ const Dashboard: React.FC = () => {
       // Carregar cards apenas de boards ativos (não excluídos)
       for (const board of boards) {
         try {
-          const boardCards = await db.getCardsForBoard(board.board_id);
+          // Verificar se board_id existe
+          if (!board.board_id) {
+            console.log(`Board ${board.name} não tem board_id, pulando...`);
+            continue;
+          }
+          
+          const boardCards = await db.getCardsForBoard(board.board_id!);
           // Verificar se o board ainda existe antes de adicionar os cards
           if (boardCards && boardCards.length > 0) {
             allCards = [...allCards, ...boardCards];
@@ -205,8 +211,8 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm font-medium text-brand-gray/70">Total de Cartões</p>
                 <p className="text-2xl font-bold text-brand-gray">{stats.total_cards}</p>
               </div>
-                              <div className="w-12 h-12 bg-brand-blue-light/10 rounded-2xl flex items-center justify-center">
-                <Trello className="w-6 h-6 text-brand-blue-light" />
+                              <div className="w-12 h-12 bg-brand-green-light/10 rounded-2xl flex items-center justify-center">
+                <Trello className="w-6 h-6 text-brand-green-light" />
               </div>
             </div>
             <div className="mt-4 flex space-x-2">
@@ -350,7 +356,7 @@ const Dashboard: React.FC = () => {
                       <span className="text-xs bg-brand-green-light/10 text-brand-green px-2 py-1 rounded-full">
                         {meeting.platform}
                       </span>
-                      <button className="text-xs text-brand-blue hover:text-brand-blue-dark">
+                      <button className="text-xs text-brand-green hover:text-brand-green-dark">
                         Entrar
                       </button>
                     </div>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Persistência da Ordem dos Quadros</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .board-tabs {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .board-tab {
+            padding: 8px 16px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .board-tab.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .board-tab.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+        .simulation {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Teste de Persistência da Ordem dos Quadros</h1>
+        <p>Este teste verifica se a ordem das abas dos quadros é salva e carregada corretamente para cada usuário.</p>
+        
+        <button onclick="testSaveOrder()">💾 Testar Salvamento da Ordem</button>
+        <button onclick="testLoadOrder()">📂 Testar Carregamento da Ordem</button>
+        <button onclick="testUserSpecificOrder()">👤 Testar Ordem por Usuário</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Simular dados de quadros
+        const mockBoards = [
+            { id: 1, name: 'Desenvolvimento', board_id: 'board-1' },
+            { id: 2, name: 'Design', board_id: 'board-2' },
+            { id: 3, name: 'Marketing', board_id: 'board-3' },
+            { id: 4, name: 'Vendas', board_id: 'board-4' }
+        ];
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function createBoardTabsHTML(boards, title = 'Quadros') {
+            return `
+                <div class="simulation">
+                    <h4>${title}</h4>
+                    <div class="board-tabs">
+                        ${boards.map(board => `
+                            <div class="board-tab" data-board-id="${board.id}">
+                                ${board.name}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        Ordem: ${boards.map(b => b.id).join(', ')}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function testSaveOrder() {
+            addResult('💾 Testando Salvamento da Ordem...', 'Executando teste...', 'info');
+            
+            try {
+                const testUserId = 1;
+                const testOrder = [3, 1, 4, 2]; // Ordem personalizada
+                
+                // Simular salvamento da ordem
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: testUserId,
+                        setting_key: 'boards_order',
+                        setting_value: JSON.stringify(testOrder)
+                    });
+
+                if (error) {
+                    addResult('❌ Erro ao salvar ordem', JSON.stringify(error, null, 2), 'error');
+                    return;
+                }
+
+                // Reordenar quadros conforme a ordem salva
+                const orderedBoards = [];
+                const remainingBoards = [...mockBoards];
+                
+                testOrder.forEach(boardId => {
+                    const boardIndex = remainingBoards.findIndex(board => board.id === boardId);
+                    if (boardIndex !== -1) {
+                        orderedBoards.push(remainingBoards[boardIndex]);
+                        remainingBoards.splice(boardIndex, 1);
+                    }
+                });
+                orderedBoards.push(...remainingBoards);
+
+                addResult('✅ Ordem salva com sucesso!', 
+                    `Usuário ID: ${testUserId}\n` +
+                    `Ordem salva: ${JSON.stringify(testOrder)}\n` +
+                    `Quadros reordenados: ${JSON.stringify(orderedBoards.map(b => ({ id: b.id, name: b.name })))}\n\n` +
+                    createBoardTabsHTML(orderedBoards, 'Quadros Reordenados'), 
+                    'success');
+
+            } catch (error) {
+                addResult('❌ Erro geral no teste', error.toString(), 'error');
+            }
+        }
+
+        async function testLoadOrder() {
+            addResult('📂 Testando Carregamento da Ordem...', 'Executando teste...', 'info');
+            
+            try {
+                const testUserId = 1;
+                
+                // Buscar configurações do usuário
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('setting_key, setting_value')
+                    .eq('user_id', testUserId);
+
+                if (error) {
+                    addResult('❌ Erro ao carregar configurações', JSON.stringify(error, null, 2), 'error');
+                    return;
+                }
+
+                // Encontrar a configuração de ordem dos quadros
+                const boardsOrderSetting = data?.find(setting => setting.setting_key === 'boards_order');
+                
+                if (!boardsOrderSetting) {
+                    addResult('ℹ️ Nenhuma ordem salva encontrada', 'Usuário não possui ordem personalizada salva', 'info');
+                    return;
+                }
+
+                const savedOrder = JSON.parse(boardsOrderSetting.setting_value);
+                
+                // Reordenar quadros conforme a ordem salva
+                const orderedBoards = [];
+                const remainingBoards = [...mockBoards];
+                
+                savedOrder.forEach(boardId => {
+                    const boardIndex = remainingBoards.findIndex(board => board.id === boardId);
+                    if (boardIndex !== -1) {
+                        orderedBoards.push(remainingBoards[boardIndex]);
+                        remainingBoards.splice(boardIndex, 1);
+                    }
+                });
+                orderedBoards.push(...remainingBoards);
+
+                addResult('✅ Ordem carregada com sucesso!', 
+                    `Usuário ID: ${testUserId}\n` +
+                    `Ordem carregada: ${JSON.stringify(savedOrder)}\n` +
+                    `Quadros reordenados: ${JSON.stringify(orderedBoards.map(b => ({ id: b.id, name: b.name })))}\n\n` +
+                    createBoardTabsHTML(orderedBoards, 'Quadros Carregados'), 
+                    'success');
+
+            } catch (error) {
+                addResult('❌ Erro geral no teste', error.toString(), 'error');
+            }
+        }
+
+        async function testUserSpecificOrder() {
+            addResult('👤 Testando Ordem por Usuário...', 'Executando teste...', 'info');
+            
+            try {
+                // Simular diferentes usuários com diferentes ordens
+                const userOrders = [
+                    { userId: 1, order: [3, 1, 4, 2], name: 'Usuário 1' },
+                    { userId: 2, order: [1, 3, 2, 4], name: 'Usuário 2' },
+                    { userId: 3, order: [4, 2, 1, 3], name: 'Usuário 3' }
+                ];
+
+                let result = 'Testando ordens personalizadas por usuário:\n\n';
+
+                for (const userOrder of userOrders) {
+                    // Salvar ordem para o usuário
+                    await supabase
+                        .from('user_settings')
+                        .upsert({
+                            user_id: userOrder.userId,
+                            setting_key: 'boards_order',
+                            setting_value: JSON.stringify(userOrder.order)
+                        });
+
+                    // Reordenar quadros
+                    const orderedBoards = [];
+                    const remainingBoards = [...mockBoards];
+                    
+                    userOrder.order.forEach(boardId => {
+                        const boardIndex = remainingBoards.findIndex(board => board.id === boardId);
+                        if (boardIndex !== -1) {
+                            orderedBoards.push(remainingBoards[boardIndex]);
+                            remainingBoards.splice(boardIndex, 1);
+                        }
+                    });
+                    orderedBoards.push(...remainingBoards);
+
+                    result += `${userOrder.name} (ID: ${userOrder.userId}):\n`;
+                    result += `Ordem: ${JSON.stringify(userOrder.order)}\n`;
+                    result += `Quadros: ${orderedBoards.map(b => b.name).join(' → ')}\n\n`;
+                }
+
+                addResult('✅ Ordens por usuário testadas!', result, 'success');
+
+            } catch (error) {
+                addResult('❌ Erro geral no teste', error.toString(), 'error');
+            }
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a persistência da ordem dos quadros.', 'info');
+        });
+    </script>
+</body>
+</html>
+

@@ -40,8 +40,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) =>
         <div className="card-hover animate-fade-in">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mb-4">
-              <User className="w-8 h-8 text-white" />
+            <div className="mx-auto mb-4">
+              <img 
+                src="/LOGOCAPA.png" 
+                alt="Logo Boodesk" 
+                className="w-24 h-24 mx-auto object-contain"
+              />
             </div>
             <h1 className="text-2xl font-bold text-brand-gray dark:text-gray-50 mb-2">
               Sistema Boodesk

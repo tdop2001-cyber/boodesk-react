@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Criação de Múltiplas Subtarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2563eb;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .test-steps {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2563eb;
+        }
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .expected-result {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+            margin-top: 15px;
+        }
+        .expected-result h4 {
+            color: #16a34a;
+            margin: 0 0 10px 0;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #d97706;
+            font-weight: bold;
+        }
+        .debug-info {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #f59e0b;
+            margin-top: 15px;
+        }
+        .debug-info h4 {
+            color: #d97706;
+            margin: 0 0 10px 0;
+        }
+        .problem-analysis {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ef4444;
+            margin-top: 15px;
+        }
+        .problem-analysis h4 {
+            color: #dc2626;
+            margin: 0 0 10px 0;
+        }
+        .solution-steps {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 15px;
+        }
+        .solution-steps h4 {
+            color: #2563eb;
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Criação de Múltiplas Subtarefas</h1>
+        <p>Este arquivo contém um teste específico para identificar por que não é possível criar múltiplas subtarefas por coluna.</p>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Análise do Problema</div>
+            <div class="test-description">
+                <strong>Situação Atual:</strong> Você consegue alternar subtarefas entre colunas (drag and drop funcionando), mas não consegue inserir mais de uma subtarefa por coluna.
+            </div>
+            <div class="problem-analysis">
+                <h4>🚨 Problema Identificado:</h4>
+                <ul>
+                    <li><span class="status-success">✅ Drag and Drop funcionando</span> - Subtarefas podem ser movidas entre colunas</li>
+                    <li><span class="status-error">❌ Criação limitada</span> - Apenas uma subtarefa por coluna</li>
+                    <li><span class="status-warning">⚠️ Banco de dados OK</span> - Não há restrições de unicidade</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔧 Possíveis Causas</div>
+            <div class="test-description">
+                Com base na análise do código, identifiquei as seguintes possíveis causas:
+            </div>
+            <div class="test-steps">
+                <h4>🚨 Causas Possíveis:</h4>
+                <ol>
+                    <li><strong>Problema na função addNewSubtask</strong> - Erro na criação de novas subtarefas</li>
+                    <li><strong>Problema na função onSubtasksChange</strong> - Callback não está funcionando</li>
+                    <li><strong>Problema no estado interno</strong> - Estado não está sendo atualizado</li>
+                    <li><strong>Problema na filtragem</strong> - Função getSubtasksByColumn com erro</li>
+                    <li><strong>Problema no banco de dados</strong> - Erro na inserção (mesmo sem restrições)</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste Passo a Passo</div>
+            <div class="test-description">
+                Siga estes passos para identificar exatamente onde está o problema:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Vá para a aba Console</strong> e limpe os logs</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Clique em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite um título</strong> (ex: "Teste 1") e clique em "Adicionar"</li>
+                    <li><strong>Observe o console</strong> para logs de criação</li>
+                    <li><strong>Clique novamente em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite outro título</strong> (ex: "Teste 2") e clique em "Adicionar"</li>
+                    <li><strong>Compare os logs</strong> das duas criações</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Logs Esperados vs. Problemas</div>
+            <div class="test-description">
+                Compare os logs que você vê com os logs esperados:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Logs Esperados (Funcionando):</h4>
+                <div class="console-log">
+=== SUBTASK KANBAN RENDERIZADO ===
+=== SINCRONIZANDO ESTADO INTERNO ===
+=== DATABASE: createSubtask ===
+subtaskData recebido: {card_id: "...", title: "Teste 1", ...}
+✅ Subtarefa criada com sucesso: {id: 123, title: "Teste 1", ...}
+=== ATUALIZANDO ESTADO INTERNO ===
+✅ onSubtasksChange executado com sucesso
+=== SUBTASK KANBAN RENDERIZADO ===
+=== SINCRONIZANDO ESTADO INTERNO ===
+=== DATABASE: createSubtask ===
+subtaskData recebido: {card_id: "...", title: "Teste 2", ...}
+✅ Subtarefa criada com sucesso: {id: 124, title: "Teste 2", ...}
+=== ATUALIZANDO ESTADO INTERNO ===
+✅ onSubtasksChange executado com sucesso
+                </div>
+            </div>
+            <div class="problem-analysis">
+                <h4>❌ Logs de Problema (Não Funcionando):</h4>
+                <div class="console-log">
+=== SUBTASK KANBAN RENDERIZADO ===
+=== SINCRONIZANDO ESTADO INTERNO ===
+=== DATABASE: createSubtask ===
+subtaskData recebido: {card_id: "...", title: "Teste 1", ...}
+✅ Subtarefa criada com sucesso: {id: 123, title: "Teste 1", ...}
+=== ATUALIZANDO ESTADO INTERNO ===
+✅ onSubtasksChange executado com sucesso
+=== SUBTASK KANBAN RENDERIZADO ===
+=== SINCRONIZANDO ESTADO INTERNO ===
+=== DATABASE: createSubtask ===
+subtaskData recebido: {card_id: "...", title: "Teste 2", ...}
+❌ Erro ao criar subtarefa: [ERRO ESPECÍFICO]
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Específicas</div>
+            <div class="test-description">
+                Durante o teste, verifique especificamente:
+            </div>
+            <div class="test-steps">
+                <h4>🔍 Pontos de Verificação:</h4>
+                <ol>
+                    <li><strong>Primeira criação:</strong> A subtarefa aparece na coluna "A Fazer"?</li>
+                    <li><strong>Segunda criação:</strong> A segunda subtarefa é criada no banco?</li>
+                    <li><strong>Erro específico:</strong> Qual é a mensagem de erro exata?</li>
+                    <li><strong>Estado interno:</strong> O estado interno é atualizado?</li>
+                    <li><strong>Callback:</strong> onSubtasksChange é chamado?</li>
+                    <li><strong>Interface:</strong> A interface é atualizada?</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Soluções Baseadas no Problema</div>
+            <div class="test-description">
+                Dependendo do problema identificado, aqui estão as soluções:
+            </div>
+            <div class="solution-steps">
+                <h4>🔧 Soluções por Tipo de Problema:</h4>
+                
+                <h5>1. Erro no Banco de Dados:</h5>
+                <ul>
+                    <li>Verificar logs de erro específicos</li>
+                    <li>Confirmar se a tabela subtasks existe</li>
+                    <li>Verificar permissões de inserção</li>
+                </ul>
+                
+                <h5>2. Problema na Função addNewSubtask:</h5>
+                <ul>
+                    <li>Verificar se a função é chamada</li>
+                    <li>Confirmar se os dados estão corretos</li>
+                    <li>Verificar se há exceções não capturadas</li>
+                </ul>
+                
+                <h5>3. Problema no Estado Interno:</h5>
+                <ul>
+                    <li>Verificar se setInternalSubtasks é chamado</li>
+                    <li>Confirmar se o estado é atualizado</li>
+                    <li>Verificar se há conflitos de estado</li>
+                </ul>
+                
+                <h5>4. Problema no Callback:</h5>
+                <ul>
+                    <li>Verificar se onSubtasksChange é chamado</li>
+                    <li>Confirmar se o componente pai recebe as mudanças</li>
+                    <li>Verificar se há erros na propagação</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Comandos de Debug Úteis</div>
+            <div class="test-description">
+                Use estes comandos no console para debug adicional:
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Comandos de Debug:</h4>
+                <div class="console-log">
+// Verificar estado atual
+console.log('Estado interno:', window.internalSubtasks)
+
+// Verificar função de criação
+console.log('Função addNewSubtask:', typeof window.addNewSubtask)
+
+// Verificar callback
+console.log('Função onSubtasksChange:', typeof window.onSubtasksChange)
+
+// Verificar filtragem por coluna
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'))
+
+// Forçar criação de subtarefa (se disponível)
+window.addNewSubtask && window.addNewSubtask()
+
+// Verificar erros de rede
+// Aba Network no DevTools
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📋 Checklist de Verificação</div>
+            <div class="test-description">
+                Use este checklist para confirmar que identificou o problema:
+            </div>
+            <div class="test-steps">
+                <h4>✅ Checklist de Verificação:</h4>
+                <ul>
+                    <li><input type="checkbox"> Console aberto e limpo</li>
+                    <li><input type="checkbox"> Primeira subtarefa criada com sucesso</li>
+                    <li><input type="checkbox"> Segunda subtarefa tentada</li>
+                    <li><input type="checkbox"> Logs de erro identificados</li>
+                    <li><input type="checkbox"> Problema específico identificado</li>
+                    <li><input type="checkbox"> Solução aplicada</li>
+                    <li><input type="checkbox"> Múltiplas subtarefas funcionando</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Próximos Passos</div>
+            <div class="test-description">
+                Após identificar o problema:
+            </div>
+            <div class="test-steps">
+                <h4>📋 Próximos Passos:</h4>
+                <ol>
+                    <li><strong>Execute o teste</strong> seguindo os passos acima</li>
+                    <li><strong>Identifique o problema</strong> específico nos logs</li>
+                    <li><strong>Compartilhe os logs</strong> de erro ou comportamento</li>
+                    <li><strong>Reporte o comportamento</strong> observado</li>
+                    <li><strong>Aguarde correção</strong> específica para o problema</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script para ajudar nos testes
+        console.log('🧪 Teste de Criação de Múltiplas Subtarefas carregado');
+        console.log('Siga os passos no arquivo para identificar o problema específico');
+        
+        // Função para verificar estado atual
+        window.checkCurrentState = function() {
+            console.log('=== VERIFICAÇÃO DO ESTADO ATUAL ===');
+            console.log('Verificando estado das subtarefas...');
+            
+            // Esta função pode ser expandida para verificações automatizadas
+            if (typeof window.internalSubtasks !== 'undefined') {
+                console.log('Estado interno das subtarefas:', window.internalSubtasks);
+            } else {
+                console.log('Estado interno não disponível');
+            }
+        };
+        
+        // Função para simular criação de subtarefa
+        window.simulateSubtaskCreation = function() {
+            console.log('=== SIMULAÇÃO DE CRIAÇÃO DE SUBTAREFA ===');
+            console.log('Simulando criação de subtarefa...');
+            
+            // Esta função pode ser expandida para testes automatizados
+            console.log('Verifique se é possível criar múltiplas subtarefas por coluna');
+        };
+        
+        // Função para verificar problemas comuns
+        window.checkCommonIssues = function() {
+            console.log('=== VERIFICAÇÃO DE PROBLEMAS COMUNS ===');
+            console.log('1. Verificar se addNewSubtask está disponível');
+            console.log('2. Verificar se onSubtasksChange está funcionando');
+            console.log('3. Verificar se o estado interno está sendo atualizado');
+            console.log('4. Verificar se há erros no banco de dados');
+            console.log('5. Verificar se há problemas de filtragem');
+        };
+    </script>
+</body>
+</html>

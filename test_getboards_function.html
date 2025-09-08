@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da Função getBoards</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste da Função getBoards</h1>
+        <p>Este teste verifica especificamente se a função getBoards funciona sem erros de JSON.</p>
+        
+        <button onclick="testGetBoardsAdmin()">👑 Testar getBoards (Admin)</button>
+        <button onclick="testGetBoardsUser()">👤 Testar getBoards (Usuário)</button>
+        <button onclick="testCardsData()">📋 Testar Dados dos Cards</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Simular a função getBoards do código
+        async function getBoards(userId, userRole) {
+            try {
+                // Se for admin, retorna todos os boards
+                if (userRole === 'admin') {
+                    const { data, error } = await supabase
+                        .from('boards')
+                        .select('*')
+                        .order('name');
+                    
+                    if (error) throw error;
+                    return data || [];
+                }
+
+                // Para usuários não-admin, buscar boards onde são membros de algum card
+                if (userId) {
+                    console.log('=== DATABASE: getBoards - Usuário não-admin ===');
+                    console.log('userId:', userId);
+                    
+                    // Buscar todos os cards e filtrar no lado do cliente
+                    const { data: allCardsData, error: cardsError } = await supabase
+                        .from('cards')
+                        .select('board_id, members')
+                        .eq('is_archived', false);
+
+                    // Filtrar cards onde o usuário é membro
+                    const cardsData = allCardsData?.filter(card => {
+                        if (!card.members || !Array.isArray(card.members)) return false;
+                        return card.members.includes(userId);
+                    }) || [];
+
+                    console.log('cardsData (cards onde usuário é membro):', cardsData);
+                    console.log('cardsError:', cardsError);
+
+                    if (cardsError) throw cardsError;
+
+                    if (cardsData && cardsData.length > 0) {
+                        // Buscar boards únicos dos cards onde o usuário é membro
+                        const boardIds = Array.from(new Set(cardsData.map(card => card.board_id)));
+                        console.log('boardIds únicos encontrados:', boardIds);
+                        
+                        const { data, error } = await supabase
+                            .from('boards')
+                            .select('*')
+                            .in('id', boardIds)
+                            .order('name');
+
+                        console.log('boards encontrados:', data);
+                        console.log('error:', error);
+
+                        if (error) throw error;
+                        return data || [];
+                    } else {
+                        console.log('Nenhum card encontrado onde o usuário é membro');
+                    }
+                }
+
+                return [];
+            } catch (error) {
+                console.error('Erro ao buscar quadros:', error);
+                throw error;
+            }
+        }
+
+        async function testGetBoardsAdmin() {
+            addResult('🔄 Testando getBoards (Admin)...', 'Executando teste...', 'info');
+            
+            try {
+                const boards = await getBoards(null, 'admin');
+                addResult('✅ getBoards (Admin) OK', 
+                    `Boards encontrados: ${boards.length}\n` +
+                    `Dados: ${JSON.stringify(boards, null, 2)}`, 
+                    'success');
+            } catch (error) {
+                addResult('❌ Erro em getBoards (Admin)', 
+                    `Erro: ${error.message}\n` +
+                    `Código: ${error.code}\n` +
+                    `Detalhes: ${error.details}`, 
+                    'error');
+            }
+        }
+
+        async function testGetBoardsUser() {
+            addResult('🔄 Testando getBoards (Usuário)...', 'Executando teste...', 'info');
+            
+            try {
+                const boards = await getBoards(1, 'user');
+                addResult('✅ getBoards (Usuário) OK', 
+                    `Boards encontrados: ${boards.length}\n` +
+                    `Dados: ${JSON.stringify(boards, null, 2)}`, 
+                    'success');
+            } catch (error) {
+                addResult('❌ Erro em getBoards (Usuário)', 
+                    `Erro: ${error.message}\n` +
+                    `Código: ${error.code}\n` +
+                    `Detalhes: ${error.details}`, 
+                    'error');
+            }
+        }
+
+        async function testCardsData() {
+            addResult('🔄 Testando Dados dos Cards...', 'Executando teste...', 'info');
+            
+            try {
+                const { data: cards, error } = await supabase
+                    .from('cards')
+                    .select('board_id, members')
+                    .eq('is_archived', false)
+                    .limit(10);
+                
+                if (error) {
+                    addResult('❌ Erro ao buscar cards', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 
+                        'error');
+                    return;
+                }
+
+                let result = `Cards encontrados: ${cards.length}\n\n`;
+                let hasProblems = false;
+
+                cards.forEach((card, index) => {
+                    result += `Card ${index + 1}:\n`;
+                    result += `  Board ID: ${card.board_id}\n`;
+                    result += `  Members: ${JSON.stringify(card.members)}\n`;
+                    
+                    // Verificar se members é um array válido
+                    if (!Array.isArray(card.members)) {
+                        result += `  ❌ Members não é um array válido!\n`;
+                        hasProblems = true;
+                    } else {
+                        result += `  ✅ Members é um array válido\n`;
+                    }
+                    result += `\n`;
+                });
+
+                addResult(hasProblems ? '⚠️ Problemas encontrados nos dados dos cards' : '✅ Dados dos cards OK', 
+                    result, 
+                    hasProblems ? 'error' : 'success');
+                    
+            } catch (error) {
+                addResult('❌ Erro geral ao testar cards', error.toString(), 'error');
+            }
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a função getBoards.', 'info');
+        });
+    </script>
+</body>
+</html>
+

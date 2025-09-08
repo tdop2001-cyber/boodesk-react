@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Sensor Simples</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2563eb;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Sensor Simples</h1>
+        <p>Este arquivo testa se o problema dos sensores foi resolvido.</p>
+
+        <div class="test-section">
+            <div class="test-title">🔧 Correção Aplicada</div>
+            <p><strong>Problema:</strong> Erro "Cannot use 'in' operator to search for 'x' in undefined" no PointerSensor</p>
+            <p><strong>Solução:</strong> Removidas as configurações complexas dos sensores</p>
+            <p><strong>Configuração Atual:</strong> Sensores básicos sem activationConstraint</p>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste da Correção</div>
+            <p>Siga estes passos para testar se o erro foi resolvido:</p>
+            <ol>
+                <li><strong>Recarregue a página</strong> da aplicação principal</li>
+                <li><strong>Abra o console</strong> (F12)</li>
+                <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                <li><strong>Ative o modo Kanban</strong></li>
+                <li><strong>Verifique se não há erros</strong> no console</li>
+                <li><strong>Tente mover uma subtarefa</strong> entre colunas</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Resultado Esperado</div>
+            <div class="console-log">
+✅ Console limpo sem erros
+✅ Modo Kanban carrega normalmente
+✅ Sensores funcionam sem erros
+✅ Drag and drop funciona
+✅ Subtarefas podem ser movidas entre colunas
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚨 Se o Erro Persistir</div>
+            <p>Se ainda aparecer o erro, pode ser um problema de versão do @dnd-kit/core:</p>
+            <div class="console-log">
+// Verificar versão no package.json
+"@dnd-kit/core": "^6.0.0",
+"@dnd-kit/sortable": "^7.0.0",
+"@dnd-kit/utilities": "^6.0.0"
+
+// Ou executar no console:
+npm list @dnd-kit/core
+npm list @dnd-kit/sortable
+npm list @dnd-kit/utilities
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Adicionais</div>
+            <p>Se o problema persistir, verifique:</p>
+            <ul>
+                <li><strong>Versão do React:</strong> Deve ser 16.8+ para hooks</li>
+                <li><strong>Versão do @dnd-kit:</strong> Deve ser compatível</li>
+                <li><strong>Console do navegador:</strong> Outros erros relacionados</li>
+                <li><strong>Network tab:</strong> Arquivos carregando corretamente</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Próximos Passos</div>
+            <p>Após testar:</p>
+            <ol>
+                <li><strong>Confirme se o erro foi resolvido</strong></li>
+                <li><strong>Teste o drag and drop</strong> das subtarefas</li>
+                <li><strong>Reporte o resultado</strong> do teste</li>
+                <li><strong>Se ainda houver problemas</strong>, compartilhe os novos logs</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Teste de Sensor Simples carregado');
+        console.log('A correção foi aplicada - teste agora a aplicação principal');
+        
+        // Função para verificar se há problemas de versão
+        window.checkDndKitVersion = function() {
+            console.log('=== VERIFICAÇÃO DE VERSÃO ===');
+            console.log('Verifique se as versões do @dnd-kit são compatíveis');
+            console.log('Execute: npm list @dnd-kit/core');
+            console.log('Execute: npm list @dnd-kit/sortable');
+            console.log('Execute: npm list @dnd-kit/utilities');
+        };
+    </script>
+</body>
+</html>

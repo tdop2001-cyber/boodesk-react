@@ -4,8 +4,10 @@ import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
 
-import { Card, Column } from '../types';
+import { Card, Column, User as UserType } from '../types';
 import { db } from '../services/database';
+import UnifiedKanban, { KanbanItem as UnifiedKanbanItem, KanbanColumnDef } from '../components/UnifiedKanban';
+import AvatarGroup from '../components/AvatarGroup';
 import {
   Calendar,
   Clock,
@@ -16,7 +18,6 @@ import {
   ArrowRight,
   FileText,
   Edit3,
-  RefreshCw,
   Filter,
   Search,
   Eye,
@@ -33,7 +34,11 @@ import {
   ChevronRight,
   ExternalLink,
   BookOpen,
-  Settings
+  Settings,
+  ArrowLeft,
+  X,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 
 interface ActivityItem {
@@ -54,6 +59,8 @@ interface ActivityItem {
   actualTime?: string;
   category?: string;
   recurrence?: string;
+  completed?: boolean;
+  boardId?: string;
 }
 
 interface MyActivitiesProps {}
@@ -63,48 +70,6 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   const { hasPermission } = usePermissions();
   const { addToast } = useToast();
   const { getPriorityColor, getPriorityTextColor } = useSettings();
-
-  const getPriorityLabel = (priority: string): string => {
-    switch (priority.toLowerCase()) {
-      case 'critical': return 'Urgente';
-      case 'high': return 'Alta';
-      case 'medium': return 'Normal';
-      case 'low': return 'Baixa';
-      default: return priority;
-    }
-  };
-
-  // Cores padrão do sistema - vermelho e verde
-  const getSystemPriorityColor = (priority: string): string => {
-    switch (priority.toLowerCase()) {
-      case 'critical':
-      case 'urgent':
-        return '#DC2626'; // Vermelho escuro
-      case 'high':
-        return '#EF4444'; // Vermelho
-      case 'medium':
-        return '#F59E0B'; // Laranja
-      case 'low':
-        return '#10B981'; // Verde
-      default:
-        return '#6B7280'; // Cinza
-    }
-  };
-
-  const getSystemPriorityTextColor = (priority: string): string => {
-    switch (priority.toLowerCase()) {
-      case 'critical':
-      case 'urgent':
-      case 'high':
-        return '#FFFFFF'; // Texto branco para fundos escuros
-      case 'medium':
-        return '#FFFFFF'; // Texto branco para laranja
-      case 'low':
-        return '#FFFFFF'; // Texto branco para verde
-      default:
-        return '#FFFFFF'; // Texto branco
-    }
-  };
   
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
@@ -114,24 +79,368 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed' | 'in_progress'>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'low' | 'medium' | 'high' | 'urgent'>('all');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [selectedCardForKanban, setSelectedCardForKanban] = useState<ActivityItem | null>(null);
+  const [filterBoard, setFilterBoard] = useState<string>('all');
+  const [groupByBoard, setGroupByBoard] = useState<boolean>(false);
+  const [availableBoards, setAvailableBoards] = useState<{id: string, name: string}[]>([]);
+  const [hideEmptyCards, setHideEmptyCards] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [membersCache, setMembersCache] = useState<Map<number, UserType>>(new Map());
 
-  // Carregar dados reais do Supabase
+  // ===== FUNÇÕES DE PERSISTÊNCIA =====
+  
+  /**
+   * Carrega informações dos membros dos cards
+   */
+  const loadMembersInfo = async (memberIds: number[]) => {
+    if (!memberIds || memberIds.length === 0) return;
+    
+    try {
+      // Verificar quais membros já estão no cache
+      const missingIds = memberIds.filter(id => !membersCache.has(id));
+      
+      if (missingIds.length > 0) {
+        console.log('MyActivities: Carregando informações dos membros:', missingIds);
+        const members = await db.getUsersByIds(missingIds);
+        
+        // Atualizar o cache
+        setMembersCache(prev => {
+          const newCache = new Map(prev);
+          members.forEach(member => {
+            newCache.set(member.id, member);
+          });
+          return newCache;
+        });
+        
+        console.log('MyActivities: Informações dos membros carregadas:', members);
+      }
+    } catch (error) {
+      console.error('MyActivities: Erro ao carregar informações dos membros:', error);
+    }
+  };
+  
+  /**
+   * Carrega as preferências do usuário do banco de dados
+   */
+  const loadUserPreferences = async () => {
+    if (!user?.id) {
+      console.log('MyActivities: Usuário não logado, não carregando preferências');
+      return;
+    }
+    
+    try {
+      console.log('MyActivities: 🔄 Carregando preferências do usuário:', user.id);
+      const preferences = await db.getUserPreferences(user.id.toString());
+      
+      console.log('MyActivities: 📥 Preferências recebidas do banco:', preferences);
+      
+      if (preferences && Object.keys(preferences).length > 0) {
+        // Aplica as preferências carregadas
+        if (preferences.viewMode) {
+          console.log('MyActivities: Aplicando viewMode:', preferences.viewMode);
+          setViewMode(preferences.viewMode);
+        }
+        if (preferences.filterType) {
+          console.log('MyActivities: Aplicando filterType:', preferences.filterType);
+          setFilterType(preferences.filterType);
+        }
+        if (preferences.filterStatus) {
+          console.log('MyActivities: Aplicando filterStatus:', preferences.filterStatus);
+          setFilterStatus(preferences.filterStatus);
+        }
+        if (preferences.filterPriority) {
+          console.log('MyActivities: Aplicando filterPriority:', preferences.filterPriority);
+          setFilterPriority(preferences.filterPriority);
+        }
+        if (preferences.filterBoard) {
+          console.log('MyActivities: Aplicando filterBoard:', preferences.filterBoard);
+          setFilterBoard(preferences.filterBoard);
+        }
+        if (preferences.hideEmptyCards !== undefined) {
+          console.log('MyActivities: Aplicando hideEmptyCards:', preferences.hideEmptyCards);
+          setHideEmptyCards(preferences.hideEmptyCards);
+        }
+        if (preferences.groupByBoard !== undefined) {
+          console.log('MyActivities: Aplicando groupByBoard:', preferences.groupByBoard);
+          setGroupByBoard(preferences.groupByBoard);
+        }
+        if (preferences.showFilters !== undefined) {
+          console.log('MyActivities: Aplicando showFilters:', preferences.showFilters);
+          setShowFilters(preferences.showFilters);
+        }
+        if (preferences.showOptions !== undefined) {
+          console.log('MyActivities: Aplicando showOptions:', preferences.showOptions);
+          setShowOptions(preferences.showOptions);
+        }
+        
+        console.log('MyActivities: ✅ Preferências aplicadas com sucesso');
+      } else {
+        console.log('MyActivities: ℹ️ Nenhuma preferência encontrada, usando valores padrão');
+      }
+      
+      setPreferencesLoaded(true);
+      console.log('MyActivities: ✅ Sistema de preferências carregado');
+    } catch (error) {
+      console.error('MyActivities: ❌ Erro ao carregar preferências:', error);
+      setPreferencesLoaded(true); // Continua mesmo com erro
+    }
+  };
+
+  /**
+   * Salva as preferências atuais do usuário no banco de dados
+   */
+  const saveUserPreferences = async () => {
+    if (!user?.id || !preferencesLoaded) return;
+    
+    try {
+      const preferences = {
+        viewMode,
+        filterType,
+        filterStatus,
+        filterPriority,
+        filterBoard,
+        hideEmptyCards,
+        groupByBoard,
+        showFilters,
+        showOptions,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      console.log('MyActivities: Salvando preferências do usuário:', preferences);
+      await db.saveUserPreferences(user.id.toString(), preferences);
+      console.log('MyActivities: Preferências salvas com sucesso');
+    } catch (error) {
+      console.error('MyActivities: Erro ao salvar preferências:', error);
+    }
+  };
+
+  /**
+   * Salva uma preferência específica com debounce
+   */
+  const savePreference = async (key: string, value: any) => {
+    if (!user?.id) {
+      console.log('MyActivities: Usuário não logado, não salvando preferência');
+      return;
+    }
+    
+    if (!preferencesLoaded) {
+      console.log('MyActivities: Preferências ainda não carregadas, não salvando');
+      return;
+    }
+    
+    // Limpa timeout anterior se existir
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    // Cria novo timeout para salvar após 500ms
+    const timeout = setTimeout(async () => {
+      try {
+        console.log(`MyActivities: 💾 Salvando preferência '${key}':`, value, 'para usuário:', user.id);
+        await db.updateUserPreference(user.id.toString(), key, value);
+        console.log(`MyActivities: ✅ Preferência '${key}' salva com sucesso:`, value);
+      } catch (error) {
+        console.error(`MyActivities: ❌ Erro ao salvar preferência '${key}':`, error);
+      }
+    }, 500);
+    
+    setSaveTimeout(timeout);
+  };
+
+  const kanbanColumns: KanbanColumnDef[] = [
+    {
+      id: 'pending',
+      title: 'A Fazer',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
+    },
+    {
+      id: 'in_progress',
+      title: 'Em Progresso',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200'
+    },
+    {
+      id: 'completed',
+      title: 'Concluído',
+      color: 'text-[#16704E]',
+      bgColor: 'bg-[#16704E]/10',
+      borderColor: 'border-[#16704E]/20'
+    }
+  ];
+
+  const handleItemMove = async (itemId: string, newStatus: string) => {
+    console.log('=== HANDLE ITEM MOVE ===');
+    console.log('itemId:', itemId, 'type:', typeof itemId);
+    console.log('newStatus:', newStatus);
+    console.log('activities:', activities);
+    
+    // Verificar se é um card
+    const cardItem = activities.find(a => a.id === itemId);
+    console.log('Card encontrado:', cardItem);
+    
+    // Verificar se é uma subtarefa
+    const allSubtasks = activities.flatMap(a => a.subtasks || []);
+    console.log('Todas as subtarefas:', allSubtasks);
+    console.log('IDs das subtarefas:', allSubtasks.map(s => ({ id: s.id, type: typeof s.id, title: s.title })));
+    
+    const subtaskItem = allSubtasks.find(s => {
+      const matches = s.id === itemId || 
+                     String(s.id) === String(itemId) || 
+                     parseInt(String(s.id)) === parseInt(String(itemId));
+      console.log('Buscando subtarefa:', {
+        subId: s.id,
+        subIdType: typeof s.id,
+        itemId: itemId,
+        itemIdType: typeof itemId,
+        matches: matches,
+        subTitle: s.title
+      });
+      return matches;
+    });
+    console.log('Subtarefa encontrada:', subtaskItem);
+    
+    const item = cardItem || subtaskItem;
+    console.log('Item final encontrado:', item);
+    
+    if (!item) {
+      console.log('Item não encontrado!');
+      console.log('Tentando buscar com diferentes comparações...');
+      
+      // Tentar diferentes formas de comparação
+      const altItem1 = allSubtasks.find(s => s.id == itemId);
+      const altItem2 = allSubtasks.find(s => String(s.id) == String(itemId));
+      const altItem3 = allSubtasks.find(s => parseInt(String(s.id)) == parseInt(String(itemId)));
+      
+      console.log('Tentativa 1 (==):', altItem1);
+      console.log('Tentativa 2 (String ==):', altItem2);
+      console.log('Tentativa 3 (parseInt ==):', altItem3);
+      
+      return;
+    }
+
+    const numericId = parseInt(itemId);
+    console.log('numericId:', numericId);
+    
+    if (isNaN(numericId)) {
+      console.log('ID inválido, tentando usar itemId diretamente:', itemId);
+      // Se não conseguir converter para number, usar o ID original
+      const directId = itemId;
+      console.log('Usando ID direto:', directId);
+    }
+
+    try {
+      if (item.type === 'card') {
+        await db.updateCard(String(numericId), { status: newStatus as 'todo' | 'progress' | 'done' });
+      } else {
+        // Mapear status do Kanban para status do banco de dados
+        let dbStatus = newStatus;
+        if (newStatus === 'pending') {
+          dbStatus = 'todo';
+        } else if (newStatus === 'in_progress') {
+          dbStatus = 'in_progress';
+        } else if (newStatus === 'completed') {
+          dbStatus = 'completed';
+        }
+        
+        // Usar o ID correto para a subtarefa
+        const subtaskId = isNaN(numericId) ? parseInt(itemId) : numericId;
+        
+        console.log('Atualizando subtarefa no banco:');
+        console.log('- itemId original:', itemId);
+        console.log('- numericId:', numericId);
+        console.log('- subtaskId final:', subtaskId);
+        console.log('- dbStatus:', dbStatus);
+        console.log('- item.type:', item.type);
+        
+        await db.updateSubtask(subtaskId, { status: dbStatus });
+        console.log('Subtarefa atualizada no banco com sucesso!');
+      }
+
+      const newActivities = activities.map(act => {
+        if (act.id === itemId) {
+          return { ...act, status: newStatus as any, completed: newStatus === 'completed' };
+        }
+        if (act.subtasks) {
+          return {
+            ...act,
+            subtasks: act.subtasks.map(sub => {
+              // Comparar IDs de forma mais robusta
+              const subIdMatches = sub.id === itemId || 
+                                 String(sub.id) === String(itemId) || 
+                                 parseInt(String(sub.id)) === parseInt(String(itemId));
+              
+              console.log('Comparando IDs para atualização:', {
+                subId: sub.id,
+                subIdType: typeof sub.id,
+                itemId: itemId,
+                itemIdType: typeof itemId,
+                matches: subIdMatches,
+                subTitle: sub.title
+              });
+              
+              return subIdMatches 
+                ? { ...sub, status: newStatus as any, completed: newStatus === 'completed' }
+                : sub;
+            })
+          };
+        }
+        return act;
+      });
+
+      console.log('Atualizando estado local:');
+      console.log('- newActivities:', newActivities);
+      
+      setActivities(newActivities);
+      if (selectedCardForKanban) {
+        const updatedCard = newActivities.find(a => a.id === selectedCardForKanban.id);
+        if (updatedCard) {
+          setSelectedCardForKanban(updatedCard);
+        }
+      }
+      addToast({ type: 'success', title: 'Status atualizado', message: `Item movido para ${newStatus}` });
+      console.log('Estado local atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao mover item:', error);
+      addToast({ type: 'error', title: 'Erro ao atualizar', message: 'Não foi possível mover o item.' });
+    }
+  };
+
   const loadActivities = async () => {
     setLoading(true);
     try {
       if (!user?.id) return;
 
-      // Carregar cards do usuário
       const boards = await db.getBoards(user.id);
       let allCards: any[] = [];
       
+      // Carregar quadros disponíveis
+      const boardsList = boards.map(board => ({
+        id: String(board.board_id || board.id),
+        name: board.name
+      }));
+      setAvailableBoards(boardsList);
+      
       for (const board of boards) {
         try {
-          const boardCards = await db.getCardsForBoard(board.board_id);
-          // Verificar se o board ainda existe antes de adicionar os cards
+          const boardCards = await db.getCardsForBoardByUser(
+            String(board.board_id || board.id), 
+            user?.id || 1, 
+            user?.role || 'member'
+          );
           if (boardCards && boardCards.length > 0) {
-            allCards = [...allCards, ...boardCards];
+            // Adicionar boardId aos cards
+            const cardsWithBoardId = boardCards.map(card => ({
+              ...card,
+              boardId: String(board.board_id || board.id)
+            }));
+            allCards = [...allCards, ...cardsWithBoardId];
           }
         } catch (error) {
           console.log(`Board ${board.name} não encontrado ou excluído, pulando...`);
@@ -139,20 +448,35 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
         }
       }
 
-      // Carregar subtarefas para cada card
       for (const card of allCards) {
         try {
-          const subtasks = await db.getSubtasksForCard(card.card_id);
+          let cardId = null;
+          if (card.id && typeof card.id === 'number') {
+            cardId = card.id;
+          } else if (card.card_id) {
+            cardId = parseInt(card.card_id);
+          }
+          
+          if (!cardId || isNaN(cardId)) {
+            card.subtasks = [];
+            continue;
+          }
+          
+          const subtasks = await db.getSubtasksForCardByUser(
+            cardId, 
+            user?.id || 1, 
+            user?.role || 'member'
+          );
+          
           card.subtasks = subtasks;
+          console.log(`Subtasks for card '${card.title}':`, subtasks);
         } catch (error) {
-          console.error(`Erro ao carregar subtarefas para card ${card.card_id}:`, error);
+          console.error(`Erro ao carregar subtarefas para card "${card.title}":`, error);
           card.subtasks = [];
         }
       }
 
-      // Converter cards para ActivityItem
       const convertedActivities: ActivityItem[] = allCards.map(card => {
-        // Mapear prioridade corretamente
         let priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium';
         if (card.importance) {
           const importance = card.importance.toLowerCase();
@@ -167,61 +491,84 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           }
         }
 
-        // Converter subtarefas se existirem
-        const subtasks: ActivityItem[] = (card.subtasks || []).map((subtask: any) => {
-          let subtaskPriority: 'low' | 'medium' | 'high' | 'urgent' = 'medium';
-          if (subtask.importance) {
-            const importance = subtask.importance.toLowerCase();
-            if (importance === 'critical' || importance === 'urgent') {
-              subtaskPriority = 'urgent';
-            } else if (importance === 'high' || importance === 'alta') {
-              subtaskPriority = 'high';
-            } else if (importance === 'medium' || importance === 'normal' || importance === 'média') {
-              subtaskPriority = 'medium';
-            } else if (importance === 'low' || importance === 'baixa') {
-              subtaskPriority = 'low';
-            }
-          }
-
-          return {
-            id: subtask.subtask_id,
-            type: 'subtask',
-            title: subtask.title,
-            description: subtask.description,
-            status: subtask.status as 'pending' | 'completed' | 'in_progress',
-            priority: subtaskPriority,
-            dueDate: subtask.due_date,
-            members: subtask.assigned_to ? [subtask.assigned_to] : [],
-            dependencies: [],
-            importance: subtask.importance,
-            tags: subtask.tags || [],
-            estimatedTime: subtask.estimated_time || '0h',
-            actualTime: subtask.actual_time || '0h',
-            category: subtask.category || 'Geral',
-            parentCardId: card.card_id
-          };
-        });
+        // Mapear status do card do banco para status do Kanban
+        let cardStatus = 'pending';
+        if (card.status === 'todo') {
+          cardStatus = 'pending';
+        } else if (card.status === 'progress' || card.status === 'in_progress') {
+          cardStatus = 'in_progress';
+        } else if (card.status === 'done' || card.status === 'completed') {
+          cardStatus = 'completed';
+        } else {
+          cardStatus = card.status || 'pending';
+        }
 
         return {
           id: card.card_id,
           type: 'card',
           title: card.title,
           description: card.description,
-          status: card.status as 'pending' | 'completed' | 'in_progress',
+          status: cardStatus as 'pending' | 'completed' | 'in_progress',
           priority: priority,
           dueDate: card.due_date,
-          members: card.members || [],
-          dependencies: card.dependencies || [],
-          importance: card.importance,
-          tags: card.tags || [],
-          estimatedTime: card.estimated_time || '0h',
-          actualTime: card.actual_time || '0h',
-          category: card.subject || 'Geral',
-          subtasks: subtasks
+          completed: cardStatus === 'completed',
+          boardId: card.boardId,
+          subtasks: card.subtasks?.map((sub: any) => {
+            // Mapear status do banco para status do Kanban
+            let mappedStatus = 'pending';
+            if (sub.status === 'todo') {
+              mappedStatus = 'pending';
+            } else if (sub.status === 'in_progress') {
+              mappedStatus = 'in_progress';
+            } else if (sub.status === 'completed') {
+              mappedStatus = 'completed';
+            } else {
+              mappedStatus = sub.status || 'pending';
+            }
+            
+            const subtaskId = sub.subtask_id || sub.id;
+            console.log('Mapeando subtarefa:', {
+              originalId: sub.id,
+              subtask_id: sub.subtask_id,
+              finalId: subtaskId,
+              title: sub.title,
+              status: sub.status,
+              mappedStatus: mappedStatus
+            });
+            
+            return {
+              id: subtaskId,
+              type: 'subtask',
+              title: sub.title,
+              description: sub.description,
+              status: mappedStatus,
+              priority: sub.priority || 'medium',
+              dueDate: sub.due_date,
+              completed: sub.status === 'completed' || sub.completed === true,
+              parentCardId: card.card_id
+            };
+          })
         };
       });
 
       setActivities(convertedActivities);
+      console.log('Converted Activities:', JSON.stringify(convertedActivities, null, 2));
+      
+      // Carregar informações dos membros de todos os cards
+      const allMemberIds = new Set<number>();
+      convertedActivities.forEach(activity => {
+        if (activity.members && Array.isArray(activity.members)) {
+          activity.members.forEach(memberId => {
+            if (typeof memberId === 'number') {
+              allMemberIds.add(memberId);
+            }
+          });
+        }
+      });
+      
+      if (allMemberIds.size > 0) {
+        await loadMembersInfo(Array.from(allMemberIds));
+      }
     } catch (error) {
       console.error('Erro ao carregar atividades:', error);
       addToast({
@@ -236,25 +583,99 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
   useEffect(() => {
     if (user?.id) {
-      loadActivities();
+      loadUserPreferences().then(() => {
+        loadActivities();
+      });
     }
   }, [user?.id]);
+
+  // Salva preferências automaticamente quando mudarem
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('viewMode', viewMode);
+    }
+  }, [viewMode, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('filterType', filterType);
+    }
+  }, [filterType, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('filterStatus', filterStatus);
+    }
+  }, [filterStatus, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('filterPriority', filterPriority);
+    }
+  }, [filterPriority, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('filterBoard', filterBoard);
+    }
+  }, [filterBoard, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('hideEmptyCards', hideEmptyCards);
+    }
+  }, [hideEmptyCards, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('groupByBoard', groupByBoard);
+    }
+  }, [groupByBoard, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('showFilters', showFilters);
+    }
+  }, [showFilters, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('showOptions', showOptions);
+    }
+  }, [showOptions, preferencesLoaded]);
+
+  // Cleanup do timeout quando componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+    };
+  }, [saveTimeout]);
 
   const filteredActivities = activities.filter(activity => {
     const matchesSearch = activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          activity.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     let matchesType = true;
+    if (viewMode === 'kanban') {
+        matchesType = activity.type === 'card';
+    } else if (filterType !== 'all') {
     if (filterType === 'cards') {
       matchesType = activity.type === 'card';
     } else if (filterType === 'subtasks') {
       matchesType = activity.type === 'subtask' || activity.type === 'individual_subtask';
+      }
     }
     
     const matchesStatus = filterStatus === 'all' || activity.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || activity.priority === filterPriority;
+    const matchesBoard = filterBoard === 'all' || activity.boardId === filterBoard;
     
-    return matchesSearch && matchesType && matchesStatus && matchesPriority;
+    // Filtrar cards sem subtarefas se a opção estiver ativada
+    const hasSubtasks = !hideEmptyCards || (activity.subtasks && activity.subtasks.length > 0);
+    
+    return matchesSearch && matchesType && matchesStatus && matchesPriority && matchesBoard && hasSubtasks;
   });
 
   const toggleExpanded = (itemId: string) => {
@@ -267,136 +688,12 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     setExpandedItems(newExpanded);
   };
 
-  const toggleSubtaskStatus = async (subtaskId: string) => {
-    try {
-      // Encontrar a subtarefa e o card pai
-      let subtaskToUpdate: ActivityItem | null = null;
-      let parentCardId: string | null = null;
-
-      for (const activity of activities) {
-        if (activity.subtasks) {
-          const subtask = activity.subtasks.find(s => s.id === subtaskId);
-          if (subtask) {
-            subtaskToUpdate = subtask;
-            parentCardId = activity.id;
-            break;
-          }
-        }
-      }
-
-      if (!subtaskToUpdate || !parentCardId) {
-        console.error('Subtarefa não encontrada');
-        return;
-      }
-
-      const newStatus = subtaskToUpdate.status === 'completed' ? 'pending' : 'completed';
-
-      // Atualizar no banco de dados
-      try {
-        await db.updateSubtask(parseInt(subtaskId), {
-          status: newStatus,
-          completed: newStatus === 'completed'
-        });
-      } catch (error) {
-        console.error('Erro ao atualizar subtarefa no banco:', error);
-        addToast({
-          type: 'error',
-          title: 'Erro ao atualizar',
-          message: 'Não foi possível salvar a alteração da subtarefa.'
-        });
-        return;
-      }
-
-      // Atualizar o estado local
-      setActivities(prev => prev.map(activity => {
-        if (activity.subtasks) {
-          return {
-            ...activity,
-            subtasks: activity.subtasks.map(subtask => 
-              subtask.id === subtaskId 
-                ? { ...subtask, status: newStatus }
-                : subtask
-            )
-          };
-        }
-        return activity;
-      }));
-
-      addToast({
-        type: 'success',
-        title: 'Status atualizado',
-        message: `Subtarefa marcada como ${newStatus === 'completed' ? 'concluída' : 'pendente'}`
-      });
-
-    } catch (error) {
-      console.error('Erro ao atualizar status da subtarefa:', error);
-      addToast({
-        type: 'error',
-        title: 'Erro ao atualizar',
-        message: 'Não foi possível atualizar o status da subtarefa.'
-      });
-    }
-  };
-
-  const updateSubtaskStatus = (subtaskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
-    setActivities(prev => prev.map(activity => {
-      if (activity.id === subtaskId) {
-        return {
-          ...activity,
-          status: newStatus
-        };
-      }
-      if (activity.subtasks) {
-        return {
-          ...activity,
-          subtasks: activity.subtasks.map(subtask => 
-            subtask.id === subtaskId 
-              ? { ...subtask, status: newStatus }
-              : subtask
-          )
-        };
-      }
-      return activity;
-    }));
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'in_progress':
-        return <Clock3 className="w-4 h-4 text-orange-500" />;
-      default:
-        return <Circle className="w-4 h-4 text-red-400" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  };
-
-  const getDaysUntilDue = (dateString: string) => {
-    const dueDate = new Date(dateString);
-    const today = new Date();
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getDueDateStatus = (dateString: string) => {
-    const daysUntilDue = getDaysUntilDue(dateString);
-    if (daysUntilDue < 0) return 'overdue';
-    if (daysUntilDue <= 3) return 'urgent';
-    if (daysUntilDue <= 7) return 'warning';
-    return 'normal';
-  };
-
   const renderActivityItem = (activity: ActivityItem, level: number = 0) => {
     const isExpanded = expandedItems.has(activity.id);
     const hasSubtasks = activity.subtasks && activity.subtasks.length > 0;
-    const isOverdue = activity.dueDate && getDueDateStatus(activity.dueDate) === 'overdue';
-    const isUrgent = activity.dueDate && getDueDateStatus(activity.dueDate) === 'urgent';
+    
+    const isOverdue = activity.dueDate && new Date(activity.dueDate) < new Date();
+    const isUrgent = activity.dueDate && new Date(activity.dueDate) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
     const isSubtask = activity.type === 'subtask' || activity.type === 'individual_subtask';
 
     return (
@@ -414,18 +711,13 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             }
             ${isSubtask 
               ? 'border-l-4 border-l-red-400 bg-gradient-to-r from-red-50/50 to-white' 
-              : 'border-l-4 border-l-green-400'
+              : 'border-l-4 border-l-[#16704E]'
             }
             ${activity.status === 'completed' ? 'opacity-75' : ''}
           `}
           onClick={() => setSelectedActivity(activity)}
         >
-          {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-slate-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          {/* Content Container */}
           <div className="relative flex items-center p-5">
-            {/* Expand/Collapse button */}
             {hasSubtasks && (
               <button
                 onClick={(e) => {
@@ -442,21 +734,19 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
               </button>
             )}
 
-            {/* Status Icon with enhanced styling */}
             <div className={`mr-4 p-2.5 rounded-full shadow-sm ${
               isSubtask 
                 ? 'bg-gradient-to-br from-red-100 to-red-200 border border-red-200' 
-                : 'bg-gradient-to-br from-green-100 to-green-200 border border-green-200'
+                : 'bg-gradient-to-br from-[#16704E]/10 to-[#16704E]/20 border border-[#16704E]/20'
             }`}>
-              {getStatusIcon(activity.status)}
+              {activity.status === 'completed' ? <CheckCircle className="w-4 h-4 text-[#16704E]" /> : activity.status === 'in_progress' ? <Clock3 className="w-4 h-4 text-orange-500" /> : <Circle className="w-4 h-4 text-red-400" />}
             </div>
 
-            {/* Type Badge with improved styling */}
             <div className="mr-4">
                              <span className={`
                  px-3 py-1.5 text-xs font-bold rounded-full border shadow-sm
                  ${activity.type === 'card' 
-                   ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600' 
+                   ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white border-[#16704E]' 
                    : 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600'
                  }
                `}>
@@ -464,7 +754,6 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                </span>
             </div>
 
-            {/* Title and Description Section */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-3 mb-2">
                 <h3 className={`
@@ -488,83 +777,43 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
               )}
             </div>
 
-            {/* Right Side Information */}
             <div className="flex items-center space-x-4">
-              {/* Priority Badge with enhanced visibility */}
               <div>
                 <span 
                   className="px-3 py-1.5 text-xs font-bold rounded-full border shadow-lg"
                   style={{ 
-                    backgroundColor: getSystemPriorityColor(activity.priority),
-                    color: getSystemPriorityTextColor(activity.priority)
+                    backgroundColor: getPriorityColor(activity.priority),
+                    color: getPriorityTextColor(activity.priority)
                   }}
                 >
-                  {getPriorityLabel(activity.priority)}
+                  {activity.priority}
                 </span>
               </div>
 
-              {/* Due Date with better formatting */}
               {activity.dueDate && (
-                <div className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : isUrgent ? 'text-orange-600' : 'text-green-600'}`}>
+                <div className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : isUrgent ? 'text-orange-600' : 'text-[#16704E]'}`}>
                   <div className="flex items-center space-x-1.5">
                     <Calendar className="w-4 h-4" />
-                    <span>{formatDate(activity.dueDate)}</span>
-                  </div>
-                  {isOverdue && (
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold border border-red-200 shadow-sm">
-                      ⏰ Atrasado
-                    </span>
-                  )}
-                  {!isOverdue && !isUrgent && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold border border-green-200 shadow-sm">
-                      ✅ No prazo
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Estimated Time with better styling */}
-              {activity.estimatedTime && (
-                <div className="text-sm text-slate-600 font-semibold">
-                  <div className="flex items-center space-x-1.5">
-                    <Clock className="w-4 h-4" />
-                    <span>{activity.estimatedTime}</span>
+                    <span>{new Date(activity.dueDate).toLocaleDateString('pt-BR')}</span>
                   </div>
                 </div>
               )}
-
-              {/* Tags with improved visibility */}
-              {activity.tags && activity.tags.length > 0 && (
-                <div className="flex space-x-1.5">
-                  {activity.tags.slice(0, 2).map((tag, index) => (
-                    <span key={index} className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium border border-slate-200 shadow-sm">
-                      #{tag}
-                    </span>
-                  ))}
-                  {activity.tags.length > 2 && (
-                    <span className="text-xs text-slate-500 font-bold bg-slate-50 px-2 py-1 rounded-full border border-slate-200">
-                      +{activity.tags.length - 2}
-                    </span>
-                  )}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Subtasks with enhanced visual separation */}
           {hasSubtasks && isExpanded && (
-            <div className="bg-gradient-to-br from-red-50 via-slate-50 to-green-50 border-t border-red-200/50">
+            <div className="bg-gradient-to-br from-red-50 via-slate-50 to-[#16704E]/10 border-t border-red-200/50">
               <div className="px-6 py-4">
                 <div className="text-sm font-bold text-red-800 mb-3 flex items-center">
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                  Subtarefas ({activity.subtasks?.length})
-                </div>
-                <div className="space-y-3">
-                  {activity.subtasks?.map(subtask => renderActivityItem(subtask, level + 1))}
-                </div>
-              </div>
-            </div>
-          )}
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                    Subtarefas ({activity.subtasks?.length})
+                  </div>
+                  <div className="space-y-3">
+                    {activity.subtasks?.map(subtask => renderActivityItem(subtask, level + 1))}
+                  </div>
+                            </div>
+                          </div>
+                        )}
         </div>
       </div>
     );
@@ -589,23 +838,22 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
     return (
       <div className="p-6 space-y-6">
-        {/* Header */}
         <div className="border-b pb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-full ${isSubtask ? 'bg-red-100' : 'bg-green-100'}`}>
-                {getStatusIcon(selectedActivity.status)}
+              <div className={`p-2 rounded-full ${isSubtask ? 'bg-red-100' : 'bg-[#16704E]/20'}`}>
+                {selectedActivity.status === 'completed' ? <CheckCircle className="w-4 h-4 text-[#16704E]" /> : selectedActivity.status === 'in_progress' ? <Clock3 className="w-4 h-4 text-orange-500" /> : <Circle className="w-4 h-4 text-red-400" />}
               </div>
               <span 
                 className="px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm"
                 style={{ 
-                  backgroundColor: getSystemPriorityColor(selectedActivity.priority),
-                  color: getSystemPriorityTextColor(selectedActivity.priority)
+                  backgroundColor: getPriorityColor(selectedActivity.priority),
+                  color: getPriorityTextColor(selectedActivity.priority)
                 }}
               >
-                {getPriorityLabel(selectedActivity.priority)}
+                {selectedActivity.priority}
               </span>
-                             <span className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${selectedActivity.type === 'card' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}`}>
+                             <span className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${selectedActivity.type === 'card' ? 'bg-[#16704E]/20 text-[#16704E] border-[#16704E]/30' : 'bg-red-100 text-red-800 border-red-300'}`}>
                  {selectedActivity.type === 'card' ? 'Tarefa' : 'Subtarefa'}
                </span>
             </div>
@@ -621,11 +869,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           <h2 className="text-2xl font-bold text-gray-900">{selectedActivity.title}</h2>
         </div>
 
-        {/* Description */}
         {selectedActivity.description && (
-          <div className="bg-gradient-to-r from-slate-50 via-green-50 to-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-gradient-to-r from-slate-50 via-[#16704E]/10 to-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="font-semibold mb-3 flex items-center text-slate-800">
-              <div className="p-1.5 bg-gradient-to-br from-green-500 to-green-600 rounded-lg mr-2">
+              <div className="p-1.5 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-lg mr-2">
                 <FileText className="w-4 h-4 text-white" />
               </div>
               Descrição
@@ -636,53 +883,79 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 pt-6 border-t border-slate-200">
-          <button className="flex items-center px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
-            <ArrowRight className="w-4 h-4 mr-2" />
-            Ir para o Quadro
-          </button>
-          <button className="flex items-center px-4 py-2 bg-gradient-to-r from-red-400 to-red-500 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Abrir Card
-          </button>
-          <button className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Anotações
-          </button>
-          {selectedActivity.type !== 'card' && (
-            <button 
-              onClick={() => toggleSubtaskStatus(selectedActivity.id)}
-              className={`flex items-center px-4 py-2 text-white rounded-lg transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                selectedActivity.status === 'completed' 
-                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
-                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-              }`}
-            >
-              {selectedActivity.status === 'completed' ? (
-                <>
-                  <Square className="w-4 h-4 mr-2" />
-                  Desmarcar
-                </>
-              ) : (
-                <>
-                  <CheckSquare className="w-4 h-4 mr-2" />
-                  Concluir
-                </>
-              )}
-            </button>
-          )}
-        </div>
+        {selectedActivity.subtasks && selectedActivity.subtasks.length > 0 && (
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Subtarefas ({selectedActivity.subtasks.length})</h3>
+              </div>
+            <UnifiedKanban
+              columns={kanbanColumns}
+              items={selectedActivity.subtasks.map(s => {
+                const mappedItem = { 
+                  ...s, 
+                  id: String(s.id),
+                  completed: s.status === 'completed', 
+                  importance: s.importance as any,
+                  estimatedTime: s.estimatedTime ? (typeof s.estimatedTime === 'string' ? parseInt(s.estimatedTime) : s.estimatedTime) : undefined,
+                  actualTime: s.actualTime ? (typeof s.actualTime === 'string' ? parseInt(s.actualTime) : s.actualTime) : undefined
+                };
+                console.log('Mapeando subtarefa para UnifiedKanban:', {
+                  original: s,
+                  mapped: mappedItem,
+                  originalId: s.id,
+                  mappedId: mappedItem.id
+                });
+                return mappedItem;
+              })}
+              onItemMove={handleItemMove}
+            />
+          </div>
+        )}
       </div>
     );
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-brand-light-gray/30 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando suas atividades...</p>
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+              }
+            `
+          }} />
+          
+          <div className="relative mb-6">
+            <div>
+              <img 
+                src="/carregamento.png" 
+                alt="Carregando" 
+                className="w-24 h-24 mx-auto rounded-full"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (nextElement) {
+                    nextElement.style.display = 'block';
+                  }
+                }}
+              />
+              <div className="hidden w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                ⚡
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h2 className="text-xl font-semibold text-brand-gray dark:text-gray-50 mb-2">
+              Carregando suas atividades...
+            </h2>
+            <p className="text-brand-gray/70 dark:text-gray-300">
+              Organizando suas tarefas e subtarefas
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -690,119 +963,460 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-             {/* Header */}
-       <div className="bg-gradient-to-br from-green-700 via-green-600 to-green-500 text-white shadow-xl">
+      <div className="bg-gradient-to-br from-[#16704E] via-[#0F5A3A] to-[#0A4A2E] text-white shadow-xl">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
            <div className="flex items-center justify-between h-20">
              <div className="flex items-center space-x-6">
                <div className="flex items-center space-x-3">
-                 <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
+                 <div className="p-3 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-xl shadow-lg">
                    <Target className="w-6 h-6 text-white" />
                  </div>
                  <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
                    Minhas Atividades
                  </h1>
                </div>
-                               <div className="flex items-center space-x-3">
-                  <span className="text-sm bg-gradient-to-r from-green-500/20 to-green-600/20 backdrop-blur-sm px-3 py-1.5 rounded-full font-semibold border border-white/10">
-                    {activities.filter(a => a.type === 'card').length} tarefas
-                  </span>
-                  <span className="text-sm bg-gradient-to-r from-red-400/20 to-red-500/20 backdrop-blur-sm px-3 py-1.5 rounded-full font-semibold border border-white/10">
-                    {activities.filter(a => a.type === 'subtask' || a.type === 'individual_subtask').length} subtarefas
-                  </span>
-                </div>
-             </div>
-             <div className="flex items-center space-x-3">
-               <button
-                 onClick={loadActivities}
-                 className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-               >
-                 <RefreshCw className="w-4 h-4 mr-2" />
-                 Atualizar
-               </button>
              </div>
            </div>
          </div>
        </div>
 
-      {/* Filters */}
       <div className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-100 border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+          {/* Barra de Busca Discreta */}
+          <div className="mb-4">
+            <div className="relative max-w-xl">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="🔍 Buscar atividades por título ou descrição..."
+                placeholder="Buscar atividades..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-lg bg-white/80 backdrop-blur-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-200/60 rounded-lg focus:ring-1 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm bg-white/70 backdrop-blur-sm shadow-sm hover:bg-white/80"
               />
             </div>
-
-            {/* Type Filter */}
-            <div className="relative">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-lg font-medium appearance-none bg-white/80 backdrop-blur-sm pr-10"
-              >
-                                 <option value="all">📂 Todos os tipos</option>
-                 <option value="cards">Apenas tarefas</option>
-                 <option value="subtasks">Apenas subtarefas</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            </div>
-
-            {/* Status Filter */}
-            <div className="relative">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-lg font-medium appearance-none bg-white/80 backdrop-blur-sm pr-10"
-              >
-                <option value="all">🔄 Todos os status</option>
-                <option value="pending">⏳ Pendente</option>
-                <option value="in_progress">⚡ Em progresso</option>
-                <option value="completed">✅ Concluído</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            </div>
-
-            {/* Priority Filter */}
-            <div className="relative">
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value as any)}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-lg font-medium appearance-none bg-white/80 backdrop-blur-sm pr-10"
-              >
-                <option value="all">🎯 Todas as prioridades</option>
-                <option value="urgent">🚨 Urgente</option>
-                <option value="high">⚡ Alta</option>
-                <option value="medium">📊 Normal</option>
-                <option value="low">✅ Baixa</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            </div>
           </div>
+
+          {/* Sistema de Filtros com Botões */}
+          <div className="space-y-4">
+            {/* Linha de Botões de Filtro */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Indicador de Filtros Ativos */}
+              {(filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all' || hideEmptyCards || groupByBoard) && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-[#16704E] to-[#0F5A3A] rounded-xl text-white shadow-lg shadow-[#16704E]/25">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Filtros Ativos</span>
+                  <button
+                    onClick={() => {
+                      setFilterType('all');
+                      setFilterStatus('all');
+                      setFilterPriority('all');
+                      setFilterBoard('all');
+                      setHideEmptyCards(false);
+                      setGroupByBoard(false);
+                    }}
+                    className="ml-2 p-1 hover:bg-white/20 rounded-lg transition-all duration-200 hover:scale-110"
+                    title="Limpar todos os filtros"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Botão de Filtros */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
+                  showFilters || filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all'
+                    ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
+                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                }`}
+              >
+                <Filter className={`w-4 h-4 transition-colors duration-200 ${
+                  showFilters || filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all'
+                    ? 'text-white' 
+                    : 'text-slate-500 group-hover:text-[#16704E]'
+                }`} />
+                <span>Filtros</span>
+                {(filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all') && (
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                )}
+              </button>
+
+              {/* Botão de Opções */}
+              <button
+                onClick={() => setShowOptions(!showOptions)}
+                className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
+                  showOptions || hideEmptyCards || groupByBoard
+                    ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
+                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                }`}
+              >
+                <Settings className={`w-4 h-4 transition-colors duration-200 ${
+                  showOptions || hideEmptyCards || groupByBoard
+                    ? 'text-white' 
+                    : 'text-slate-500 group-hover:text-[#16704E]'
+                }`} />
+                <span>Opções</span>
+                {(hideEmptyCards || groupByBoard) && (
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                )}
+              </button>
+
+              {/* Toggle de Visualização Melhorado */}
+              <div className="relative flex bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                <div 
+                  className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-[#16704E] to-[#0F5A3A] rounded-lg shadow-lg shadow-[#16704E]/25 transition-all duration-500 ease-out ${
+                    viewMode === 'list' ? 'left-1 translate-x-0' : 'left-1 translate-x-full'
+                  }`}
+                />
+                
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`relative z-10 flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-out ${
+                    viewMode === 'list' 
+                      ? 'text-white drop-shadow-sm' 
+                      : 'text-slate-600 hover:text-[#16704E] hover:scale-105'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  <span className="font-medium">Lista</span>
+                </button>
+                
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`relative z-10 flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-out ${
+                    viewMode === 'kanban' 
+                      ? 'text-white drop-shadow-sm' 
+                      : 'text-slate-600 hover:text-[#16704E] hover:scale-105'
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="font-medium">Kanban</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Painel de Filtros (Expandível) */}
+            {showFilters && (
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-5 shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative">
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value as any)}
+                      className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
+                    >
+                      <option value="all">Todos os tipos</option>
+                      <option value="cards">Apenas tarefas</option>
+                      <option value="subtasks">Apenas subtarefas</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                      className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
+                    >
+                      <option value="all">Todos os status</option>
+                      <option value="pending">Pendente</option>
+                      <option value="in_progress">Em progresso</option>
+                      <option value="completed">Concluído</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={filterPriority}
+                      onChange={(e) => setFilterPriority(e.target.value as any)}
+                      className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
+                    >
+                      <option value="all">Todas as prioridades</option>
+                      <option value="urgent">Urgente</option>
+                      <option value="high">Alta</option>
+                      <option value="medium">Normal</option>
+                      <option value="low">Baixa</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={filterBoard}
+                      onChange={(e) => setFilterBoard(e.target.value)}
+                      className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
+                    >
+                      <option value="all">Todos os quadros</option>
+                      {availableBoards.map(board => (
+                        <option key={board.id} value={board.id}>{board.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Painel de Opções (Expandível) */}
+            {showOptions && (
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-5 shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center space-x-3 px-4 py-3 border border-slate-200/60 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white hover:shadow-md transition-all duration-200">
+                    <input
+                      type="checkbox"
+                      id="hideEmptyCards"
+                      checked={hideEmptyCards}
+                      onChange={(e) => setHideEmptyCards(e.target.checked)}
+                      className="w-4 h-4 text-[#16704E] bg-gray-100 border-gray-300 rounded focus:ring-[#16704E] focus:ring-2 transition-all duration-200"
+                    />
+                    <label htmlFor="hideEmptyCards" className="text-sm font-medium text-slate-700 cursor-pointer hover:text-[#16704E] transition-colors duration-200">
+                      Ocultar cards sem subtarefas
+                    </label>
+                  </div>
+
+                  <button
+                    onClick={() => setGroupByBoard(!groupByBoard)}
+                    className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
+                      groupByBoard 
+                        ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
+                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                    }`}
+                  >
+                    {groupByBoard ? 'Agrupado por Quadro' : 'Agrupar por Quadro'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Activities List */}
-          <div className="lg:col-span-2">
+        {viewMode === 'kanban' ? (
+          selectedCardForKanban ? (
+            <div>
+              <button onClick={() => setSelectedCardForKanban(null)} className="flex items-center mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para a lista de cards
+              </button>
+              <UnifiedKanban
+                columns={kanbanColumns}
+                items={selectedCardForKanban.subtasks?.map(s => {
+                  const mappedItem = { 
+                    ...s, 
+                    id: String(s.id),
+                    completed: s.status === 'completed', 
+                    importance: s.importance as any,
+                    estimatedTime: s.estimatedTime ? (typeof s.estimatedTime === 'string' ? parseInt(s.estimatedTime) : s.estimatedTime) : undefined,
+                    actualTime: s.actualTime ? (typeof s.actualTime === 'string' ? parseInt(s.actualTime) : s.actualTime) : undefined
+                  };
+                  console.log('Mapeando subtarefa para UnifiedKanban (card):', {
+                    original: s,
+                    mapped: mappedItem,
+                    originalId: s.id,
+                    mappedId: mappedItem.id
+                  });
+                  return mappedItem;
+                }) || []}
+                onItemMove={handleItemMove}
+              />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {groupByBoard ? (
+                // Agrupado por quadro
+                availableBoards.map(board => {
+                  const boardCards = filteredActivities.filter(card => card.boardId === board.id);
+                  if (boardCards.length === 0) return null;
+                  
+                  return (
+                    <div key={board.id} className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-1 h-8 bg-gradient-to-b from-[#16704E] to-[#0F5A3A] rounded-full"></div>
+                        <h2 className="text-xl font-bold text-slate-800">{board.name}</h2>
+                        <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                          {boardCards.length} {boardCards.length === 1 ? 'card' : 'cards'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {boardCards.map(card => (
+                          <div key={card.id} onClick={() => {
+                            console.log('Card clicked:', card);
+                            setSelectedCardForKanban(card)
+                          }} className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border border-slate-200/50 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md">
+                            {/* Barra lateral de prioridade melhorada */}
+                            <div className={`h-full w-2 absolute left-0 top-0 rounded-l-3xl shadow-lg ${
+                              card.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600' :
+                              card.priority === 'high' ? 'bg-gradient-to-b from-orange-500 to-orange-600' :
+                              card.priority === 'medium' ? 'bg-gradient-to-b from-yellow-500 to-yellow-600' :
+                              card.priority === 'low' ? 'bg-gradient-to-b from-green-500 to-green-600' :
+                              'bg-gradient-to-b from-gray-400 to-gray-500'
+                            }`} />
+                            
+                            {/* Efeito de brilho no hover */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            
+                            <div className="p-6 pl-10 relative z-10">
+                              <div className="flex items-start justify-between mb-3">
+                                <h3 className="font-bold text-xl mb-2 text-slate-800 group-hover:text-slate-900 transition-colors duration-300 leading-tight">{card.title}</h3>
+                                <div className="flex items-center space-x-2">
+                                  {/* Indicador de subtarefas */}
+                                  <div className="flex items-center space-x-1 bg-slate-100 group-hover:bg-slate-200 rounded-full px-2 py-1 transition-colors duration-300">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <span className="text-xs font-semibold text-slate-600">{card.subtasks?.length || 0}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <p className="text-sm text-slate-600 mb-4 line-clamp-2 group-hover:text-slate-700 transition-colors duration-300">{card.description}</p>
+                              
+                              {/* Avatares dos membros */}
+                              {card.members && card.members.length > 0 && (
+                                <div className="mb-4">
+                                  <AvatarGroup 
+                                    members={card.members.map(memberId => membersCache.get(typeof memberId === 'string' ? parseInt(memberId) : memberId)).filter(Boolean) as UserType[]}
+                                    maxVisible={3}
+                                    size="sm"
+                                  />
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center space-x-2">
+                                  {/* Ícone de prioridade */}
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    card.priority === 'urgent' ? 'bg-red-500' :
+                                    card.priority === 'high' ? 'bg-orange-500' :
+                                    card.priority === 'medium' ? 'bg-yellow-500' :
+                                    card.priority === 'low' ? 'bg-green-500' :
+                                    'bg-gray-400'
+                                  }`}></div>
+                                  <span className="text-xs font-medium text-slate-500">
+                              {card.priority === 'urgent' ? 'Urgente' :
+                               card.priority === 'high' ? 'Alta' :
+                               card.priority === 'medium' ? 'Normal' :
+                               card.priority === 'low' ? 'Baixa' :
+                               'Normal'}
+                            </span>
+                                </div>
+                                
+                                {/* Status tag melhorado */}
+                                <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${
+                                  card.status === 'completed' ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' : 
+                                  card.status === 'in_progress' ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25' : 
+                                  'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25'
+                                }`}>
+                                  {card.status === 'pending' ? 'A Fazer' : card.status === 'in_progress' ? 'Em Progresso' : card.status === 'completed' ? 'Concluído' : card.status}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Borda inferior decorativa */}
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-slate-300 transition-colors duration-300"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                // Não agrupado
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredActivities.map(card => (
+                    <div key={card.id} onClick={() => {
+                      console.log('Card clicked:', card);
+                      setSelectedCardForKanban(card)
+                    }} className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border border-slate-200/50 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md">
+                      {/* Barra lateral de prioridade melhorada */}
+                      <div className={`h-full w-2 absolute left-0 top-0 rounded-l-3xl shadow-lg ${
+                        card.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600' :
+                        card.priority === 'high' ? 'bg-gradient-to-b from-orange-500 to-orange-600' :
+                        card.priority === 'medium' ? 'bg-gradient-to-b from-yellow-500 to-yellow-600' :
+                        card.priority === 'low' ? 'bg-gradient-to-b from-green-500 to-green-600' :
+                        'bg-gradient-to-b from-gray-400 to-gray-500'
+                      }`} />
+                      
+                      {/* Efeito de brilho no hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                      
+                      <div className="p-6 pl-10 relative z-10">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="font-bold text-xl mb-2 text-slate-800 group-hover:text-slate-900 transition-colors duration-300 leading-tight">{card.title}</h3>
+                          <div className="flex items-center space-x-2">
+                            {/* Indicador de subtarefas */}
+                            <div className="flex items-center space-x-1 bg-slate-100 group-hover:bg-slate-200 rounded-full px-2 py-1 transition-colors duration-300">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-slate-600">{card.subtasks?.length || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-slate-600 mb-4 line-clamp-2 group-hover:text-slate-700 transition-colors duration-300">{card.description}</p>
+                        
+                        {/* Avatares dos membros */}
+                        {card.members && card.members.length > 0 && (
+                          <div className="mb-4">
+                            <AvatarGroup 
+                              members={card.members.map(memberId => membersCache.get(typeof memberId === 'string' ? parseInt(memberId) : memberId)).filter(Boolean) as UserType[]}
+                              maxVisible={3}
+                              size="sm"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            {/* Ícone de prioridade */}
+                            <div className={`w-3 h-3 rounded-full ${
+                              card.priority === 'urgent' ? 'bg-red-500' :
+                              card.priority === 'high' ? 'bg-orange-500' :
+                              card.priority === 'medium' ? 'bg-yellow-500' :
+                              card.priority === 'low' ? 'bg-green-500' :
+                              'bg-gray-400'
+                            }`}></div>
+                            <span className="text-xs font-medium text-slate-500">
+                              {card.priority === 'urgent' ? 'Urgente' :
+                               card.priority === 'high' ? 'Alta' :
+                               card.priority === 'medium' ? 'Normal' :
+                               card.priority === 'low' ? 'Baixa' :
+                               'Normal'}
+                            </span>
+                          </div>
+                          
+                          {/* Status tag melhorado */}
+                          <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${
+                            card.status === 'completed' ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' : 
+                            card.status === 'in_progress' ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25' : 
+                            'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25'
+                          }`}>
+                            {card.status === 'pending' ? 'A Fazer' : card.status === 'in_progress' ? 'Em Progresso' : card.status === 'completed' ? 'Concluído' : card.status}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Borda inferior decorativa */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-slate-300 transition-colors duration-300"></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        ) : (
+          <div className={`grid grid-cols-1 gap-8 lg:grid-cols-3`}>
+            <div className="lg:col-span-2">
             <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-100 via-green-50 to-slate-100 p-6 border-b border-slate-200">
+                <div className="bg-gradient-to-r from-slate-100 via-[#16704E]/10 to-slate-100 p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
-                                  <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
-                  <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg mr-3 shadow-sm">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  Lista de Atividades
-                </h2>
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
+                      <div className="p-2 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-lg mr-3 shadow-sm">
+                      <Target className="w-5 h-5 text-white" />
+                    </div>
+                    Lista de Atividades
+                  </h2>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-slate-600 bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 rounded-full border border-slate-300 shadow-sm">
                       {filteredActivities.length} resultado{filteredActivities.length !== 1 ? 's' : ''}
@@ -811,42 +1425,44 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 </div>
               </div>
               <div className="max-h-[calc(100vh-350px)] overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
-                {filteredActivities.length === 0 ? (
-                  <div className="flex items-center justify-center h-64 text-slate-500">
-                    <div className="text-center">
-                      <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <Target className="w-8 h-8 text-slate-400" />
+                <div>
+                    {filteredActivities.length === 0 ? (
+                      <div className="flex items-center justify-center h-64 text-slate-500">
+                        <div className="text-center">
+                          <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                            <Target className="w-8 h-8 text-slate-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold mb-2">Nenhuma atividade encontrada</h3>
+                          <p className="text-slate-600">Tente ajustar os filtros ou criar novas atividades</p>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">Nenhuma atividade encontrada</h3>
-                      <p className="text-slate-600">Tente ajustar os filtros ou criar novas atividades</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredActivities.map(activity => renderActivityItem(activity))}
-                  </div>
-                )}
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredActivities.map(activity => renderActivityItem(activity))}
+                      </div>
+                    )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Activity Details */}
-          <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 h-[calc(100vh-350px)] overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-100 via-red-50 to-slate-100 p-6 border-b border-slate-200">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
-                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg mr-3 shadow-sm">
-                    <Eye className="w-5 h-5 text-white" />
-                  </div>
-                  Detalhes da Atividade
-                </h2>
-              </div>
-              <div className="overflow-y-auto h-full bg-gradient-to-br from-slate-50/50 to-white">
-                {renderActivityDetails()}
+            <div className="lg:col-span-1">
+              <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 h-[calc(100vh-350px)] overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-100 via-red-50 to-slate-100 p-6 border-b border-slate-200">
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
+                    <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg mr-3 shadow-sm">
+                      <Eye className="w-5 h-5 text-white" />
+                    </div>
+                    Detalhes da Atividade
+                  </h2>
+                </div>
+                <div className="overflow-y-auto h-full bg-gradient-to-br from-slate-50/50 to-white">
+                  {renderActivityDetails()}
+                </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
       </div>
     </div>
   );

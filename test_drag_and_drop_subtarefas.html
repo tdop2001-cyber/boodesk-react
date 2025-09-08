@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Drag and Drop de Subtarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2563eb;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .test-steps {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2563eb;
+        }
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .expected-result {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+            margin-top: 15px;
+        }
+        .expected-result h4 {
+            color: #16a34a;
+            margin: 0 0 10px 0;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #d97706;
+            font-weight: bold;
+        }
+        .problem-analysis {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ef4444;
+            margin-top: 15px;
+        }
+        .problem-analysis h4 {
+            color: #dc2626;
+            margin: 0 0 10px 0;
+        }
+        .solution-implemented {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 15px;
+        }
+        .solution-implemented h4 {
+            color: #2563eb;
+            margin: 0 0 10px 0;
+        }
+        .drag-test {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #f59e0b;
+            margin: 20px 0;
+        }
+        .drag-test h4 {
+            color: #d97706;
+            margin: 0 0 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Drag and Drop de Subtarefas</h1>
+        <p>Este arquivo contém o teste para verificar se o drag and drop das subtarefas está funcionando.</p>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Problema Identificado e Corrigido</div>
+            <div class="test-description">
+                <strong>Problema:</strong> O drag and drop das subtarefas entre colunas não estava funcionando devido a problemas na atualização do estado.
+            </div>
+            <div class="problem-analysis">
+                <h4>🚨 Problema Identificado:</h4>
+                <ul>
+                    <li><span class="status-error">Estado Não Atualizado:</span> setInternalSubtasks não estava sincronizando</li>
+                    <li><span class="status-error">onSubtasksChange Prematuro:</span> Chamado antes do estado ser atualizado</li>
+                    <li><span class="status-error">Timing Issues:</span> Problemas de sincronização entre estado e callback</li>
+                </ul>
+            </div>
+            <div class="solution-implemented">
+                <h4>✅ Soluções Implementadas:</h4>
+                <ul>
+                    <li><span class="status-success">setTimeout para Sincronização:</span> Aguarda estado ser atualizado</li>
+                    <li><span class="status-success">Estado Atualizado Primeiro:</span> setInternalSubtasks executado primeiro</li>
+                    <li><span class="status-success">Callback Sincronizado:</span> onSubtasksChange chamado após atualização</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste do Drag and Drop</div>
+            <div class="test-description">
+                Siga estes passos para testar se o drag and drop está funcionando:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Recarregue a página</strong> para aplicar as correções</li>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Tente mover uma subtarefa</strong> entre colunas</li>
+                    <li><strong>Observe os logs</strong> no console</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="drag-test">
+            <h4>🎯 Teste Específico de Drag and Drop:</h4>
+            <ol>
+                <li><strong>Identifique uma subtarefa</strong> em qualquer coluna</li>
+                <li><strong>Clique e segure</strong> na subtarefa (deve aparecer um overlay)</li>
+                <li><strong>Arraste</strong> para outra coluna</li>
+                <li><strong>Solte</strong> na nova coluna</li>
+                <li><strong>Verifique</strong> se a subtarefa foi movida</li>
+                <li><strong>Confirme</strong> se os contadores foram atualizados</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Logs Esperados Durante Drag and Drop</div>
+            <div class="test-description">
+                Durante o teste, você deve ver estes logs no console:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Logs Esperados:</h4>
+                <div class="console-log">
+=== DRAG START ===
+Evento: {active: {...}, ...}
+Active ID: [ID_DA_SUBTAREFA]
+Active Data: {...}
+
+=== DRAG END ===
+Evento completo: {active: {...}, over: {...}, ...}
+Active: {id: [ID_DA_SUBTAREFA], ...}
+Over: {id: [COLUNA_DESTINO], ...}
+
+=== ATUALIZANDO ESTADO INTERNO ===
+Subtarefas antes da atualização: [...]
+✅ Atualizando subtarefa [TÍTULO] (ID: [ID])
+   Status: [STATUS_ATUAL] → [NOVO_STATUS]
+   Completed: [COMPLETED_ATUAL] → [NOVO_COMPLETED]
+
+Estado interno atualizado com sucesso
+
+=== CHAMANDO onSubtasksChange APÓS ATUALIZAÇÃO ===
+✅ onSubtasksChange executado com sucesso
+
+=== CONFIRMAÇÃO DO ESTADO INTERNO ===
+Estado interno após atualização: [...]
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Específicas</div>
+            <div class="test-description">
+                Durante o teste, verifique especificamente:
+            </div>
+            <div class="test-steps">
+                <h4>🔍 Pontos de Verificação:</h4>
+                <ol>
+                    <li><strong>Drag Start:</strong> Overlay aparece ao clicar e segurar</li>
+                    <li><strong>Drag Over:</strong> Coluna de destino fica destacada</li>
+                    <li><strong>Drag End:</strong> Subtarefa é movida para nova coluna</li>
+                    <li><strong>Contadores:</strong> Números das colunas são atualizados</li>
+                    <li><strong>Estado:</strong> Mudanças persistem após recarregar</li>
+                    <li><strong>Console:</strong> Logs mostram processo completo</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Teste de Múltiplas Movimentações</div>
+            <div class="test-description">
+                Após confirmar que o drag and drop básico funciona, teste:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Mova uma subtarefa</strong> da coluna "A Fazer" para "Em Progresso"</li>
+                    <li><strong>Mova outra subtarefa</strong> da coluna "Em Progresso" para "Concluído"</li>
+                    <li><strong>Mova de volta</strong> uma subtarefa de "Concluído" para "A Fazer"</li>
+                    <li><strong>Verifique se os contadores</strong> são atualizados corretamente</li>
+                    <li><strong>Confirme se as mudanças</strong> persistem após recarregar</li>
+                </ol>
+            </div>
+            <div class="expected-result">
+                <h4>✅ Resultado Esperado:</h4>
+                <ul>
+                    <li>Todas as movimentações funcionam sem erros</li>
+                    <li>Contadores das colunas são atualizados corretamente</li>
+                    <li>Estado é persistido no banco de dados</li>
+                    <li>Interface é atualizada em tempo real</li>
+                    <li>Logs mostram processo completo para cada movimento</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Comandos de Debug Úteis</div>
+            <div class="test-description">
+                Use estes comandos no console para verificar o estado:
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Comandos de Debug:</h4>
+                <div class="console-log">
+// Verificar estado das subtarefas
+console.log('Subtarefas internas:', window.internalSubtasks)
+
+// Verificar filtragem por coluna
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'))
+console.log('Coluna Em Progresso:', window.getSubtasksByColumn && window.getSubtasksByColumn('in_progress'))
+console.log('Coluna Concluído:', window.getSubtasksByColumn && window.getSubtasksByColumn('completed'))
+
+// Verificar se há problemas de estado
+const subtasks = window.internalSubtasks || [];
+console.log('Total de subtarefas:', subtasks.length);
+console.log('Status das subtarefas:', subtasks.map(s => ({ 
+  title: s.title, 
+  status: s.status, 
+  completed: s.completed 
+})));
+
+// Testar função de drag and drop
+console.log('Função handleDragEnd disponível:', typeof window.handleDragEnd);
+console.log('Função handleDragStart disponível:', typeof window.handleDragStart);
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📋 Checklist de Verificação</div>
+            <div class="test-description">
+                Use este checklist para confirmar que o drag and drop está funcionando:
+            </div>
+            <div class="test-steps">
+                <h4>✅ Checklist:</h4>
+                <ul>
+                    <li><input type="checkbox"> Página recarregada com sucesso</li>
+                    <li><input type="checkbox"> Console aberto e limpo</li>
+                    <li><input type="checkbox"> Modo Kanban ativado</li>
+                    <li><input type="checkbox"> Overlay aparece ao clicar e segurar</li>
+                    <li><input type="checkbox"> Coluna de destino fica destacada</li>
+                    <li><input type="checkbox"> Subtarefa é movida com sucesso</li>
+                    <li><input type="checkbox"> Contadores são atualizados</li>
+                    <li><input type="checkbox"> Logs mostram processo completo</li>
+                    <li><input type="checkbox"> Múltiplas movimentações funcionam</li>
+                    <li><input type="checkbox"> Mudanças persistem após recarregar</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🎯 Resultado Esperado</div>
+            <div class="test-description">
+                Após a correção, o drag and drop deve funcionar perfeitamente:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Funcionalidades Corrigidas:</h4>
+                <ul>
+                    <li><strong>Drag Start:</strong> Overlay aparece ao clicar e segurar</li>
+                    <li><strong>Drag Over:</strong> Coluna de destino fica destacada</li>
+                    <li><strong>Drag End:</strong> Subtarefa é movida para nova coluna</li>
+                    <li><strong>Estado Atualizado:</strong> Estado interno sincronizado</li>
+                    <li><strong>Callback Executado:</strong> onSubtasksChange funcionando</li>
+                    <li><strong>Contadores Corretos:</strong> Números das colunas atualizados</li>
+                    <li><strong>Persistência:</strong> Mudanças salvas no banco</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Próximos Passos</div>
+            <div class="test-description">
+                Após confirmar que o drag and drop funciona:
+            </div>
+            <div class="test-steps">
+                <h4>📋 Próximos Passos:</h4>
+                <ol>
+                    <li><strong>Execute o teste</strong> seguindo os passos acima</li>
+                    <li><strong>Confirme que o drag and drop funciona</strong></li>
+                    <li><strong>Teste múltiplas movimentações</strong></li>
+                    <li><strong>Verifique se os contadores são atualizados</strong></li>
+                    <li><strong>Reporte o resultado</strong> do teste</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script para ajudar nos testes
+        console.log('🧪 Teste de Drag and Drop de Subtarefas carregado');
+        console.log('Siga os passos no arquivo para verificar se o drag and drop está funcionando');
+        
+        // Função para verificar estado atual
+        window.checkDragAndDropState = function() {
+            console.log('=== VERIFICAÇÃO DO ESTADO DE DRAG AND DROP ===');
+            console.log('Verificando se o drag and drop está funcionando...');
+            
+            // Esta função pode ser expandida para verificações automatizadas
+            if (typeof window.internalSubtasks !== 'undefined') {
+                console.log('Estado interno das subtarefas:', window.internalSubtasks);
+                
+                // Verificar se há subtarefas para mover
+                const subtasks = window.internalSubtasks;
+                if (subtasks.length > 0) {
+                    console.log('✅ Há subtarefas disponíveis para mover');
+                    console.log('Primeira subtarefa:', subtasks[0]);
+                } else {
+                    console.log('⚠️ Nenhuma subtarefa disponível para mover');
+                }
+            } else {
+                console.log('Estado interno não disponível');
+            }
+        };
+        
+        // Função para verificar funcionalidades de drag and drop
+        window.checkDragAndDropFunctions = function() {
+            console.log('=== VERIFICAÇÃO DE FUNÇÕES DE DRAG AND DROP ===');
+            console.log('Verificando se as funções necessárias estão disponíveis...');
+            
+            // Verificar funções essenciais
+            const functions = [
+                'handleDragStart',
+                'handleDragEnd',
+                'setInternalSubtasks',
+                'onSubtasksChange'
+            ];
+            
+            functions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    console.log(`✅ ${funcName}: Disponível`);
+                } else {
+                    console.log(`❌ ${funcName}: Não disponível`);
+                }
+            });
+        };
+    </script>
+</body>
+</html>

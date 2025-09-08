@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Atribuição Automática de Membros</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .card-example {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Teste de Atribuição Automática de Membros</h1>
+        <p>Este teste verifica se o criador do card é automaticamente adicionado como membro responsável.</p>
+        
+        <button onclick="testCardCreation()">🎯 Testar Criação de Card</button>
+        <button onclick="checkExistingCards()">📋 Verificar Cards Existentes</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testCardCreation() {
+            addResult('🔄 Testando Criação de Card com Membro Automático...', 'Executando teste...', 'info');
+            
+            try {
+                // 1. Buscar um board existente para criar o card
+                const { data: boards, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('*')
+                    .limit(1);
+                
+                if (boardsError || !boards || boards.length === 0) {
+                    addResult('❌ Erro ao buscar boards', 
+                        boardsError ? JSON.stringify(boardsError, null, 2) : 'Nenhum board encontrado', 
+                        'error');
+                    return;
+                }
+
+                const board = boards[0];
+                addResult('📋 Board encontrado', 
+                    `Board: ${board.name}\n` +
+                    `Board ID: ${board.board_id}\n` +
+                    `ID: ${board.id}`, 
+                    'info');
+
+                // 2. Criar um card de teste
+                const testCardData = {
+                    card_id: `test-card-${Date.now()}`,
+                    board_id: board.board_id,
+                    list_name: 'A Fazer',
+                    title: 'Card de Teste - Membro Automático',
+                    description: 'Este card foi criado para testar a atribuição automática de membros',
+                    status: 'todo',
+                    importance: 'medium',
+                    members: [], // Array vazio - o criador deve ser adicionado automaticamente
+                    creation_date: new Date().toISOString(),
+                    is_archived: false,
+                    user_id: 1 // ID do criador
+                };
+
+                addResult('📝 Dados do Card a ser criado', 
+                    `Título: ${testCardData.title}\n` +
+                    `Criador (user_id): ${testCardData.user_id}\n` +
+                    `Membros iniciais: ${JSON.stringify(testCardData.members)}\n` +
+                    `Board ID: ${testCardData.board_id}`, 
+                    'info');
+
+                // 3. Criar o card
+                const { data: createdCard, error: createError } = await supabase
+                    .from('cards')
+                    .insert([testCardData])
+                    .select()
+                    .single();
+
+                if (createError) {
+                    addResult('❌ Erro ao criar card', JSON.stringify(createError, null, 2), 'error');
+                    return;
+                }
+
+                addResult('✅ Card criado com sucesso!', 
+                    `ID: ${createdCard.id}\n` +
+                    `Card ID: ${createdCard.card_id}\n` +
+                    `Título: ${createdCard.title}\n` +
+                    `Criador (user_id): ${createdCard.user_id}\n` +
+                    `Membros: ${JSON.stringify(createdCard.members)}`, 
+                    'success');
+
+                // 4. Verificar se o criador foi adicionado como membro
+                const creatorId = createdCard.user_id;
+                const members = createdCard.members || [];
+                
+                if (members.includes(creatorId)) {
+                    addResult('🎉 SUCESSO: Criador adicionado como membro!', 
+                        `Criador ID: ${creatorId}\n` +
+                        `Membros: ${JSON.stringify(members)}\n` +
+                        `Criador está na lista: ✅`, 
+                        'success');
+                } else {
+                    addResult('⚠️ PROBLEMA: Criador NÃO foi adicionado como membro', 
+                        `Criador ID: ${creatorId}\n` +
+                        `Membros: ${JSON.stringify(members)}\n` +
+                        `Criador está na lista: ❌`, 
+                        'error');
+                }
+
+                // 5. Limpar o card de teste
+                const { error: deleteError } = await supabase
+                    .from('cards')
+                    .delete()
+                    .eq('id', createdCard.id);
+
+                if (deleteError) {
+                    addResult('⚠️ Aviso: Não foi possível deletar o card de teste', 
+                        `Erro: ${deleteError.message}`, 
+                        'info');
+                } else {
+                    addResult('🧹 Card de teste removido', 'Card de teste foi removido com sucesso', 'info');
+                }
+
+            } catch (error) {
+                addResult('❌ Erro geral no teste', error.toString(), 'error');
+            }
+        }
+
+        async function checkExistingCards() {
+            addResult('🔄 Verificando Cards Existentes...', 'Executando verificação...', 'info');
+            
+            try {
+                // Buscar alguns cards existentes
+                const { data: cards, error } = await supabase
+                    .from('cards')
+                    .select('id, title, user_id, members')
+                    .limit(10);
+                
+                if (error) {
+                    addResult('❌ Erro ao buscar cards', JSON.stringify(error, null, 2), 'error');
+                    return;
+                }
+
+                if (!cards || cards.length === 0) {
+                    addResult('ℹ️ Nenhum card encontrado', 'Não há cards para verificar', 'info');
+                    return;
+                }
+
+                let result = `Cards encontrados: ${cards.length}\n\n`;
+                let cardsWithCreatorAsMember = 0;
+                let cardsWithoutCreatorAsMember = 0;
+
+                cards.forEach((card, index) => {
+                    const creatorId = card.user_id;
+                    const members = card.members || [];
+                    const hasCreatorAsMember = members.includes(creatorId);
+                    
+                    if (hasCreatorAsMember) {
+                        cardsWithCreatorAsMember++;
+                    } else {
+                        cardsWithoutCreatorAsMember++;
+                    }
+                    
+                    result += `Card ${index + 1}:\n`;
+                    result += `  ID: ${card.id}\n`;
+                    result += `  Título: ${card.title}\n`;
+                    result += `  Criador: ${creatorId}\n`;
+                    result += `  Membros: ${JSON.stringify(members)}\n`;
+                    result += `  Criador é membro: ${hasCreatorAsMember ? '✅' : '❌'}\n\n`;
+                });
+
+                result += `\nResumo:\n`;
+                result += `- Cards com criador como membro: ${cardsWithCreatorAsMember}\n`;
+                result += `- Cards sem criador como membro: ${cardsWithoutCreatorAsMember}\n`;
+                result += `- Taxa de sucesso: ${Math.round((cardsWithCreatorAsMember / cards.length) * 100)}%`;
+
+                const type = cardsWithoutCreatorAsMember === 0 ? 'success' : 'error';
+                addResult(
+                    cardsWithoutCreatorAsMember === 0 ? 
+                    '✅ Todos os cards têm o criador como membro!' : 
+                    '⚠️ Alguns cards não têm o criador como membro',
+                    result, 
+                    type
+                );
+
+            } catch (error) {
+                addResult('❌ Erro geral na verificação', error.toString(), 'error');
+            }
+        }
+
+        // Executar verificação automática ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a atribuição automática de membros.', 'info');
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Múltiplas Subtarefas por Coluna</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2563eb;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .test-steps {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2563eb;
+        }
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .expected-result {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+            margin-top: 15px;
+        }
+        .expected-result h4 {
+            color: #16a34a;
+            margin: 0 0 10px 0;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #d97706;
+            font-weight: bold;
+        }
+        .problem-analysis {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ef4444;
+            margin-top: 15px;
+        }
+        .problem-analysis h4 {
+            color: #dc2626;
+            margin: 0 0 10px 0;
+        }
+        .solution-implemented {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 15px;
+        }
+        .solution-implemented h4 {
+            color: #2563eb;
+            margin: 0 0 10px 0;
+        }
+        .test-image {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .test-image img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Múltiplas Subtarefas por Coluna</h1>
+        <p>Este arquivo contém o teste para verificar se agora é possível ter múltiplas subtarefas por coluna.</p>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Problema Identificado e Corrigido</div>
+            <div class="test-description">
+                <strong>Problema:</strong> O sistema não permitia múltiplas subtarefas por coluna devido a filtros de duplicatas incorretos.
+            </div>
+            <div class="problem-analysis">
+                <h4>🚨 Problema Identificado:</h4>
+                <ul>
+                    <li><span class="status-error">Filtro de Duplicatas Incorreto:</span> Estava removendo subtarefas legítimas</li>
+                    <li><span class="status-error">Chaves de Renderização:</span> Keys duplicadas causavam problemas</li>
+                    <li><span class="status-error">Lógica de Estado:</span> Estado interno não sincronizado corretamente</li>
+                </ul>
+            </div>
+            <div class="solution-implemented">
+                <h4>✅ Soluções Implementadas:</h4>
+                <ul>
+                    <li><span class="status-success">Removido Filtro de Duplicatas:</span> Agora permite múltiplas subtarefas por coluna</li>
+                    <li><span class="status-success">Chaves Únicas:</span> Cada subtarefa tem chave única com índice</li>
+                    <li><span class="status-success">Estado Corrigido:</span> Estado interno sincronizado corretamente</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste da Funcionalidade</div>
+            <div class="test-description">
+                Siga estes passos para testar se agora é possível ter múltiplas subtarefas por coluna:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Recarregue a página</strong> para aplicar as correções</li>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Verifique se não há duplicatas visuais</strong></li>
+                    <li><strong>Teste a criação de múltiplas subtarefas</strong></li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Resultado Esperado Após Correção</div>
+            <div class="test-description">
+                Após a correção, você deve ver:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Funcionalidades Corrigidas:</h4>
+                <ul>
+                    <li><strong>Coluna "A Fazer":</strong> Vazia (0 subtarefas) - CORRETO</li>
+                    <li><strong>Coluna "Em Progresso":</strong> 1 subtarefa (aaaaa) - CORRETO</li>
+                    <li><strong>Coluna "Concluído":</strong> 1 subtarefa (bbb) - CORRETO</li>
+                    <li><strong>Sem Duplicatas:</strong> Cada subtarefa aparece apenas uma vez</li>
+                    <li><strong>Contadores Corretos:</strong> 0, 1, 1 respectivamente</li>
+                    <li><strong>É possível criar múltiplas subtarefas</strong> na mesma coluna</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Teste de Criação de Múltiplas Subtarefas</div>
+            <div class="test-description">
+                Agora teste se é possível criar múltiplas subtarefas na mesma coluna:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Clique em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite um título</strong> (ex: "Teste 1") e clique em "Adicionar"</li>
+                    <li><strong>Verifique se aparece</strong> na coluna "A Fazer"</li>
+                    <li><strong>Clique novamente em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite outro título</strong> (ex: "Teste 2") e clique em "Adicionar"</li>
+                    <li><strong>Verifique se ambas aparecem</strong> na coluna "A Fazer"</li>
+                    <li><strong>Contador deve mostrar "2"</strong> na coluna "A Fazer"</li>
+                    <li><strong>Teste mover uma subtarefa</strong> para outra coluna</li>
+                </ol>
+            </div>
+            <div class="expected-result">
+                <h4>✅ Resultado Esperado:</h4>
+                <ul>
+                    <li>Primeira subtarefa criada com sucesso</li>
+                    <li>Segunda subtarefa criada com sucesso</li>
+                    <li>Ambas aparecem na coluna "A Fazer" (uma sobre a outra)</li>
+                    <li>Contador da coluna mostra "2"</li>
+                    <li>É possível mover subtarefas entre colunas</li>
+                    <li>Sem duplicatas visuais</li>
+                    <li>Logs limpos no console</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Específicas</div>
+            <div class="test-description">
+                Durante o teste, verifique especificamente:
+            </div>
+            <div class="test-steps">
+                <h4>🔍 Pontos de Verificação:</h4>
+                <ol>
+                    <li><strong>Estado Visual:</strong> Não há subtarefas duplicadas visivelmente</li>
+                    <li><strong>Contadores:</strong> Cada coluna mostra o número correto de subtarefas</li>
+                    <li><strong>Criação Múltipla:</strong> É possível criar várias subtarefas na mesma coluna</li>
+                    <li><strong>Drag and Drop:</strong> Subtarefas podem ser movidas entre colunas</li>
+                    <li><strong>Persistência:</strong> Mudanças persistem após recarregar</li>
+                    <li><strong>Console:</strong> Logs limpos sem erros de duplicatas</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Comandos de Debug Úteis</div>
+            <div class="test-description">
+                Use estes comandos no console para verificar o estado:
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Comandos de Debug:</h4>
+                <div class="console-log">
+// Verificar estado das subtarefas
+console.log('Subtarefas internas:', window.internalSubtasks)
+
+// Verificar filtragem por coluna
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'))
+console.log('Coluna Em Progresso:', window.getSubtasksByColumn && window.getSubtasksByColumn('in_progress'))
+console.log('Coluna Concluído:', window.getSubtasksByColumn && window.getSubtasksByColumn('completed'))
+
+// Verificar se há duplicatas reais
+const subtasks = window.internalSubtasks || [];
+const ids = subtasks.map(s => s.id);
+const uniqueIds = ids.filter((id, index) => ids.indexOf(id) === index);
+console.log('Total de subtarefas:', subtasks.length);
+console.log('IDs únicos:', uniqueIds.length);
+console.log('Há duplicatas reais?', subtasks.length !== uniqueIds.length);
+
+// Verificar renderização por coluna
+console.log('Verificando renderização por coluna...');

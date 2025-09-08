@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug React - Ordem dos Quadros</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .console-log {
+            background-color: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 Debug React - Ordem dos Quadros</h1>
+        <p>Este teste simula exatamente o que acontece na aplicação React.</p>
+        
+        <button onclick="testReactFlow()">⚛️ Testar Fluxo React</button>
+        <button onclick="testDatabaseFunctions()">🗄️ Testar Funções do Banco</button>
+        <button onclick="testUserSettings()">👤 Testar User Settings</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div class="step">
+            <h3>📋 Console de Logs</h3>
+            <div class="console-log" id="consoleLog"></div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function log(message) {
+            const consoleLog = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            consoleLog.innerHTML += `[${timestamp}] ${message}\n`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+        }
+
+        // Simular as funções do DatabaseService
+        async function getUserSettings(userId) {
+            log(`getUserSettings: Buscando configurações para usuário ${userId}`);
+            
+            try {
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('setting_key, setting_value')
+                    .eq('user_id', userId);
+
+                if (error) {
+                    log(`getUserSettings: Erro - ${error.message}`);
+                    throw error;
+                }
+
+                const settings = {};
+                data?.forEach(setting => {
+                    try {
+                        settings[setting.setting_key] = JSON.parse(setting.setting_value);
+                    } catch {
+                        settings[setting.setting_key] = setting.setting_value;
+                    }
+                });
+
+                log(`getUserSettings: Configurações encontradas - ${JSON.stringify(settings)}`);
+                return settings;
+            } catch (error) {
+                log(`getUserSettings: Erro geral - ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function saveUserSettings(userId, settings) {
+            log(`saveUserSettings: Salvando configurações para usuário ${userId}`);
+            log(`saveUserSettings: Configurações - ${JSON.stringify(settings)}`);
+            
+            try {
+                const settingsToSave = Object.entries(settings).map(([key, value]) => ({
+                    user_id: userId,
+                    setting_key: key,
+                    setting_value: JSON.stringify(value),
+                    updated_at: new Date().toISOString()
+                }));
+
+                log(`saveUserSettings: Dados preparados - ${JSON.stringify(settingsToSave)}`);
+
+                for (const setting of settingsToSave) {
+                    const { data, error } = await supabase
+                        .from('user_settings')
+                        .upsert(setting);
+
+                    if (error) {
+                        log(`saveUserSettings: Erro ao salvar ${setting.setting_key} - ${error.message}`);
+                        throw error;
+                    }
+                    
+                    log(`saveUserSettings: ${setting.setting_key} salvo com sucesso`);
+                }
+
+                log(`saveUserSettings: Todas as configurações salvas com sucesso`);
+                return true;
+            } catch (error) {
+                log(`saveUserSettings: Erro geral - ${error.message}`);
+                return false;
+            }
+        }
+
+        // Simular a função loadUserBoardsOrder do React
+        async function loadUserBoardsOrder(boardsData, userId) {
+            log(`loadUserBoardsOrder: Iniciando para usuário ${userId}`);
+            log(`loadUserBoardsOrder: Quadros recebidos - ${JSON.stringify(boardsData.map(b => ({ id: b.id, name: b.name })))}`);
+            
+            try {
+                if (!userId) {
+                    log(`loadUserBoardsOrder: Usuário não encontrado, retornando ordem padrão`);
+                    return boardsData;
+                }
+
+                // Buscar a ordem salva do usuário
+                const userSettings = await getUserSettings(userId);
+                const boardsOrderValue = userSettings['boards_order'];
+                
+                if (!boardsOrderValue) {
+                    log(`loadUserBoardsOrder: Nenhuma ordem salva encontrada, retornando ordem padrão`);
+                    return boardsData;
+                }
+
+                // A ordem já vem parseada da função getUserSettings
+                const savedOrder = boardsOrderValue;
+                log(`loadUserBoardsOrder: Ordem salva encontrada - ${JSON.stringify(savedOrder)}`);
+
+                // Reordenar os quadros conforme a ordem salva
+                const orderedBoards = [];
+                const remainingBoards = [...boardsData];
+
+                // Primeiro, adicionar os quadros na ordem salva
+                savedOrder.forEach(boardId => {
+                    const boardIndex = remainingBoards.findIndex(board => board.id === boardId);
+                    if (boardIndex !== -1) {
+                        orderedBoards.push(remainingBoards[boardIndex]);
+                        remainingBoards.splice(boardIndex, 1);
+                    }
+                });
+
+                // Depois, adicionar os quadros que não estavam na ordem salva (novos quadros)
+                orderedBoards.push(...remainingBoards);
+
+                log(`loadUserBoardsOrder: Quadros reordenados - ${JSON.stringify(orderedBoards.map(b => ({ id: b.id, name: b.name })))}`);
+                return orderedBoards;
+            } catch (error) {
+                log(`loadUserBoardsOrder: Erro - ${error.message}`);
+                return boardsData; // Retornar ordem padrão em caso de erro
+            }
+        }
+
+        // Simular a função saveBoardsOrder do React
+        async function saveBoardsOrder(orderedBoards, userId) {
+            log(`saveBoardsOrder: Salvando ordem para usuário ${userId}`);
+            log(`saveBoardsOrder: Quadros ordenados - ${JSON.stringify(orderedBoards.map(b => ({ id: b.id, name: b.name })))}`);
+            
+            try {
+                if (!userId) {
+                    log(`saveBoardsOrder: Usuário não encontrado`);
+                    return false;
+                }
+
+                // Extrair apenas os IDs dos quadros na ordem
+                const boardIds = orderedBoards.map(board => board.id);
+                log(`saveBoardsOrder: IDs dos quadros - ${JSON.stringify(boardIds)}`);
+
+                // Salvar a ordem no banco de dados
+                const success = await saveUserSettings(userId, {
+                    'boards_order': boardIds
+                });
+
+                if (success) {
+                    log(`saveBoardsOrder: Ordem salva com sucesso`);
+                } else {
+                    log(`saveBoardsOrder: Falha ao salvar ordem`);
+                }
+
+                return success;
+            } catch (error) {
+                log(`saveBoardsOrder: Erro - ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testReactFlow() {
+            addResult('⚛️ Testando fluxo completo do React...', 'Executando...', 'info');
+            
+            try {
+                const testUserId = 1;
+                
+                // 1. Simular quadros do banco
+                const mockBoards = [
+                    { id: 1, name: 'Desenvolvimento', description: 'Quadro de desenvolvimento' },
+                    { id: 2, name: 'Design', description: 'Quadro de design' },
+                    { id: 3, name: 'Marketing', description: 'Quadro de marketing' }
+                ];
+
+                log(`testReactFlow: Quadros mock criados - ${JSON.stringify(mockBoards.map(b => ({ id: b.id, name: b.name })))}`);
+
+                // 2. Simular salvamento de ordem
+                const newOrder = [3, 1, 2];
+                const reorderedBoards = newOrder.map(id => mockBoards.find(b => b.id === id)).filter(Boolean);
+                
+                log(`testReactFlow: Simulando reordenação para - ${JSON.stringify(newOrder)}`);
+                
+                const saveSuccess = await saveBoardsOrder(reorderedBoards, testUserId);
+                
+                if (!saveSuccess) {
+                    addResult('❌ Falha ao salvar ordem', 'Erro no salvamento', 'error');
+                    return;
+                }
+
+                // 3. Simular carregamento e aplicação da ordem
+                const loadedBoards = await loadUserBoardsOrder(mockBoards, testUserId);
+                
+                const isCorrect = JSON.stringify(loadedBoards.map(b => b.id)) === JSON.stringify(newOrder);
+                
+                addResult('✅ Fluxo React testado', 
+                    `Ordem original: ${JSON.stringify(mockBoards.map(b => b.id))}\n` +
+                    `Ordem salva: ${JSON.stringify(newOrder)}\n` +
+                    `Ordem carregada: ${JSON.stringify(loadedBoards.map(b => b.id))}\n` +
+                    `Resultado: ${isCorrect ? '✅ CORRETO' : '❌ INCORRETO'}`, 
+                    isCorrect ? 'success' : 'error');
+
+            } catch (error) {
+                addResult('❌ Erro no fluxo React', error.toString(), 'error');
+            }
+        }
+
+        async function testDatabaseFunctions() {
+            addResult('🗄️ Testando funções do banco...', 'Executando...', 'info');
+            
+            try {
+                const testUserId = 1;
+                const testSettings = {
+                    'boards_order': [2, 1, 3],
+                    'theme': 'dark',
+                    'language': 'pt-BR'
+                };
+
+                // Testar salvamento
+                const saveSuccess = await saveUserSettings(testUserId, testSettings);
+                
+                if (!saveSuccess) {
+                    addResult('❌ Falha ao salvar configurações', 'Erro no salvamento', 'error');
+                    return;
+                }
+
+                // Testar carregamento
+                const loadedSettings = await getUserSettings(testUserId);
+                
+                const isCorrect = JSON.stringify(testSettings) === JSON.stringify(loadedSettings);
+                
+                addResult('✅ Funções do banco testadas', 
+                    `Configurações salvas: ${JSON.stringify(testSettings)}\n` +
+                    `Configurações carregadas: ${JSON.stringify(loadedSettings)}\n` +
+                    `Resultado: ${isCorrect ? '✅ CORRETO' : '❌ INCORRETO'}`, 
+                    isCorrect ? 'success' : 'error');
+
+            } catch (error) {
+                addResult('❌ Erro nas funções do banco', error.toString(), 'error');
+            }
+        }
+
+        async function testUserSettings() {
+            addResult('👤 Testando user settings...', 'Executando...', 'info');
+            
+            try {
+                // Buscar usuários reais
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('id, username')
+                    .limit(3);
+
+                if (usersError) {
+                    addResult('❌ Erro ao buscar usuários', 
+                        `Erro: ${usersError.message}`, 'error');
+                    return;
+                }
+
+                addResult('👥 Usuários encontrados', 
+                    `Usuários: ${JSON.stringify(users, null, 2)}`, 'info');
+
+                // Testar com cada usuário
+                for (const user of users) {
+                    const testOrder = [3, 1, 2];
+                    
+                    // Salvar ordem
+                    const saveSuccess = await saveUserSettings(user.id, {
+                        'boards_order': testOrder
+                    });
+                    
+                    if (!saveSuccess) {
+                        addResult(`❌ Falha ao salvar para ${user.username}`, 'Erro no salvamento', 'error');
+                        continue;
+                    }
+                    
+                    // Carregar ordem
+                    const loadedSettings = await getUserSettings(user.id);
+                    const loadedOrder = loadedSettings['boards_order'];
+                    
+                    const isCorrect = JSON.stringify(testOrder) === JSON.stringify(loadedOrder);
+                    
+                    addResult(`✅ Teste para ${user.username}`, 
+                        `Ordem salva: ${JSON.stringify(testOrder)}\n` +
+                        `Ordem carregada: ${JSON.stringify(loadedOrder)}\n` +
+                        `Resultado: ${isCorrect ? '✅ CORRETO' : '❌ INCORRETO'}`, 
+                        isCorrect ? 'success' : 'error');
+                }
+
+            } catch (error) {
+                addResult('❌ Erro no teste de user settings', error.toString(), 'error');
+            }
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            log('Página carregada - Debug React iniciado');
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a funcionalidade.', 'info');
+        });
+    </script>
+</body>
+</html>
+

@@ -43,3 +43,4 @@ SELECT
   indexdef
 FROM pg_indexes 
 WHERE tablename = 'user_settings';
+

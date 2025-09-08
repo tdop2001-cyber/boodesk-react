@@ -128,7 +128,7 @@ const Calendar: React.FC = () => {
       // Carregar cards de todos os boards
       for (const board of boards) {
         try {
-          const boardCards = await db.getCardsForBoard(board.board_id);
+          const boardCards = await db.getCardsForBoard(board.board_id!);
           // Verificar se o board ainda existe antes de adicionar os cards
           if (boardCards && boardCards.length > 0) {
             allCards = [...allCards, ...boardCards];

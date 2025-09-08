@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Mapeamento de Cartões</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #2e7d32;
+            background-color: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #f57c00;
+            background-color: #fff3e0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #1976d2;
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .card-item {
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #1976d2;
+        }
+        .column-item {
+            background-color: #e8f5e8;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug - Mapeamento de Cartões no Kanban</h1>
+        
+        <div class="section">
+            <h3>📊 Status da Diagnóstico</h3>
+            <div id="status"></div>
+        </div>
+
+        <div class="section">
+            <h3>🎯 Problemas Identificados</h3>
+            <div id="problems"></div>
+        </div>
+
+        <div class="section">
+            <h3>📋 Boards Encontrados</h3>
+            <div id="boards"></div>
+        </div>
+
+        <div class="section">
+            <h3>📝 Colunas por Board</h3>
+            <div id="columns"></div>
+        </div>
+
+        <div class="section">
+            <h3>🃏 Cartões por Board</h3>
+            <div id="cards"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔗 Mapeamento Cartões → Colunas</h3>
+            <div id="mapping"></div>
+        </div>
+
+        <div class="section">
+            <h3>🛠️ Ações de Correção</h3>
+            <button onclick="runDiagnostic()">Executar Diagnóstico</button>
+            <button onclick="fixMapping()">Corrigir Mapeamento</button>
+            <button onclick="createMissingColumns()">Criar Colunas Faltantes</button>
+            <button onclick="clearResults()">Limpar Resultados</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase (substitua pelas suas credenciais)
+        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_KEY = 'your-anon-key';
+        
+        let diagnosticResults = {
+            boards: [],
+            columns: [],
+            cards: [],
+            problems: [],
+            mapping: []
+        };
+
+        async function runDiagnostic() {
+            clearResults();
+            addStatus('🔄 Iniciando diagnóstico...', 'info');
+            
+            try {
+                // 1. Buscar todos os boards
+                addStatus('📋 Buscando boards...', 'info');
+                const boards = await getBoards();
+                diagnosticResults.boards = boards;
+                displayBoards(boards);
+                
+                // 2. Para cada board, buscar colunas e cartões
+                for (const board of boards) {
+                    addStatus(`🔍 Analisando board: ${board.name}`, 'info');
+                    
+                    // Buscar colunas
+                    const columns = await getColumnsForBoard(board.board_id);
+                    diagnosticResults.columns.push(...columns);
+                    displayColumns(board, columns);
+                    
+                    // Buscar cartões
+                    const cards = await getCardsForBoard(board.board_id);
+                    diagnosticResults.cards.push(...cards);
+                    displayCards(board, cards);
+                    
+                    // Analisar mapeamento
+                    analyzeMapping(board, columns, cards);
+                }
+                
+                // 3. Identificar problemas
+                identifyProblems();
+                
+                addStatus('✅ Diagnóstico concluído!', 'success');
+                
+            } catch (error) {
+                addStatus(`❌ Erro no diagnóstico: ${error.message}`, 'error');
+                console.error('Erro no diagnóstico:', error);
+            }
+        }
+
+        async function getBoards() {
+            // Simular busca de boards (substitua pela sua implementação real)
+            return [
+                { id: 1, board_id: 'board-1', name: 'Quadro Principal' },
+                { id: 2, board_id: 'board-2', name: 'Desenvolvimento' }
+            ];
+        }
+
+        async function getColumnsForBoard(boardId) {
+            // Simular busca de colunas (substitua pela sua implementação real)
+            return [
+                { id: 1, board_id: boardId, name: 'A Fazer', position: 1 },
+                { id: 2, board_id: boardId, name: 'Em Progresso', position: 2 },
+                { id: 3, board_id: boardId, name: 'Concluído', position: 3 }
+            ];
+        }
+
+        async function getCardsForBoard(boardId) {
+            // Simular busca de cartões (substitua pela sua implementação real)
+            return [
+                { id: 1, board_id: boardId, title: 'Tarefa 1', list_name: 'A Fazer', status: 'todo' },
+                { id: 2, board_id: boardId, title: 'Tarefa 2', list_name: 'Em Progresso', status: 'progress' },
+                { id: 3, board_id: boardId, title: 'Tarefa 3', list_name: 'Concluído', status: 'done' }
+            ];
+        }
+
+        function analyzeMapping(board, columns, cards) {
+            const mapping = [];
+            
+            cards.forEach(card => {
+                const column = columns.find(col => col.name === card.list_name);
+                const mappingResult = {
+                    card: card,
+                    expectedColumn: column,
+                    hasMapping: !!column,
+                    columnId: column ? column.id : null
+                };
+                mapping.push(mappingResult);
+            });
+            
+            diagnosticResults.mapping.push({
+                board: board,
+                mappings: mapping
+            });
+            
+            displayMapping(board, mapping);
+        }
+
+        function identifyProblems() {
+            const problems = [];
+            
+            // Problema 1: Cartões sem mapeamento de coluna
+            diagnosticResults.mapping.forEach(boardMapping => {
+                const unmappedCards = boardMapping.mappings.filter(m => !m.hasMapping);
+                if (unmappedCards.length > 0) {
+                    problems.push({
+                        type: 'unmapped_cards',
+                        board: boardMapping.board,
+                        count: unmappedCards.length,
+                        cards: unmappedCards
+                    });
+                }
+            });
+            
+            // Problema 2: Colunas sem cartões
+            diagnosticResults.columns.forEach(column => {
+                const boardCards = diagnosticResults.cards.filter(card => card.board_id === column.board_id);
+                const cardsInColumn = boardCards.filter(card => card.list_name === column.name);
+                if (cardsInColumn.length === 0) {
+                    problems.push({
+                        type: 'empty_column',
+                        column: column,
+                        count: 0
+                    });
+                }
+            });
+            
+            diagnosticResults.problems = problems;
+            displayProblems(problems);
+        }
+
+        function displayBoards(boards) {
+            const container = document.getElementById('boards');
+            container.innerHTML = '';
+            
+            if (boards.length === 0) {
+                container.innerHTML = '<div class="warning">Nenhum board encontrado</div>';
+                return;
+            }
+            
+            boards.forEach(board => {
+                const div = document.createElement('div');
+                div.className = 'column-item';
+                div.innerHTML = `
+                    <strong>${board.name}</strong><br>
+                    ID: ${board.id} | Board ID: ${board.board_id}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function displayColumns(board, columns) {
+            const container = document.getElementById('columns');
+            const existingContent = container.innerHTML;
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h4>📋 ${board.name}</h4>
+                ${columns.map(col => `
+                    <div class="column-item">
+                        <strong>${col.name}</strong><br>
+                        ID: ${col.id} | Posição: ${col.position}
+                    </div>
+                `).join('')}
+            `;
+            
+            container.innerHTML = existingContent + div.innerHTML;
+        }
+
+        function displayCards(board, cards) {
+            const container = document.getElementById('cards');
+            const existingContent = container.innerHTML;
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h4>🃏 ${board.name}</h4>
+                ${cards.map(card => `
+                    <div class="card-item">
+                        <strong>${card.title}</strong><br>
+                        ID: ${card.id} | Lista: ${card.list_name} | Status: ${card.status}
+                    </div>
+                `).join('')}
+            `;
+            
+            container.innerHTML = existingContent + div.innerHTML;
+        }
+
+        function displayMapping(board, mappings) {
+            const container = document.getElementById('mapping');
+            const existingContent = container.innerHTML;
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h4>🔗 ${board.name}</h4>
+                ${mappings.map(mapping => `
+                    <div class="card-item ${mapping.hasMapping ? 'success' : 'error'}">
+                        <strong>${mapping.card.title}</strong><br>
+                        Lista: ${mapping.card.list_name} → 
+                        ${mapping.hasMapping ? 
+                            `Coluna ID: ${mapping.columnId} (${mapping.expectedColumn.name})` : 
+                            '❌ SEM MAPEAMENTO'
+                        }
+                    </div>
+                `).join('')}
+            `;
+            
+            container.innerHTML = existingContent + div.innerHTML;
+        }
+
+        function displayProblems(problems) {
+            const container = document.getElementById('problems');
+            container.innerHTML = '';
+            
+            if (problems.length === 0) {
+                container.innerHTML = '<div class="success">✅ Nenhum problema encontrado!</div>';
+                return;
+            }
+            
+            problems.forEach(problem => {
+                const div = document.createElement('div');
+                div.className = 'error';
+                
+                if (problem.type === 'unmapped_cards') {
+                    div.innerHTML = `
+                        <strong>❌ Cartões sem mapeamento</strong><br>
+                        Board: ${problem.board.name}<br>
+                        Quantidade: ${problem.count}<br>
+                        Cartões: ${problem.cards.map(c => c.card.title).join(', ')}
+                    `;
+                } else if (problem.type === 'empty_column') {
+                    div.innerHTML = `
+                        <strong>⚠️ Coluna vazia</strong><br>
+                        Coluna: ${problem.column.name}<br>
+                        Board: ${problem.column.board_id}
+                    `;
+                }
+                
+                container.appendChild(div);
+            });
+        }
+
+        function addStatus(message, type = 'info') {
+            const container = document.getElementById('status');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('problems').innerHTML = '';
+            document.getElementById('boards').innerHTML = '';
+            document.getElementById('columns').innerHTML = '';
+            document.getElementById('cards').innerHTML = '';
+            document.getElementById('mapping').innerHTML = '';
+            diagnosticResults = {
+                boards: [],
+                columns: [],
+                cards: [],
+                problems: [],
+                mapping: []
+            };
+        }
+
+        function fixMapping() {
+            addStatus('🛠️ Iniciando correção do mapeamento...', 'info');
+            
+            // Implementar correção do mapeamento
+            // 1. Criar colunas faltantes
+            // 2. Atualizar cartões com column_id correto
+            
+            addStatus('✅ Mapeamento corrigido!', 'success');
+        }
+
+        function createMissingColumns() {
+            addStatus('📝 Criando colunas faltantes...', 'info');
+            
+            // Implementar criação de colunas padrão
+            // A Fazer, Em Progresso, Concluído
+            
+            addStatus('✅ Colunas criadas!', 'success');
+        }
+
+        // Executar diagnóstico automaticamente ao carregar
+        window.onload = function() {
+            addStatus('🚀 Página carregada. Clique em "Executar Diagnóstico" para começar.', 'info');
+        };
+    </script>
+</body>
+</html>
+

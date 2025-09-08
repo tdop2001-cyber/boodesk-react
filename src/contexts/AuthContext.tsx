@@ -168,8 +168,17 @@ const realLoginAPI = async (credentials: LoginCredentials): Promise<ApiResponse<
       };
     }
     
+    // Verificar se o usuário está ativo
+    if (!user.is_active) {
+      return {
+        success: false,
+        error: 'Usuário inativo. Contate o administrador.'
+      };
+    }
+    
     // Verificar senha (em produção, usar hash real)
-    if (credentials.password === 'admin123' && user.username === 'admin') {
+    // Para usuários padrão, manter senhas específicas
+    if (user.username === 'admin' && credentials.password === 'admin123') {
       return {
         success: true,
         data: {
@@ -180,7 +189,7 @@ const realLoginAPI = async (credentials: LoginCredentials): Promise<ApiResponse<
       };
     }
     
-    if (credentials.password === 'user123' && user.username === 'user') {
+    if (user.username === 'user' && credentials.password === 'user123') {
       return {
         success: true,
         data: {
@@ -191,7 +200,49 @@ const realLoginAPI = async (credentials: LoginCredentials): Promise<ApiResponse<
       };
     }
     
-    if (credentials.password === 'manager123' && user.username === 'manager') {
+    if (user.username === 'manager' && credentials.password === 'manager123') {
+      return {
+        success: true,
+        data: {
+          ...user,
+          is_authenticated: true,
+          login_time: new Date().toISOString(),
+        },
+      };
+    }
+    
+    // Para usuário thalles específico
+    if (user.username === 'thalles' && credentials.password === 'v123x9ll') {
+      // Atualizar último login
+      await supabase
+        .from('users')
+        .update({ 
+          last_login: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      return {
+        success: true,
+        data: {
+          ...user,
+          is_authenticated: true,
+          login_time: new Date().toISOString(),
+        },
+      };
+    }
+    
+    // Para usuários cadastrados, verificar senha diretamente
+    if (user.password_hash === credentials.password) {
+      // Atualizar último login
+      await supabase
+        .from('users')
+        .update({ 
+          last_login: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
       return {
         success: true,
         data: {

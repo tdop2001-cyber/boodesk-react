@@ -218,7 +218,7 @@ ON CONFLICT DO NOTHING;`;
               </div>
               <div>
                 <h1 className="text-xl font-bold">Configuração do Banco</h1>
-                <p className="text-blue-100 text-sm">Configure o PostgreSQL/Supabase</p>
+                <p className="text-green-100 text-sm">Configure o PostgreSQL/Supabase</p>
               </div>
             </div>
           </div>
@@ -251,9 +251,9 @@ ON CONFLICT DO NOTHING;`;
             )}
 
             {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-800 mb-2">Instruções de Configuração</h3>
-              <ol className="text-blue-700 text-sm space-y-2">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-800 mb-2">Instruções de Configuração</h3>
+              <ol className="text-green-700 text-sm space-y-2">
                 <li>1. Acesse o painel do Supabase em <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline">supabase.com</a></li>
                 <li>2. Vá para o seu projeto</li>
                 <li>3. Acesse "SQL Editor" no menu lateral</li>
@@ -271,7 +271,7 @@ ON CONFLICT DO NOTHING;`;
                 </h3>
                 <button
                   onClick={() => copyToClipboard(sqlSchema)}
-                  className="flex items-center space-x-2 px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
                 >
                   <Copy className="w-3 h-3" />
                   <span>Copiar</span>

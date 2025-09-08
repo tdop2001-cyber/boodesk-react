@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da Correção do Mapeamento de Boards</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste da Correção do Mapeamento de Boards</h1>
+        <p>Este teste verifica se a correção do mapeamento entre board_id e id funcionou.</p>
+        
+        <button onclick="testBoardMapping()">🎯 Testar Mapeamento de Boards</button>
+        <button onclick="testGetBoardsFunction()">📋 Testar Função getBoards</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testBoardMapping() {
+            addResult('🔄 Testando Mapeamento de Boards...', 'Executando teste...', 'info');
+            
+            try {
+                // 1. Buscar alguns cards para obter board_ids
+                const { data: cards, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('board_id, members')
+                    .eq('is_archived', false)
+                    .limit(5);
+                
+                if (cardsError) {
+                    addResult('❌ Erro ao buscar cards', JSON.stringify(cardsError, null, 2), 'error');
+                    return;
+                }
+
+                if (!cards || cards.length === 0) {
+                    addResult('⚠️ Nenhum card encontrado', 'Não há cards para testar o mapeamento', 'info');
+                    return;
+                }
+
+                // 2. Extrair board_ids únicos
+                const boardIds = Array.from(new Set(cards.map(card => card.board_id)));
+                addResult('📋 Board IDs encontrados', 
+                    `Board IDs: ${JSON.stringify(boardIds, null, 2)}\n` +
+                    `Total: ${boardIds.length}`, 
+                    'info');
+
+                // 3. Testar a consulta corrigida (usando board_id em vez de id)
+                const { data: boards, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('*')
+                    .in('board_id', boardIds)
+                    .order('name');
+
+                if (boardsError) {
+                    addResult('❌ Erro na consulta corrigida', 
+                        `Erro: ${boardsError.message}\n` +
+                        `Código: ${boardsError.code}\n` +
+                        `Detalhes: ${boardsError.details}`, 
+                        'error');
+                } else {
+                    addResult('✅ Consulta corrigida funcionando!', 
+                        `Boards encontrados: ${boards.length}\n` +
+                        `Dados: ${JSON.stringify(boards, null, 2)}`, 
+                        'success');
+                }
+
+                // 4. Testar a consulta antiga (que causava erro) para comparação
+                try {
+                    const { data: oldBoards, error: oldError } = await supabase
+                        .from('boards')
+                        .select('*')
+                        .in('id', boardIds) // Esta é a consulta que causava erro
+                        .order('name');
+                    
+                    if (oldError) {
+                        addResult('✅ Confirmação: Consulta antiga ainda causa erro (esperado)', 
+                            `Erro esperado: ${oldError.message}\n` +
+                            `Código: ${oldError.code}`, 
+                            'info');
+                    }
+                } catch (error) {
+                    addResult('✅ Confirmação: Consulta antiga ainda causa erro (esperado)', 
+                        `Erro esperado: ${error.message}`, 
+                        'info');
+                }
+
+            } catch (error) {
+                addResult('❌ Erro geral no teste', error.toString(), 'error');
+            }
+        }
+
+        // Simular a função getBoards corrigida
+        async function getBoards(userId, userRole) {
+            try {
+                // Se for admin, retorna todos os boards
+                if (userRole === 'admin') {
+                    const { data, error } = await supabase
+                        .from('boards')
+                        .select('*')
+                        .order('name');
+                    
+                    if (error) throw error;
+                    return data || [];
+                }
+
+                // Para usuários não-admin, buscar boards onde são membros de algum card
+                if (userId) {
+                    // Buscar todos os cards e filtrar no lado do cliente
+                    const { data: allCardsData, error: cardsError } = await supabase
+                        .from('cards')
+                        .select('board_id, members')
+                        .eq('is_archived', false);
+
+                    // Filtrar cards onde o usuário é membro
+                    const cardsData = allCardsData?.filter(card => {
+                        if (!card.members || !Array.isArray(card.members)) return false;
+                        return card.members.includes(userId);
+                    }) || [];
+
+                    if (cardsError) throw cardsError;
+
+                    if (cardsData && cardsData.length > 0) {
+                        // Buscar boards únicos dos cards onde o usuário é membro
+                        const boardIds = Array.from(new Set(cardsData.map(card => card.board_id)));
+                        
+                        const { data, error } = await supabase
+                            .from('boards')
+                            .select('*')
+                            .in('board_id', boardIds) // CORREÇÃO: usar board_id em vez de id
+                            .order('name');
+
+                        if (error) throw error;
+                        return data || [];
+                    }
+                }
+
+                return [];
+            } catch (error) {
+                console.error('Erro ao buscar quadros:', error);
+                throw error;
+            }
+        }
+
+        async function testGetBoardsFunction() {
+            addResult('🔄 Testando Função getBoards Corrigida...', 'Executando teste...', 'info');
+            
+            try {
+                // Testar como admin
+                const adminBoards = await getBoards(null, 'admin');
+                addResult('✅ getBoards (Admin) OK', 
+                    `Boards encontrados: ${adminBoards.length}\n` +
+                    `Dados: ${JSON.stringify(adminBoards, null, 2)}`, 
+                    'success');
+
+                // Testar como usuário
+                const userBoards = await getBoards(1, 'user');
+                addResult('✅ getBoards (Usuário) OK', 
+                    `Boards encontrados: ${userBoards.length}\n` +
+                    `Dados: ${JSON.stringify(userBoards, null, 2)}`, 
+                    'success');
+
+            } catch (error) {
+                addResult('❌ Erro na função getBoards', 
+                    `Erro: ${error.message}\n` +
+                    `Código: ${error.code}\n` +
+                    `Detalhes: ${error.details}`, 
+                    'error');
+            }
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a correção do mapeamento.', 'info');
+        });
+    </script>
+</body>
+</html>
+

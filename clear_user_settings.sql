@@ -19,3 +19,4 @@ ALTER SEQUENCE user_settings_id_seq RESTART WITH 1;
 SELECT 'Estrutura da tabela:' as info;
 SELECT column_name, data_type, is_nullable FROM information_schema.columns 
 WHERE table_name = 'user_settings' ORDER BY ordinal_position;
+

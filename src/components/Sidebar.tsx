@@ -99,14 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       badge: undefined
     },
     {
-      id: 'users',
-      label: 'Usuários',
-      icon: Users,
-      path: '/users',
-      badge: undefined,
-      adminOnly: true
-    },
-    {
       id: 'settings',
       label: 'Configurações',
       icon: Settings,
@@ -159,9 +151,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src="/LOGO (2).png" 
+                alt="Logo Boodesk" 
+                className="w-8 h-8 object-contain"
+              />
               <span className="font-bold text-brand-gray dark:text-gray-50">Boodesk</span>
             </div>
           )}

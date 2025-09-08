@@ -66,13 +66,19 @@ const AllCards: React.FC = () => {
       // Para cada board, buscar os cards
       for (const board of boards) {
         try {
-          const boardCards = await db.getCardsForBoard(board.board_id);
+          // Verificar se board_id existe
+          if (!board.board_id) {
+            console.log(`Board ${board.name} não tem board_id, pulando...`);
+            continue;
+          }
+          
+          const boardCards = await db.getCardsForBoard(board.board_id!);
           // Verificar se o board ainda existe antes de adicionar os cards
           if (boardCards && boardCards.length > 0) {
-            const mappedCards: Card[] = boardCards.map(card => ({
+            const mappedCards: Card[] = boardCards.map((card: any) => ({
               id: card.id,
               title: card.title,
-              description: card.description,
+              description: card.description || '',
               priority: card.importance as 'low' | 'medium' | 'high',
               status: card.status as 'todo' | 'progress' | 'done',
               due_date: card.due_date,
@@ -80,7 +86,7 @@ const AllCards: React.FC = () => {
               column_name: card.list_name,
               created_at: card.created_at,
               updated_at: card.updated_at
-            }));
+            } as Card));
             allCards = [...allCards, ...mappedCards];
           }
         } catch (error) {
@@ -137,7 +143,7 @@ const AllCards: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'todo': return 'bg-gray-100 text-gray-700';
-      case 'progress': return 'bg-blue-100 text-blue-700';
+      case 'progress': return 'bg-green-100 text-green-700';
       case 'done': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -305,7 +311,7 @@ const AllCards: React.FC = () => {
                           e.stopPropagation();
                           handleEditCard(card);
                         }}
-                        className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                        className="p-1 text-gray-400 hover:text-green-600 rounded"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -433,7 +439,7 @@ const AllCards: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleEditCard(card)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-gray-400 hover:text-green-600"
                           >
                             <Edit className="w-4 h-4" />
                           </button>

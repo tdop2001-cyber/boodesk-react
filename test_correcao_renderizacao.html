@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Correção da Renderização Duplicada</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2563eb;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .test-steps {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2563eb;
+        }
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .expected-result {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+            margin-top: 15px;
+        }
+        .expected-result h4 {
+            color: #16a34a;
+            margin: 0 0 10px 0;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #d97706;
+            font-weight: bold;
+        }
+        .problem-analysis {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ef4444;
+            margin-top: 15px;
+        }
+        .problem-analysis h4 {
+            color: #dc2626;
+            margin: 0 0 10px 0;
+        }
+        .solution-implemented {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 15px;
+        }
+        .solution-implemented h4 {
+            color: #2563eb;
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Correção da Renderização Duplicada</h1>
+        <p>Este arquivo contém o teste para verificar se a correção da renderização duplicada funcionou.</p>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Problema Identificado e Corrigido</div>
+            <div class="test-description">
+                <strong>Problema:</strong> As subtarefas estavam sendo renderizadas múltiplas vezes, causando duplicatas visuais.
+            </div>
+            <div class="problem-analysis">
+                <h4>🚨 Problema Identificado nos Logs:</h4>
+                <ul>
+                    <li><span class="status-error">Renderização Duplicada:</span> Cada subtarefa aparecia 2 vezes</li>
+                    <li><span class="status-error">Lógica de Filtragem Incorreta:</span> Coluna "todo" não estava funcionando</li>
+                    <li><span class="status-error">IDs Temporários:</span> IDs como 'temp-bbb-6' não eram substituídos</li>
+                </ul>
+            </div>
+            <div class="solution-implemented">
+                <h4>✅ Soluções Implementadas:</h4>
+                <ul>
+                    <li><span class="status-success">Filtro de Duplicatas:</span> Adicionado filtro para remover subtarefas duplicadas</li>
+                    <li><span class="status-success">Lógica de Coluna Corrigida:</span> Coluna "todo" agora filtra corretamente</li>
+                    <li><span class="status-success">Chave Única:</span> Cada subtarefa tem uma chave única baseada no ID</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste da Correção</div>
+            <div class="test-description">
+                Siga estes passos para verificar se a correção funcionou:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Recarregue a página</strong> para aplicar as correções</li>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Observe as colunas</strong> e verifique se não há duplicatas</li>
+                    <li><strong>Verifique os logs</strong> no console</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Logs Esperados Após Correção</div>
+            <div class="test-description">
+                Após a correção, você deve ver estes logs:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Logs Corretos (Sem Duplicatas):</h4>
+                <div class="console-log">
+=== SUBTASK KANBAN RENDERIZADO ===
+Props recebidas: {subtasks: Array(2), cardId: '...'}
+Quantidade de subtarefas: 2
+
+=== GET SUBTASKS BY COLUMN ===
+Coluna solicitada: todo
+Subtarefas filtradas: []
+Quantidade filtrada: 0
+
+Coluna solicitada: in_progress
+Subtarefas filtradas: [{id: 'temp-aaaaa-7', title: 'aaaaa', ...}]
+Quantidade filtrada: 1
+
+Coluna solicitada: completed
+Subtarefas filtradas: [{id: 'temp-bbb-6', title: 'bbb', ...}]
+Quantidade filtrada: 1
+
+Renderizando SortableSubtaskItem: {id: 'temp-aaaaa-7', title: 'aaaaa', ...}
+Renderizando SortableSubtaskItem: {id: 'temp-bbb-6', title: 'bbb', ...}
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Específicas</div>
+            <div class="test-description">
+                Durante o teste, verifique especificamente:
+            </div>
+            <div class="test-steps">
+                <h4>🔍 Pontos de Verificação:</h4>
+                <ol>
+                    <li><strong>Coluna "A Fazer":</strong> Deve estar vazia (0 subtarefas)</li>
+                    <li><strong>Coluna "Em Progresso":</strong> Deve ter 1 subtarefa (aaaaa)</li>
+                    <li><strong>Coluna "Concluído":</strong> Deve ter 1 subtarefa (bbb)</li>
+                    <li><strong>Sem Duplicatas:</strong> Cada subtarefa deve aparecer apenas uma vez</li>
+                    <li><strong>Contadores Corretos:</strong> 0, 1, 1 respectivamente</li>
+                    <li><strong>Logs Limpos:</strong> Sem renderizações duplicadas</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Teste de Criação de Novas Subtarefas</div>
+            <div class="test-description">
+                Agora teste se é possível criar múltiplas subtarefas:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Clique em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite um título</strong> (ex: "Teste 1") e clique em "Adicionar"</li>
+                    <li><strong>Verifique se aparece</strong> na coluna "A Fazer"</li>
+                    <li><strong>Clique novamente em "Nova Subtarefa"</strong></li>
+                    <li><strong>Digite outro título</strong> (ex: "Teste 2") e clique em "Adicionar"</li>
+                    <li><strong>Verifique se ambas aparecem</strong> na coluna "A Fazer"</li>
+                    <li><strong>Contador deve mostrar "2"</strong> na coluna "A Fazer"</li>
+                </ol>
+            </div>
+            <div class="expected-result">
+                <h4>✅ Resultado Esperado:</h4>
+                <ul>
+                    <li>Primeira subtarefa criada com sucesso</li>
+                    <li>Segunda subtarefa criada com sucesso</li>
+                    <li>Ambas aparecem na coluna "A Fazer"</li>
+                    <li>Contador da coluna mostra "2"</li>
+                    <li>Sem duplicatas visuais</li>
+                    <li>Logs limpos no console</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Comandos de Debug Úteis</div>
+            <div class="test-description">
+                Use estes comandos no console para verificar o estado:
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Comandos de Debug:</h4>
+                <div class="console-log">
+// Verificar estado das subtarefas
+console.log('Subtarefas internas:', window.internalSubtasks)
+
+// Verificar filtragem por coluna
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'))
+console.log('Coluna Em Progresso:', window.getSubtasksByColumn && window.getSubtasksByColumn('in_progress'))
+console.log('Coluna Concluído:', window.getSubtasksByColumn && window.getSubtasksByColumn('completed'))
+
+// Verificar se há duplicatas
+const subtasks = window.internalSubtasks || [];
+const ids = subtasks.map(s => s.id);
+const uniqueIds = [...new Set(ids)];
+console.log('Total de subtarefas:', subtasks.length);
+console.log('IDs únicos:', uniqueIds.length);
+console.log('Há duplicatas?', subtasks.length !== uniqueIds.length);
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📋 Checklist de Verificação</div>
+            <div class="test-description">
+                Use este checklist para confirmar que a correção funcionou:
+            </div>
+            <div class="test-steps">
+                <h4>✅ Checklist:</h4>
+                <ul>
+                    <li><input type="checkbox"> Página recarregada com sucesso</li>
+                    <li><input type="checkbox"> Console aberto e limpo</li>
+                    <li><input type="checkbox"> Modo Kanban ativado</li>
+                    <li><input type="checkbox"> Coluna "A Fazer" vazia (0 subtarefas)</li>
+                    <li><input type="checkbox"> Coluna "Em Progresso" com 1 subtarefa</li>
+                    <li><input type="checkbox"> Coluna "Concluído" com 1 subtarefa</li>
+                    <li><input type="checkbox"> Sem duplicatas visuais</li>
+                    <li><input type="checkbox"> É possível criar nova subtarefa</li>
+                    <li><input type="checkbox"> É possível criar segunda subtarefa</li>
+                    <li><input type="checkbox"> Ambas aparecem na coluna "A Fazer"</li>
+                    <li><input type="checkbox"> Contador mostra número correto</li>
+                    <li><input type="checkbox"> Logs limpos no console</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🎯 Resultado Esperado</div>
+            <div class="test-description">
+                Após a correção, o Kanban deve funcionar perfeitamente:
+            </div>
+            <div class="expected-result">
+                <h4>✅ Funcionalidades Corrigidas:</h4>
+                <ul>
+                    <li><strong>Renderização Única:</strong> Cada subtarefa aparece apenas uma vez</li>
+                    <li><strong>Filtragem Correta:</strong> Subtarefas vão para as colunas corretas</li>
+                    <li><strong>Criação Múltipla:</strong> É possível criar várias subtarefas por coluna</li>
+                    <li><strong>Drag and Drop:</strong> Funciona corretamente entre colunas</li>
+                    <li><strong>Contadores Atualizados:</strong> Mostram números corretos</li>
+                    <li><strong>Logs Limpos:</strong> Sem duplicatas ou erros</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Próximos Passos</div>
+            <div class="test-description">
+                Após confirmar que a correção funcionou:
+            </div>
+            <div class="test-steps">
+                <h4>📋 Próximos Passos:</h4>
+                <ol>
+                    <li><strong>Execute o teste</strong> seguindo os passos acima</li>
+                    <li><strong>Confirme que não há duplicatas</strong></li>
+                    <li><strong>Teste a criação de múltiplas subtarefas</strong></li>
+                    <li><strong>Verifique se o drag and drop funciona</strong></li>
+                    <li><strong>Reporte o resultado</strong> do teste</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script para ajudar nos testes
+        console.log('🧪 Teste de Correção da Renderização Duplicada carregado');
+        console.log('Siga os passos no arquivo para verificar se a correção funcionou');
+        
+        // Função para verificar estado atual
+        window.checkCurrentState = function() {
+            console.log('=== VERIFICAÇÃO DO ESTADO ATUAL ===');
+            console.log('Verificando se a correção da renderização duplicada funcionou...');
+            
+            // Esta função pode ser expandida para verificações automatizadas
+            if (typeof window.internalSubtasks !== 'undefined') {
+                console.log('Estado interno das subtarefas:', window.internalSubtasks);
+                
+                // Verificar duplicatas
+                const subtasks = window.internalSubtasks;
+                const ids = subtasks.map(s => s.id);
+                const uniqueIds = [...new Set(ids)];
+                console.log('Total de subtarefas:', subtasks.length);
+                console.log('IDs únicos:', uniqueIds.length);
+                console.log('Há duplicatas?', subtasks.length !== uniqueIds.length);
+            } else {
+                console.log('Estado interno não disponível');
+            }
+        };
+        
+        // Função para verificar filtragem por coluna
+        window.checkColumnFiltering = function() {
+            console.log('=== VERIFICAÇÃO DE FILTRAGEM POR COLUNA ===');
+            console.log('Verificando se as subtarefas estão sendo filtradas corretamente...');
+            
+            if (typeof window.getSubtasksByColumn === 'function') {
+                console.log('Coluna A Fazer:', window.getSubtasksByColumn('todo'));
+                console.log('Coluna Em Progresso:', window.getSubtasksByColumn('in_progress'));
+                console.log('Coluna Concluído:', window.getSubtasksByColumn('completed'));
+            } else {
+                console.log('Função getSubtasksByColumn não disponível');
+            }
+        };
+    </script>
+</body>
+</html>

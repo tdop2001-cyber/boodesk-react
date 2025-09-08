@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Persistência de Subtarefas</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .subtask-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+        .status-todo { border-left: 4px solid #007bff; }
+        .status-in-progress { border-left: 4px solid #ffc107; }
+        .status-completed { border-left: 4px solid #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Persistência de Subtarefas</h1>
+        <p>Este teste verifica se a funcionalidade de subtarefas está funcionando corretamente.</p>
+        
+        <button onclick="testTableExists()">📋 Verificar Tabela</button>
+        <button onclick="testCreateSubtask()">➕ Criar Subtarefa</button>
+        <button onclick="testUpdateStatus()">🔄 Atualizar Status</button>
+        <button onclick="testFilterByMembers()">👥 Filtrar por Membros</button>
+        <button onclick="loadSubtasks()">📂 Carregar Subtarefas</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testTableExists() {
+            addResult('📋 Verificando se a tabela subtasks existe...', 'Executando verificação...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    addResult('❌ Tabela subtasks não existe ou há erro', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 
+                        'error');
+                } else {
+                    addResult('✅ Tabela subtasks existe!', 
+                        `Tabela encontrada com sucesso.\n` +
+                        `Dados de exemplo: ${JSON.stringify(data, null, 2)}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao verificar tabela', error.toString(), 'error');
+            }
+        }
+
+        async function testCreateSubtask() {
+            addResult('➕ Testando criação de subtarefa...', 'Executando teste...', 'info');
+            
+            try {
+                const subtaskData = {
+                    card_id: 1,
+                    title: 'Teste de Subtarefa',
+                    description: 'Descrição da subtarefa de teste',
+                    priority: 'medium',
+                    due_date: '2025-09-30',
+                    members: ['1', '2'],
+                    created_by: 1
+                };
+
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .insert([subtaskData])
+                    .select(`
+                        *,
+                        created_by_user:users!subtasks_created_by_fkey(id, username, avatar_url)
+                    `)
+                    .single();
+
+                if (error) {
+                    addResult('❌ Erro ao criar subtarefa', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 
+                        'error');
+                } else {
+                    addResult('✅ Subtarefa criada com sucesso!', 
+                        `Subtarefa criada:\n` +
+                        `ID: ${data.id}\n` +
+                        `Título: ${data.title}\n` +
+                        `Status: ${data.status}\n` +
+                        `Membros: ${JSON.stringify(data.members)}\n` +
+                        `Criado por: ${data.created_by_user?.username}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao criar subtarefa', error.toString(), 'error');
+            }
+        }
+
+        async function testUpdateStatus() {
+            addResult('🔄 Testando atualização de status...', 'Executando teste...', 'info');
+            
+            try {
+                // Primeiro, buscar uma subtarefa existente
+                const { data: subtasks, error: fetchError } = await supabase
+                    .from('subtasks')
+                    .select('id, title, status')
+                    .limit(1);
+
+                if (fetchError || !subtasks || subtasks.length === 0) {
+                    addResult('❌ Nenhuma subtarefa encontrada para testar', 
+                        'Crie uma subtarefa primeiro.', 'error');
+                    return;
+                }
+
+                const subtask = subtasks[0];
+                const newStatus = subtask.status === 'todo' ? 'in_progress' : 'completed';
+
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .update({ 
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', subtask.id)
+                    .select()
+                    .single();
+
+                if (error) {
+                    addResult('❌ Erro ao atualizar status', 
+                        `Erro: ${error.message}`, 'error');
+                } else {
+                    addResult('✅ Status atualizado com sucesso!', 
+                        `Subtarefa: ${data.title}\n` +
+                        `Status anterior: ${subtask.status}\n` +
+                        `Status novo: ${data.status}\n` +
+                        `Atualizado em: ${data.updated_at}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao atualizar status', error.toString(), 'error');
+            }
+        }
+
+        async function testFilterByMembers() {
+            addResult('👥 Testando filtro por membros...', 'Executando teste...', 'info');
+            
+            try {
+                // Testar filtro para usuário ID 1
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .select(`
+                        *,
+                        created_by_user:users!subtasks_created_by_fkey(id, username, avatar_url)
+                    `)
+                    .contains('members', ['1']);
+
+                if (error) {
+                    addResult('❌ Erro ao filtrar por membros', 
+                        `Erro: ${error.message}`, 'error');
+                } else {
+                    addResult('✅ Filtro por membros funcionando!', 
+                        `Subtarefas encontradas para usuário ID 1: ${data.length}\n` +
+                        `Detalhes: ${JSON.stringify(data.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            members: s.members,
+                            status: s.status
+                        })), null, 2)}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao filtrar por membros', error.toString(), 'error');
+            }
+        }
+
+        async function loadSubtasks() {
+            addResult('📂 Carregando todas as subtarefas...', 'Executando...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .select(`
+                        *,
+                        created_by_user:users!subtasks_created_by_fkey(id, username, avatar_url)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    addResult('❌ Erro ao carregar subtarefas', 
+                        `Erro: ${error.message}`, 'error');
+                } else {
+                    // Agrupar por status
+                    const grouped = {
+                        todo: data.filter(s => s.status === 'todo'),
+                        in_progress: data.filter(s => s.status === 'in_progress'),
+                        completed: data.filter(s => s.status === 'completed')
+                    };
+
+                    addResult('✅ Subtarefas carregadas com sucesso!', 
+                        `Total de subtarefas: ${data.length}\n` +
+                        `A Fazer: ${grouped.todo.length}\n` +
+                        `Em Progresso: ${grouped.in_progress.length}\n` +
+                        `Concluídas: ${grouped.completed.length}\n\n` +
+                        `Detalhes: ${JSON.stringify(data.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            status: s.status,
+                            members: s.members,
+                            created_by: s.created_by_user?.username
+                        })), null, 2)}`, 
+                        'success');
+
+                    // Mostrar subtarefas visualmente
+                    showSubtasksVisually(grouped);
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao carregar subtarefas', error.toString(), 'error');
+            }
+        }
+
+        function showSubtasksVisually(grouped) {
+            const resultsDiv = document.getElementById('results');
+            
+            // Criar seção visual
+            const visualSection = document.createElement('div');
+            visualSection.className = 'test-section info';
+            visualSection.innerHTML = '<h3>📊 Visualização das Subtarefas</h3>';
+            
+            // Criar colunas
+            const columnsDiv = document.createElement('div');
+            columnsDiv.style.display = 'grid';
+            columnsDiv.style.gridTemplateColumns = '1fr 1fr 1fr';
+            columnsDiv.style.gap = '20px';
+            columnsDiv.style.marginTop = '10px';
+
+            // Coluna A Fazer
+            const todoColumn = document.createElement('div');
+            todoColumn.innerHTML = '<h4 style="color: #007bff; margin-bottom: 10px;">📋 A Fazer</h4>';
+            grouped.todo.forEach(subtask => {
+                const card = document.createElement('div');
+                card.className = 'subtask-card status-todo';
+                card.innerHTML = `
+                    <strong>${subtask.title}</strong><br>
+                    <small>Membros: ${subtask.members.length}</small><br>
+                    <small>Por: ${subtask.created_by_user?.username}</small>
+                `;
+                todoColumn.appendChild(card);
+            });
+            columnsDiv.appendChild(todoColumn);
+
+            // Coluna Em Progresso
+            const progressColumn = document.createElement('div');
+            progressColumn.innerHTML = '<h4 style="color: #ffc107; margin-bottom: 10px;">🔄 Em Progresso</h4>';
+            grouped.in_progress.forEach(subtask => {
+                const card = document.createElement('div');
+                card.className = 'subtask-card status-in-progress';
+                card.innerHTML = `
+                    <strong>${subtask.title}</strong><br>
+                    <small>Membros: ${subtask.members.length}</small><br>
+                    <small>Por: ${subtask.created_by_user?.username}</small>
+                `;
+                progressColumn.appendChild(card);
+            });
+            columnsDiv.appendChild(progressColumn);
+
+            // Coluna Concluído
+            const completedColumn = document.createElement('div');
+            completedColumn.innerHTML = '<h4 style="color: #28a745; margin-bottom: 10px;">✅ Concluído</h4>';
+            grouped.completed.forEach(subtask => {
+                const card = document.createElement('div');
+                card.className = 'subtask-card status-completed';
+                card.innerHTML = `
+                    <strong>${subtask.title}</strong><br>
+                    <small>Membros: ${subtask.members.length}</small><br>
+                    <small>Por: ${subtask.created_by_user?.username}</small>
+                `;
+                completedColumn.appendChild(card);
+            });
+            columnsDiv.appendChild(completedColumn);
+
+            visualSection.appendChild(columnsDiv);
+            resultsDiv.appendChild(visualSection);
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a funcionalidade de subtarefas.', 'info');
+        });
+    </script>
+</body>
+</html>
+

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { db, User, Board, Card, Subtask, Activity, Chat, ChatMessage } from '../services/database';
+import { db, Subtask, Chat, ChatMessage } from '../services/database';
+import { User, Board, Card, Activity } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
 export const useDatabase = () => {
@@ -232,7 +233,37 @@ export const useDatabase = () => {
       setLoading(true);
       try {
         const data = await db.getCardsForBoard(boardId);
-        setCards(data);
+        // Mapear dados do banco para Card
+        const mappedCards: Card[] = data.map((dbCard: any) => ({
+          id: dbCard.id,
+          card_id: dbCard.card_id,
+          board_id: 1, // Mapear para ID numérico
+          column_id: 1, // Mapear para ID numérico
+          title: dbCard.title,
+          description: dbCard.description,
+          priority: dbCard.importance as 'low' | 'medium' | 'high',
+          status: dbCard.status as 'todo' | 'progress' | 'done',
+          assigned_to: dbCard.user_id,
+          created_by: dbCard.user_id || 1,
+          created_at: dbCard.created_at,
+          updated_at: dbCard.updated_at,
+          due_date: dbCard.due_date,
+          tags: [],
+          attachments: [],
+          comments: [],
+          members: dbCard.members || [],
+          dependencies: dbCard.dependencies || [],
+          subtasks: [],
+          git_branch: dbCard.git_branch,
+          git_commit: dbCard.git_commit,
+          goal: dbCard.goal,
+          category: '',
+          importance: dbCard.importance,
+          recurrence: dbCard.recurrence,
+          board_name: '',
+          column_name: dbCard.list_name
+        }));
+        setCards(mappedCards);
       } catch (error) {
         handleError(error, 'buscar cards');
       } finally {
@@ -243,7 +274,22 @@ export const useDatabase = () => {
     const createCard = useCallback(async (cardData: Partial<Card>) => {
       setLoading(true);
       try {
-        const newCard = await db.createCard(cardData);
+        // Garantir que o criador seja sempre um membro do card
+        const creatorId = cardData.created_by || 1;
+        const members = cardData.members || [];
+        
+        // Se o criador não estiver na lista de membros, adicionar
+        if (!members.includes(creatorId)) {
+          members.push(creatorId);
+        }
+        
+        // Atualizar os dados do card com os membros corretos
+        const updatedCardData = {
+          ...cardData,
+          members: members
+        };
+        
+        const newCard = await db.createCard(updatedCardData);
         if (newCard) {
           setCards(prev => [...prev, newCard]);
           addToast({
@@ -323,7 +369,7 @@ export const useDatabase = () => {
   // HOOKS PARA SUBTAREFAS
   // ============================================================================
 
-  const useSubtasks = (cardId: string) => {
+  const useSubtasks = (cardId: number) => {
     const [subtasks, setSubtasks] = useState<Subtask[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -340,7 +386,15 @@ export const useDatabase = () => {
       }
     }, [cardId, handleError]);
 
-    const createSubtask = useCallback(async (subtaskData: Partial<Subtask>) => {
+    const createSubtask = useCallback(async (subtaskData: {
+      card_id: number;
+      title: string;
+      description?: string;
+      priority?: string;
+      due_date?: string;
+      members?: string[];
+      created_by: number;
+    }) => {
       setLoading(true);
       try {
         const newSubtask = await db.createSubtask(subtaskData);
@@ -361,7 +415,15 @@ export const useDatabase = () => {
       return null;
     }, [handleError, addToast]);
 
-    const updateSubtask = useCallback(async (id: number, updates: Partial<Subtask>) => {
+    const updateSubtask = useCallback(async (id: number, updates: {
+      title?: string;
+      description?: string;
+      priority?: string;
+      due_date?: string;
+      status?: string;
+      members?: string[];
+      position?: number;
+    }) => {
       setLoading(true);
       try {
         const success = await db.updateSubtask(id, updates);

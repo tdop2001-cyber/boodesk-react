@@ -22,3 +22,4 @@ DO UPDATE SET
 
 -- 4. Verificar todas as configurações do usuário 1
 SELECT setting_key, setting_value FROM user_settings WHERE user_id = 1;
+

@@ -133,3 +133,6 @@ Para atualizar as credenciais:
 
 **Nota**: Esta integração usa Service Account para autenticação. Para uso em produção, considere implementar OAuth 2.0 para autenticação de usuários individuais.
 
+
+
+

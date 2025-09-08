@@ -258,7 +258,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         className={`
           relative border-2 border-dashed rounded-lg p-6 text-center transition-all
           ${isDragOver 
-            ? 'border-blue-500 bg-blue-50' 
+            ? 'border-green-500 bg-green-50' 
             : 'border-gray-300 hover:border-gray-400'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -302,7 +302,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <button
               onClick={uploadFiles}
               disabled={isUploading || disabled}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isUploading ? (
                 <>
@@ -365,7 +365,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 {/* Status */}
                 <div className="flex-shrink-0 flex items-center space-x-2">
                   {fileWithPreview.uploading && (
-                    <Loader className="w-4 h-4 animate-spin text-blue-600" />
+                    <Loader className="w-4 h-4 animate-spin text-green-600" />
                   )}
                   {fileWithPreview.uploaded && (
                     <CheckCircle className="w-4 h-4 text-green-600" />

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples de Subtarefas</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Simples de Subtarefas</h1>
+        <p>Este teste verifica se a tabela de subtarefas foi criada corretamente.</p>
+        
+        <button onclick="testTableStructure()">📋 Verificar Estrutura</button>
+        <button onclick="testCreateSubtask()">➕ Criar Subtarefa</button>
+        <button onclick="testLoadSubtasks()">📂 Carregar Subtarefas</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testTableStructure() {
+            addResult('📋 Verificando estrutura da tabela subtasks...', 'Executando verificação...', 'info');
+            
+            try {
+                // Tentar buscar dados da tabela subtasks
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    addResult('❌ Tabela subtasks não existe ou há erro', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 
+                        'error');
+                } else {
+                    addResult('✅ Tabela subtasks existe!', 
+                        `Tabela encontrada com sucesso.\n` +
+                        `Dados de exemplo: ${JSON.stringify(data, null, 2)}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao verificar tabela', error.toString(), 'error');
+            }
+        }
+
+        async function testCreateSubtask() {
+            addResult('➕ Testando criação de subtarefa...', 'Executando teste...', 'info');
+            
+            try {
+                // Primeiro, verificar se há cards disponíveis
+                const { data: cards, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('id, title')
+                    .limit(1);
+
+                if (cardsError || !cards || cards.length === 0) {
+                    addResult('❌ Nenhum card encontrado', 
+                        'Crie um card primeiro para testar as subtarefas.', 'error');
+                    return;
+                }
+
+                const cardId = cards[0].id;
+                const subtaskData = {
+                    card_id: cardId,
+                    title: 'Teste de Subtarefa',
+                    description: 'Descrição da subtarefa de teste',
+                    priority: 'medium',
+                    due_date: '2025-09-30',
+                    members: ['1', '2'],
+                    created_by: 1
+                };
+
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .insert([subtaskData])
+                    .select()
+                    .single();
+
+                if (error) {
+                    addResult('❌ Erro ao criar subtarefa', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 
+                        'error');
+                } else {
+                    addResult('✅ Subtarefa criada com sucesso!', 
+                        `Subtarefa criada:\n` +
+                        `ID: ${data.id}\n` +
+                        `Título: ${data.title}\n` +
+                        `Card ID: ${data.card_id}\n` +
+                        `Status: ${data.status}\n` +
+                        `Membros: ${JSON.stringify(data.members)}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao criar subtarefa', error.toString(), 'error');
+            }
+        }
+
+        async function testLoadSubtasks() {
+            addResult('📂 Testando carregamento de subtarefas...', 'Executando teste...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('subtasks')
+                    .select(`
+                        *,
+                        cards!inner(id, title),
+                        users!subtasks_created_by_fkey(id, username)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    addResult('❌ Erro ao carregar subtarefas', 
+                        `Erro: ${error.message}`, 'error');
+                } else {
+                    // Agrupar por status
+                    const grouped = {
+                        todo: data.filter(s => s.status === 'todo'),
+                        in_progress: data.filter(s => s.status === 'in_progress'),
+                        completed: data.filter(s => s.status === 'completed')
+                    };
+
+                    addResult('✅ Subtarefas carregadas com sucesso!', 
+                        `Total de subtarefas: ${data.length}\n` +
+                        `A Fazer: ${grouped.todo.length}\n` +
+                        `Em Progresso: ${grouped.in_progress.length}\n` +
+                        `Concluídas: ${grouped.completed.length}\n\n` +
+                        `Detalhes: ${JSON.stringify(data.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            status: s.status,
+                            card_title: s.cards?.title,
+                            created_by: s.users?.username,
+                            members: s.members
+                        })), null, 2)}`, 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Erro geral ao carregar subtarefas', error.toString(), 'error');
+            }
+        }
+
+        // Executar teste automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para testar a funcionalidade de subtarefas.', 'info');
+        });
+    </script>
+</body>
+</html>
+

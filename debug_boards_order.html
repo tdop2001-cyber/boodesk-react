@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug da Ordem dos Quadros</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 Debug da Ordem dos Quadros</h1>
+        <p>Este teste faz um debug completo da funcionalidade de persistência da ordem dos quadros.</p>
+        
+        <button onclick="runFullDebug()">🔍 Executar Debug Completo</button>
+        <button onclick="testStepByStep()">📋 Testar Passo a Passo</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function runFullDebug() {
+            addResult('🔍 Iniciando Debug Completo...', 'Executando todos os testes...', 'info');
+            
+            try {
+                // Passo 1: Verificar se a tabela existe
+                addResult('📋 Passo 1: Verificando tabela user_settings', 'Executando...', 'info');
+                
+                const { data: tableCheck, error: tableError } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .limit(1);
+
+                if (tableError) {
+                    addResult('❌ Passo 1: Tabela user_settings não existe', 
+                        `Erro: ${tableError.message}\n` +
+                        `Código: ${tableError.code}\n` +
+                        `Detalhes: ${tableError.details}`, 
+                        'error');
+                    return;
+                }
+
+                addResult('✅ Passo 1: Tabela user_settings existe', 
+                    `Tabela acessível com sucesso.\n` +
+                    `Dados encontrados: ${JSON.stringify(tableCheck, null, 2)}`, 
+                    'success');
+
+                // Passo 2: Testar salvamento
+                addResult('💾 Passo 2: Testando salvamento', 'Executando...', 'info');
+                
+                const testUserId = 1;
+                const testOrder = [3, 1, 2];
+                
+                const { data: saveData, error: saveError } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: testUserId,
+                        setting_key: 'boards_order',
+                        setting_value: JSON.stringify(testOrder)
+                    });
+
+                if (saveError) {
+                    addResult('❌ Passo 2: Erro ao salvar', 
+                        `Erro: ${saveError.message}\n` +
+                        `Código: ${saveError.code}\n` +
+                        `Detalhes: ${saveError.details}`, 
+                        'error');
+                    return;
+                }
+
+                addResult('✅ Passo 2: Salvamento bem-sucedido', 
+                    `Usuário ID: ${testUserId}\n` +
+                    `Ordem salva: ${JSON.stringify(testOrder)}\n` +
+                    `Dados retornados: ${JSON.stringify(saveData, null, 2)}`, 
+                    'success');
+
+                // Passo 3: Testar carregamento
+                addResult('📂 Passo 3: Testando carregamento', 'Executando...', 'info');
+                
+                const { data: loadData, error: loadError } = await supabase
+                    .from('user_settings')
+                    .select('setting_key, setting_value')
+                    .eq('user_id', testUserId)
+                    .eq('setting_key', 'boards_order');
+
+                if (loadError) {
+                    addResult('❌ Passo 3: Erro ao carregar', 
+                        `Erro: ${loadError.message}\n` +
+                        `Código: ${loadError.code}\n` +
+                        `Detalhes: ${loadError.details}`, 
+                        'error');
+                    return;
+                }
+
+                if (!loadData || loadData.length === 0) {
+                    addResult('❌ Passo 3: Nenhum dado encontrado', 
+                        `Usuário ID: ${testUserId}\n` +
+                        `Chave: boards_order`, 
+                        'error');
+                    return;
+                }
+
+                const loadedOrder = JSON.parse(loadData[0].setting_value);
+                const isCorrect = JSON.stringify(testOrder) === JSON.stringify(loadedOrder);
+
+                addResult('✅ Passo 3: Carregamento bem-sucedido', 
+                    `Usuário ID: ${testUserId}\n` +
+                    `Ordem carregada: ${JSON.stringify(loadedOrder)}\n` +
+                    `Ordem correta: ${isCorrect ? '✅' : '❌'}\n` +
+                    `Dados carregados: ${JSON.stringify(loadData, null, 2)}`, 
+                    isCorrect ? 'success' : 'error');
+
+                // Passo 4: Testar funcionalidade completa
+                addResult('🔄 Passo 4: Testando funcionalidade completa', 'Executando...', 'info');
+                
+                // Simular reordenação de quadros
+                const mockBoards = [
+                    { id: 1, name: 'Desenvolvimento' },
+                    { id: 2, name: 'Design' },
+                    { id: 3, name: 'Marketing' }
+                ];
+
+                const orderedBoards = [];
+                const remainingBoards = [...mockBoards];
+                
+                loadedOrder.forEach(boardId => {
+                    const boardIndex = remainingBoards.findIndex(board => board.id === boardId);
+                    if (boardIndex !== -1) {
+                        orderedBoards.push(remainingBoards[boardIndex]);
+                        remainingBoards.splice(boardIndex, 1);
+                    }
+                });
+                orderedBoards.push(...remainingBoards);
+
+                addResult('✅ Passo 4: Funcionalidade completa testada', 
+                    `Quadros originais: ${mockBoards.map(b => b.name).join(', ')}\n` +
+                    `Ordem aplicada: ${JSON.stringify(loadedOrder)}\n` +
+                    `Quadros reordenados: ${orderedBoards.map(b => b.name).join(', ')}\n` +
+                    `Funcionalidade: ${isCorrect ? '✅ Funcionando' : '❌ Com problemas'}`, 
+                    isCorrect ? 'success' : 'error');
+
+                // Resumo final
+                addResult('📊 Resumo do Debug', 
+                    `✅ Tabela user_settings: OK\n` +
+                    `✅ Salvamento: OK\n` +
+                    `✅ Carregamento: OK\n` +
+                    `✅ Funcionalidade: ${isCorrect ? 'OK' : 'PROBLEMA'}\n\n` +
+                    `Conclusão: ${isCorrect ? 'A funcionalidade está funcionando corretamente!' : 'Há um problema na funcionalidade que precisa ser investigado.'}`, 
+                    isCorrect ? 'success' : 'error');
+
+            } catch (error) {
+                addResult('❌ Erro geral no debug', error.toString(), 'error');
+            }
+        }
+
+        async function testStepByStep() {
+            addResult('📋 Teste Passo a Passo', 'Clique nos botões para testar cada passo individualmente.', 'info');
+            
+            const steps = [
+                {
+                    name: 'Verificar Tabela',
+                    action: async () => {
+                        const { data, error } = await supabase
+                            .from('user_settings')
+                            .select('*')
+                            .limit(1);
+                        return { data, error };
+                    }
+                },
+                {
+                    name: 'Salvar Ordem',
+                    action: async () => {
+                        const { data, error } = await supabase
+                            .from('user_settings')
+                            .upsert({
+                                user_id: 1,
+                                setting_key: 'boards_order',
+                                setting_value: JSON.stringify([3, 1, 2])
+                            });
+                        return { data, error };
+                    }
+                },
+                {
+                    name: 'Carregar Ordem',
+                    action: async () => {
+                        const { data, error } = await supabase
+                            .from('user_settings')
+                            .select('setting_key, setting_value')
+                            .eq('user_id', 1)
+                            .eq('setting_key', 'boards_order');
+                        return { data, error };
+                    }
+                }
+            ];
+
+            steps.forEach((step, index) => {
+                const button = document.createElement('button');
+                button.textContent = `Passo ${index + 1}: ${step.name}`;
+                button.onclick = async () => {
+                    try {
+                        const result = await step.action();
+                        if (result.error) {
+                            addResult(`❌ Passo ${index + 1}: ${step.name}`, 
+                                `Erro: ${result.error.message}`, 'error');
+                        } else {
+                            addResult(`✅ Passo ${index + 1}: ${step.name}`, 
+                                `Sucesso: ${JSON.stringify(result.data, null, 2)}`, 'success');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Passo ${index + 1}: ${step.name}`, 
+                            `Erro: ${error.toString()}`, 'error');
+                    }
+                };
+                document.getElementById('results').appendChild(button);
+            });
+        }
+
+        // Executar debug automático ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique em "Executar Debug Completo" para testar toda a funcionalidade.', 'info');
+        });
+    </script>
+</body>
+</html>
+

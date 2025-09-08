@@ -19,12 +19,14 @@ import {
   Star,
   Target,
   Users,
-  Tag
+  Tag,
+  Kanban
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { db } from '../services/database';
 import { useAuth } from '../contexts/AuthContext';
+
 
 // Interface compatível com o banco de dados
 export interface Subtask {
@@ -46,6 +48,7 @@ export interface Subtask {
   importance?: 'low' | 'normal' | 'high' | 'critical';
   category?: string;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  members?: number[]; // IDs dos usuários membros da subtarefa
   // Campos do banco
   card_id?: string;
   status?: string;
@@ -69,7 +72,8 @@ interface SubtaskManagerProps {
   onSubtasksChange: (subtasks: Subtask[]) => void;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
-  cardId?: string; // ID do card para salvar no banco
+  cardId?: number; // ID do card para salvar no banco
+  showSubtasks?: boolean; // Controla se deve mostrar as subtarefas ou apenas detalhes
 }
 
 const SubtaskManager: React.FC<SubtaskManagerProps> = ({
@@ -77,7 +81,8 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   onSubtasksChange,
   isExpanded = false,
   onToggleExpanded,
-  cardId
+  cardId,
+  showSubtasks = true
 }) => {
   const { addToast } = useToast();
   const { getPriorityColor, getPriorityTextColor } = useSettings();
@@ -98,6 +103,10 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [showDetailModal, setShowDetailModal] = useState<string | null>(null);
   const [selectedSubtask, setSelectedSubtask] = useState<Subtask | null>(null);
+  const [showKanban, setShowKanban] = useState(false);
+  const [selectedSubtaskForKanban, setSelectedSubtaskForKanban] = useState<Subtask | null>(null);
+  const [showInlineKanban, setShowInlineKanban] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
 
   // Estados para criação/edição detalhada
   const [detailForm, setDetailForm] = useState({
@@ -110,24 +119,35 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     category: '',
     estimatedTime: '',
     tags: [] as string[],
-    recurrence: 'none' as 'none' | 'daily' | 'weekly' | 'monthly'
+    recurrence: 'none' as 'none' | 'daily' | 'weekly' | 'monthly',
+    members: [] as number[]
   });
 
-  // Mock de membros disponíveis
-  const availableMembers = [
-    { id: '1', name: 'João Silva', avatar: 'JS', role: 'Desenvolvedor' },
-    { id: '2', name: 'Maria Santos', avatar: 'MS', role: 'Designer' },
-    { id: '3', name: 'Pedro Costa', avatar: 'PC', role: 'Analista' },
-    { id: '4', name: 'Ana Oliveira', avatar: 'AO', role: 'Testador' }
-  ];
+  // Carregar usuários disponíveis
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await db.getUsers();
+        setAvailableUsers(users);
+      } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+      }
+    };
+    loadUsers();
+  }, []);
 
   const completedCount = subtasks.filter(subtask => subtask.completed).length;
   const totalCount = subtasks.length;
 
   // Salvar subtarefa no banco de dados
   const saveSubtaskToDatabase = async (subtaskData: Partial<Subtask>): Promise<Subtask | null> => {
-    if (!cardId) {
-      console.error('Card ID não fornecido para salvar subtarefa');
+    console.log('=== SUBTASKMANAGER: saveSubtaskToDatabase ===');
+    console.log('cardId:', cardId);
+    console.log('subtaskData recebido:', subtaskData);
+    console.log('user:', user);
+    
+    if (!cardId || typeof cardId !== 'number') {
+      console.error('Card ID não fornecido ou inválido para salvar subtarefa:', cardId);
       return null;
     }
 
@@ -135,21 +155,25 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       const newSubtaskData = {
         card_id: cardId,
         title: subtaskData.title || '',
-        description: subtaskData.description || '',
-        status: subtaskData.completed ? 'completed' : 'pending',
+        description: subtaskData.description || 'Sem descrição',
         priority: subtaskData.priority || 'medium',
-        importance: subtaskData.importance || 'normal',
-        category: subtaskData.category || 'Geral',
         due_date: subtaskData.dueDate || undefined,
-        estimated_time: (subtaskData.estimatedTime || 0).toString(),
-        actual_time: (subtaskData.actualTime || 0).toString(),
-        tags: subtaskData.tags || [],
-        completed: subtaskData.completed || false,
-        user_id: user?.id || undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        members: [user?.id?.toString() || '1'],
+        created_by: user?.id || 1
       };
 
+      console.log('newSubtaskData a ser enviado:', newSubtaskData);
+      
+      // Validar campos obrigatórios
+      if (!newSubtaskData.title || !newSubtaskData.card_id || !newSubtaskData.description) {
+        console.error('Campos obrigatórios não preenchidos:', {
+          title: newSubtaskData.title,
+          card_id: newSubtaskData.card_id,
+          description: newSubtaskData.description
+        });
+        return null;
+      }
+      
       const savedSubtask = await db.createSubtask(newSubtaskData);
       
       // Converter para o formato local
@@ -163,13 +187,13 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
           priority: savedSubtask.priority as 'low' | 'medium' | 'high',
           importance: savedSubtask.importance as 'low' | 'normal' | 'high' | 'critical',
           category: savedSubtask.category,
-          dueDate: savedSubtask.due_date,
+          dueDate: savedSubtask.due_date || undefined,
           estimatedTime: savedSubtask.estimated_time ? parseInt(savedSubtask.estimated_time) : undefined,
           actualTime: savedSubtask.actual_time ? parseInt(savedSubtask.actual_time) : undefined,
           tags: savedSubtask.tags || [],
           card_id: savedSubtask.card_id,
           status: savedSubtask.status,
-          due_date: savedSubtask.due_date,
+          due_date: savedSubtask.due_date || undefined,
           estimated_time: savedSubtask.estimated_time,
           actual_time: savedSubtask.actual_time,
           user_id: savedSubtask.user_id,
@@ -259,6 +283,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       category: detailForm.category || undefined,
       estimatedTime: detailForm.estimatedTime ? parseInt(detailForm.estimatedTime) : undefined,
       tags: detailForm.tags,
+      members: detailForm.members,
       recurrence: detailForm.recurrence,
       attachments: [],
       comments: []
@@ -305,7 +330,8 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       category: '',
       estimatedTime: '',
       tags: [],
-      recurrence: 'none'
+      recurrence: 'none',
+      members: []
     });
   };
 
@@ -322,7 +348,8 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
         category: subtask.category || '',
         estimatedTime: subtask.estimatedTime?.toString() || '',
         tags: subtask.tags || [],
-        recurrence: subtask.recurrence || 'none'
+        recurrence: subtask.recurrence || 'none',
+        members: subtask.members || []
       });
     } else {
       setSelectedSubtask(null);
@@ -345,15 +372,29 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       category: detailForm.category || undefined,
       estimatedTime: detailForm.estimatedTime ? parseInt(detailForm.estimatedTime) : undefined,
       tags: detailForm.tags,
-      recurrence: detailForm.recurrence
+      members: detailForm.members,
+      recurrence: detailForm.recurrence,
+      updated_at: new Date().toISOString()
     };
 
     // Salvar no banco de dados
-    if (cardId) {
-      const savedSubtask = await saveSubtaskToDatabase(updatedSubtask);
-      if (savedSubtask) {
+    if (cardId && typeof selectedSubtask.id === 'number') {
+      const updateData = {
+        title: updatedSubtask.title,
+        description: updatedSubtask.description,
+        due_date: updatedSubtask.dueDate,
+        priority: updatedSubtask.priority,
+        importance: updatedSubtask.importance,
+        category: updatedSubtask.category,
+        estimated_time: updatedSubtask.estimatedTime?.toString(),
+        tags: updatedSubtask.tags,
+        updated_at: updatedSubtask.updated_at
+      };
+
+      const success = await db.updateSubtask(selectedSubtask.id, updateData);
+      if (success) {
         const updatedSubtasks = subtasks.map(subtask => 
-          subtask.id === selectedSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+          subtask.id === selectedSubtask.id ? updatedSubtask : subtask
         );
         onSubtasksChange(updatedSubtasks);
         setShowDetailModal(null);
@@ -362,7 +403,13 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
         addToast({
           type: 'success',
           title: 'Subtarefa atualizada',
-          message: 'Detalhes da subtarefa foram salvos com sucesso'
+          message: 'Detalhes da subtarefa foram salvos no banco de dados'
+        });
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Erro ao salvar',
+          message: 'Não foi possível salvar os detalhes no banco de dados'
         });
       }
     } else {
@@ -394,8 +441,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
           // Salvar no banco de dados
           if (cardId && typeof subtask.id === 'number') {
             db.updateSubtask(subtask.id, {
-              completed: updatedSubtask.completed,
-              status: updatedSubtask.completed ? 'completed' : 'pending'
+              status: updatedSubtask.completed ? 'completed' : 'todo'
             }).catch(error => {
               console.error('Erro ao salvar subtarefa:', error);
               addToast({
@@ -477,11 +523,16 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     };
 
     // Salvar no banco de dados
-    if (cardId) {
-      const savedSubtask = await saveSubtaskToDatabase(updatedSubtask);
-      if (savedSubtask) {
+    if (cardId && typeof updatedSubtask.id === 'number') {
+      const updateData = {
+        title: updatedSubtask.title,
+        updated_at: updatedSubtask.updated_at
+      };
+
+      const success = await db.updateSubtask(updatedSubtask.id, updateData);
+      if (success) {
         const updatedSubtasks = subtasks.map(subtask => 
-          subtask.id === updatedSubtask.id ? { ...subtask, id: savedSubtask.id } : subtask
+          subtask.id === updatedSubtask.id ? updatedSubtask : subtask
         );
         onSubtasksChange(updatedSubtasks);
         setEditingId(null);
@@ -490,7 +541,13 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
         addToast({
           type: 'success',
           title: 'Subtarefa atualizada',
-          message: 'Título da subtarefa foi atualizado'
+          message: 'Título da subtarefa foi atualizado no banco de dados'
+        });
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Erro ao salvar',
+          message: 'Não foi possível salvar a alteração no banco de dados'
         });
       }
     } else {
@@ -542,6 +599,23 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
+  // Função para alternar entre lista e kanban inline
+  const toggleInlineKanban = () => {
+    setShowInlineKanban(!showInlineKanban);
+  };
+
+  // Função para abrir o kanban de uma subtarefa específica
+  const openSubtaskKanban = (subtask: Subtask) => {
+    setSelectedSubtaskForKanban(subtask);
+    setShowKanban(true);
+  };
+
+  // Função para fechar o kanban
+  const closeSubtaskKanban = () => {
+    setShowKanban(false);
+    setSelectedSubtaskForKanban(null);
+  };
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -575,7 +649,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
         )}
       </div>
 
-      {isExpanded && (
+      {isExpanded && showSubtasks && (
         <>
           {/* Progress Bar */}
           {totalCount > 0 && (
@@ -593,204 +667,319 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
             </div>
           )}
 
-          {/* Subtasks List */}
-          <div className="space-y-2">
-            {subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                                 className={`flex items-start space-x-3 p-5 rounded-xl border-2 transition-all duration-200 ${
-                   subtask.completed 
-                     ? 'bg-green-50' 
-                     : 'bg-white'
-                 }`}
-                style={{
-                  borderColor: subtask.completed 
-                    ? '#22C55E' // green-500
-                    : getPriorityColor(subtask.priority ? subtask.priority : 'medium')
-                }}
+          {/* Toggle entre Lista e Kanban */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 bg-brand-light-gray/30 rounded-lg p-1">
+              <button
+                onClick={() => setShowInlineKanban(false)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  !showInlineKanban
+                    ? 'bg-white text-brand-gray shadow-sm'
+                    : 'text-brand-gray/60 hover:text-brand-gray'
+                }`}
               >
-                {/* Checkbox */}
-                <button
-                  onClick={() => toggleSubtask(subtask.id.toString())}
-                  className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors mt-0.5"
-                >
-                  {subtask.completed ? (
-                    <CheckSquare className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <Square className="w-5 h-5 text-brand-gray/60" />
-                  )}
-                </button>
+                Lista
+              </button>
+              <button
+                onClick={() => setShowInlineKanban(true)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  showInlineKanban
+                    ? 'bg-white text-brand-gray shadow-sm'
+                    : 'text-brand-gray/60 hover:text-brand-gray'
+                }`}
+              >
+                Kanban
+              </button>
+            </div>
+            
+            {/* Informação sobre o modo Lista */}
+            {!showInlineKanban && (
+              <div className="text-xs text-brand-gray/60 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                💡 Clique em "Abrir Kanban" em cada subtarefa para gerenciar seu fluxo
+              </div>
+            )}
+            
+            {/* Botão para adicionar subtarefa */}
+            <button
+              onClick={() => openDetailModal()}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-brand-blue text-white text-xs rounded-lg hover:bg-brand-blue-dark transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Adicionar</span>
+            </button>
+          </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {editingId === subtask.id.toString() ? (
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyPress={(e) => handleKeyPress(e, saveEdit)}
-                      className="w-full p-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                      autoFocus
-                    />
-                  ) : (
-                    <div className="space-y-1">
-                      <p className={`text-sm ${
-                        subtask.completed 
-                          ? 'text-green-700 line-through' 
-                          : 'text-brand-gray'
-                      }`}>
-                        {subtask.title}
-                      </p>
-                      
-                                             {/* Subtask Details - Layout Organizado */}
-                       <div className="mt-3 space-y-3">
-                        {/* Primeira linha: Prioridade, Importância e Prazo */}
+          {/* Conteúdo baseado no modo de visualização */}
+          {!showInlineKanban ? (
+            /* Lista de Subtarefas */
+            <div className="space-y-2">
+              {subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className={`flex items-start space-x-3 p-5 rounded-xl border-2 transition-all duration-200 ${
+                     subtask.completed 
+                       ? 'bg-green-50' 
+                       : 'bg-white'
+                   }`}
+                  style={{
+                    borderColor: subtask.completed 
+                      ? '#22C55E' // green-500
+                      : getPriorityColor(subtask.priority ? subtask.priority : 'medium')
+                  }}
+                >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleSubtask(subtask.id.toString())}
+                    className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors mt-0.5"
+                  >
+                    {subtask.completed ? (
+                      <CheckSquare className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-brand-gray/60" />
+                    )}
+                  </button>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {editingId === subtask.id.toString() ? (
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyPress={(e) => handleKeyPress(e, saveEdit)}
+                        className="w-full p-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {subtask.priority && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium border`}
-                                    style={{ 
-                                      backgroundColor: getPriorityColor(subtask.priority),
-                                      color: getPriorityTextColor(subtask.priority)
-                                    }}>
-                                {getPriorityLabel(subtask.priority)}
-                              </span>
-                            )}
-                            {subtask.importance && subtask.importance !== 'normal' && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getImportanceColor(subtask.importance)}`}>
-                                {subtask.importance}
-                              </span>
+                          <p className={`text-sm ${
+                            subtask.completed 
+                              ? 'text-green-700 line-through' 
+                              : 'text-brand-gray'
+                          }`}>
+                            {subtask.title}
+                          </p>
+                          
+                          {/* Botão para abrir kanban da subtarefa */}
+                          <button
+                            onClick={() => openSubtaskKanban(subtask)}
+                            className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors border border-blue-200"
+                            title="Abrir Kanban da Subtarefa"
+                          >
+                            <Kanban className="w-3 h-3" />
+                            <span>Abrir Kanban</span>
+                          </button>
+                        </div>
+                        
+                        {/* Subtask Details - Layout Organizado */}
+                        <div className="mt-3 space-y-3">
+                          {/* Primeira linha: Prioridade, Importância e Prazo */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {subtask.priority && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium border`}
+                                      style={{ 
+                                        backgroundColor: getPriorityColor(subtask.priority),
+                                        color: getPriorityTextColor(subtask.priority)
+                                      }}>
+                                  {getPriorityLabel(subtask.priority)}
+                                </span>
+                              )}
+                              {subtask.importance && subtask.importance !== 'normal' && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getImportanceColor(subtask.importance)}`}>
+                                  {subtask.importance}
+                                </span>
+                              )}
+                            </div>
+                            {subtask.dueDate && (
+                              <div className={`flex items-center gap-1 text-xs ${
+                                isOverdue(subtask.dueDate) ? 'text-red-500' : 'text-brand-gray/60'
+                              }`}>
+                                <Calendar className="w-3 h-3" />
+                                <span>{new Date(subtask.dueDate).toLocaleDateString('pt-BR')}</span>
+                                {isOverdue(subtask.dueDate) && <AlertCircle className="w-3 h-3" />}
+                              </div>
                             )}
                           </div>
-                          {subtask.dueDate && (
-                            <div className={`flex items-center gap-1 text-xs ${
-                              isOverdue(subtask.dueDate) ? 'text-red-500' : 'text-brand-gray/60'
-                            }`}>
-                              <Calendar className="w-3 h-3" />
-                              <span>{new Date(subtask.dueDate).toLocaleDateString('pt-BR')}</span>
-                              {isOverdue(subtask.dueDate) && <AlertCircle className="w-3 h-3" />}
+
+                          {/* Segunda linha: Responsável e Tempo */}
+                          {(subtask.assignedTo || subtask.estimatedTime) && (
+                            <div className="flex items-center justify-between">
+                              {subtask.assignedTo && (
+                                <div className="flex items-center gap-1 text-xs text-brand-gray/60">
+                                  <User className="w-3 h-3" />
+                                  <span className="truncate max-w-24">{subtask.assignedTo}</span>
+                                </div>
+                              )}
+                              {subtask.estimatedTime && (
+                                <div className="flex items-center gap-1 text-xs text-brand-gray/60">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatTime(subtask.estimatedTime)}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Terceira linha: Categoria e Tags */}
+                          {(subtask.category || (subtask.tags && subtask.tags.length > 0)) && (
+                            <div className="flex flex-col gap-2">
+                              {subtask.category && (
+                                <div className="flex items-center gap-1 text-xs text-brand-gray/60">
+                                  <Tag className="w-3 h-3" />
+                                  <span className="truncate max-w-32">{subtask.category}</span>
+                                </div>
+                              )}
+                              {subtask.tags && subtask.tags.length > 0 && (
+                                <div className="text-xs text-brand-gray/60">
+                                  <span className="bg-gray-100 px-2 py-1 rounded inline-block">
+                                    {subtask.tags.join(', ')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Quarta linha: Comentários e Anexos */}
+                          {((subtask.comments && subtask.comments.length > 0) || (subtask.attachments && subtask.attachments.length > 0)) && (
+                            <div className="flex items-center gap-3 text-xs text-brand-gray/60">
+                              {subtask.comments && subtask.comments.length > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <MessageSquare className="w-3 h-3" />
+                                  <span>{subtask.comments.length}</span>
+                                </div>
+                              )}
+                              {subtask.attachments && subtask.attachments.length > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <Paperclip className="w-3 h-3" />
+                                  <span>{subtask.attachments.length}</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-
-                        {/* Segunda linha: Responsável e Tempo */}
-                        {(subtask.assignedTo || subtask.estimatedTime) && (
-                          <div className="flex items-center justify-between">
-                            {subtask.assignedTo && (
-                              <div className="flex items-center gap-1 text-xs text-brand-gray/60">
-                                <User className="w-3 h-3" />
-                                <span className="truncate max-w-24">{subtask.assignedTo}</span>
-                              </div>
-                            )}
-                            {subtask.estimatedTime && (
-                              <div className="flex items-center gap-1 text-xs text-brand-gray/60">
-                                <Clock className="w-3 h-3" />
-                                <span>{formatTime(subtask.estimatedTime)}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                                                 {/* Terceira linha: Categoria e Tags */}
-                         {(subtask.category || (subtask.tags && subtask.tags.length > 0)) && (
-                           <div className="flex flex-col gap-2">
-                             {subtask.category && (
-                               <div className="flex items-center gap-1 text-xs text-brand-gray/60">
-                                 <Tag className="w-3 h-3" />
-                                 <span className="truncate max-w-32">{subtask.category}</span>
-                               </div>
-                             )}
-                             {subtask.tags && subtask.tags.length > 0 && (
-                               <div className="text-xs text-brand-gray/60">
-                                 <span className="bg-gray-100 px-2 py-1 rounded inline-block">
-                                   {subtask.tags.join(', ')}
-                                 </span>
-                               </div>
-                             )}
-                           </div>
-                         )}
-
-                        {/* Quarta linha: Comentários e Anexos */}
-                        {((subtask.comments && subtask.comments.length > 0) || (subtask.attachments && subtask.attachments.length > 0)) && (
-                          <div className="flex items-center gap-3 text-xs text-brand-gray/60">
-                            {subtask.comments && subtask.comments.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                <MessageSquare className="w-3 h-3" />
-                                <span>{subtask.comments.length}</span>
-                              </div>
-                            )}
-                            {subtask.attachments && subtask.attachments.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Paperclip className="w-3 h-3" />
-                                <span>{subtask.attachments.length}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Actions */}
-                <div className="flex items-start space-x-1 mt-0.5">
-                  {editingId === subtask.id.toString() ? (
-                    <>
-                      <button
-                        onClick={saveEdit}
-                        className="p-1 rounded-lg hover:bg-green-100 transition-colors"
-                      >
-                        <Save className="w-4 h-4 text-green-600" />
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="p-1 rounded-lg hover:bg-brand-light-gray/30 transition-colors"
-                      >
-                        <X className="w-4 h-4 text-brand-gray" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => openDetailModal(subtask)}
-                        className="p-1 rounded-lg hover:bg-blue-100 transition-colors"
-                        title="Editar detalhes"
-                      >
-                        <Target className="w-4 h-4 text-blue-600" />
-                      </button>
-                      <button
-                        onClick={() => startEditing(subtask)}
-                        className="p-1 rounded-lg hover:bg-brand-light-gray/30 transition-colors"
-                        title="Editar título"
-                      >
-                        <Edit className="w-4 h-4 text-brand-gray/60" />
-                      </button>
-                      <button
-                        onClick={() => deleteSubtask(subtask.id.toString())}
-                        className="p-1 rounded-lg hover:bg-red-100 transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </>
-                  )}
+                  {/* Actions */}
+                  <div className="flex items-start space-x-1 mt-0.5">
+                    {editingId === subtask.id.toString() ? (
+                      <>
+                        <button
+                          onClick={saveEdit}
+                          className="p-1 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                          <Save className="w-4 h-4 text-green-600" />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="p-1 rounded-lg hover:bg-brand-light-gray/30 transition-colors"
+                        >
+                          <X className="w-4 h-4 text-brand-gray" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => openDetailModal(subtask)}
+                          className="p-1 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Editar detalhes"
+                        >
+                          <Target className="w-4 h-4 text-blue-600" />
+                        </button>
+                        <button
+                          onClick={() => startEditing(subtask)}
+                          className="p-1 rounded-lg hover:bg-brand-light-gray/30 transition-colors"
+                          title="Editar título"
+                        >
+                          <Edit className="w-4 h-4 text-brand-gray/60" />
+                        </button>
+                        <button
+                          onClick={() => deleteSubtask(subtask.id.toString())}
+                          className="p-1 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Add New Subtask */}
-          <div className="space-y-3">
-            {/* Add Subtask Button */}
-            <button
-              onClick={() => openDetailModal()}
-              className="w-full flex items-center justify-center space-x-2 p-3 border border-dashed border-brand-blue text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Adicionar Subtarefa</span>
-            </button>
-          </div>
+              ))}
+            </div>
+          ) : (
+            /* Kanban Inline */
+            <div className="text-center py-8 text-brand-gray/60">
+              <Kanban className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Kanban inline não implementado ainda</p>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Quando não mostrar subtarefas, exibir apenas informações básicas */}
+      {isExpanded && !showSubtasks && (
+        <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-brand-gray">Informações das Subtarefas</h4>
+            <span className="text-xs text-brand-gray/60 bg-white px-2 py-1 rounded-full">
+              {completedCount}/{totalCount} concluídas
+            </span>
+          </div>
+          
+          {totalCount > 0 && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-brand-gray/60">
+                <span>Progresso</span>
+                <span>{Math.round((completedCount / totalCount) * 100)}%</span>
+              </div>
+              <div className="w-full h-2 bg-brand-light-gray rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-brand-green to-brand-blue transition-all duration-300"
+                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className="text-xs text-brand-gray/60 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+            💡 As subtarefas são gerenciadas no modo Kanban da lista principal de atividades
+          </div>
+        </div>
+      )}
+
+      {/* Kanban Modal para Subtarefa Específica */}
+      {showKanban && selectedSubtaskForKanban && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Kanban className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-brand-gray">
+                      Kanban da Subtarefa: {selectedSubtaskForKanban.title}
+                    </h3>
+                    <p className="text-sm text-brand-gray/60">
+                      Gerencie o fluxo de trabalho desta subtarefa
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeSubtaskKanban}
+                  className="p-2 text-brand-gray/50 hover:text-brand-gray hover:bg-brand-light-gray/30 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Detail Modal */}
@@ -867,15 +1056,84 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
                     <select
                       value={detailForm.assignedTo}
                       onChange={(e) => setDetailForm({...detailForm, assignedTo: e.target.value})}
-                      className="w-full p-3 border border-brand-light-gray rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      className="w-full p-3 border border-brand-light-gray rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green"
                     >
-                      <option value="">Selecionar membro...</option>
-                      {availableMembers.map((member) => (
-                        <option key={member.id} value={member.name}>
-                          {member.name} ({member.role})
+                      <option value="">Selecionar responsável...</option>
+                      {availableUsers.map(user => (
+                        <option key={user.id} value={user.username}>
+                          {user.username} - {user.cargo || 'Sem cargo'}
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Seleção de Membros */}
+                  <div>
+                    <label className="block text-sm font-medium text-brand-gray mb-2">Membros (opcional)</label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto border border-brand-light-gray rounded-xl p-3">
+                      {availableUsers.map((user) => (
+                        <label key={user.id} className="flex items-center space-x-3 cursor-pointer hover:bg-brand-light-gray/30 p-2 rounded-lg transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={detailForm.members.includes(user.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setDetailForm({
+                                  ...detailForm,
+                                  members: [...detailForm.members, user.id]
+                                });
+                              } else {
+                                setDetailForm({
+                                  ...detailForm,
+                                  members: detailForm.members.filter(id => id !== user.id)
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 text-brand-green border-brand-light-gray rounded focus:ring-brand-green focus:ring-2"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-brand-green rounded-full flex items-center justify-center text-white text-sm font-medium">
+                              {user.username?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-brand-gray">{user.username}</div>
+                              <div className="text-xs text-brand-gray/60">{user.cargo || 'Sem cargo'}</div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                      {availableUsers.length === 0 && (
+                        <div className="text-sm text-brand-gray/60 text-center py-4">
+                          Nenhum usuário disponível
+                        </div>
+                      )}
+                    </div>
+                    {detailForm.members.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {detailForm.members.map((memberId) => {
+                          const member = availableUsers.find(u => u.id === memberId);
+                          return member ? (
+                            <span
+                              key={memberId}
+                              className="inline-flex items-center space-x-1 px-2 py-1 bg-brand-green/10 text-brand-green text-xs rounded-full"
+                            >
+                              <span>{member.username}</span>
+                              <button
+                                onClick={() => {
+                                  setDetailForm({
+                                    ...detailForm,
+                                    members: detailForm.members.filter(id => id !== memberId)
+                                  });
+                                }}
+                                className="ml-1 hover:text-brand-red"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-brand-gray mb-2">Importância</label>

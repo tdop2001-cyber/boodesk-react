@@ -110,9 +110,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     description: '',
     priority: cardSettings.defaultPriority as 'low' | 'medium' | 'high' | 'critical',
     column_id: 1,
-    due_date: ''
+    due_date: '',
+    members: [user?.id || 1] // Incluir o criador como membro por padrão
   });
   const [selectedCardTemplate, setSelectedCardTemplate] = useState<CardTemplate | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   
   // Estados para criação de templates
   const [showCreateBoardTemplateModal, setShowCreateBoardTemplateModal] = useState(false);
@@ -121,6 +123,34 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const [showDeleteCardTemplateModal, setShowDeleteCardTemplateModal] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<{ id: number; name: string; type: 'board' | 'card' } | null>(null);
   const [showCardDetailModal, setShowCardDetailModal] = useState(false);
+
+  // Estados para animações de drag and drop
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
+  const [dragOverCard, setDragOverCard] = useState<number | null>(null);
+  const [dropAnimation, setDropAnimation] = useState<{ cardId: number; columnId: number } | null>(null);
+
+  // Debug: Monitorar mudanças de estado do modal
+  useEffect(() => {
+    console.log('Modal state changed:', { showCardDetailModal, selectedCard: selectedCard?.title });
+  }, [showCardDetailModal, selectedCard]);
+
+  // Resetar estado de dragging quando o mouse é solto (safety net)
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isDragging) {
+        console.log('Mouse up detected - resetting drag state');
+        setIsDragging(false);
+        setDraggedCard(null);
+        setDragOverColumn(null);
+        setDragOverCard(null);
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [isDragging]);
+
   const [newBoardTemplate, setNewBoardTemplate] = useState({
     name: '',
     description: '',
@@ -157,6 +187,22 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     }
   }, [user?.id]);
 
+  // Carregar usuários disponíveis quando modal de criação de card for aberto
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await db.getUsers();
+        setAvailableUsers(users);
+      } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+      }
+    };
+
+    if (showCreateCardModal) {
+      loadUsers();
+    }
+  }, [showCreateCardModal]);
+
   // Definir aba ativa quando os quadros são carregados
   useEffect(() => {
     if (boards.length > 0 && activeTab === null) {
@@ -187,8 +233,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
   const loadBoards = async () => {
     try {
+      console.log('=== CARREGANDO BOARDS ===');
+      console.log('user?.id:', user?.id);
+      
       // Carregar boards do Supabase
       const boardsData = await db.getBoards(user?.id);
+      console.log('boardsData do banco:', boardsData);
+      console.log('Quantidade de boards encontrados:', boardsData.length);
       
       // Mapear para o tipo Board do Kanban
       const mappedBoards: Board[] = boardsData.map(board => ({
@@ -202,6 +253,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         is_active: true
       }));
       
+      console.log('mappedBoards:', mappedBoards);
       setBoards(mappedBoards);
       
       if (mappedBoards.length > 0) {
@@ -260,6 +312,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       const listsData = await db.getListsForBoard(board.board_id);
       console.log('=== CARREGANDO COLUNAS ===');
       console.log('listsData do banco:', listsData);
+      console.log('Quantidade de listas encontradas:', listsData.length);
       
       const mappedColumns: Column[] = listsData.map(list => ({
         id: list.id,
@@ -275,20 +328,55 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       setColumns(mappedColumns);
       
       // Carregar cards para o board
-      const cardsData = await db.getCardsForBoard(board.board_id);
+      const boardIdForCards = String(board.board_id || board.id);
       console.log('=== CARREGANDO CARDS ===');
       console.log('board.board_id:', board.board_id);
+      console.log('board.id:', board.id);
+      console.log('boardIdForCards:', boardIdForCards);
+      
+      const cardsData = await db.getCardsForBoardByUser(
+        boardIdForCards, 
+        user?.id || 1, 
+        user?.role || 'member'
+      );
       console.log('cardsData do banco:', cardsData);
+      console.log('Quantidade de cards encontrados:', cardsData.length);
       
       // Função auxiliar para obter ID da coluna pelo nome (usando as colunas mapeadas)
       const getColumnIdFromNameLocal = (columnName: string): number => {
         const column = mappedColumns.find(col => col.name === columnName);
-        return column?.id || 1;
+        if (column) {
+          return column.id;
+        }
+        
+        // Se não encontrou, tentar mapear para colunas padrão
+        const defaultMapping: { [key: string]: string } = {
+          'A Fazer': 'A Fazer',
+          'To Do': 'A Fazer',
+          'Pendente': 'A Fazer',
+          'Backlog': 'A Fazer',
+          'Em Progresso': 'Em Progresso',
+          'In Progress': 'Em Progresso',
+          'Em Andamento': 'Em Progresso',
+          'Desenvolvimento': 'Em Progresso',
+          'Concluído': 'Concluído',
+          'Done': 'Concluído',
+          'Finalizado': 'Concluído',
+          'Completo': 'Concluído'
+        };
+        
+        const mappedName = defaultMapping[columnName] || 'A Fazer';
+        const defaultColumn = mappedColumns.find(col => col.name === mappedName);
+        
+        console.warn(`⚠️ Coluna "${columnName}" não encontrada, mapeando para "${mappedName}" (ID: ${defaultColumn?.id || 1})`);
+        return defaultColumn?.id || 1;
       };
       
       // Carregar subtarefas para cada card
       const mappedCards: Card[] = await Promise.all(cardsData.map(async (card) => {
-        const subtasks = await db.getSubtasksForCard(card.card_id);
+        const cardIdValue = card.card_id || card.id.toString();
+        const cardId = parseInt(cardIdValue);
+        const subtasks = await db.getSubtasksForCard(cardId);
         const mappedSubtasks = subtasks.map(subtask => ({
           id: subtask.id.toString(),
           title: subtask.title,
@@ -304,19 +392,19 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           recurrence: 'none'
         }));
 
-        const columnId = getColumnIdFromNameLocal(card.list_name);
-        console.log(`Mapeando card "${card.title}" da coluna "${card.list_name}" para column_id: ${columnId}`);
+        const columnId = getColumnIdFromNameLocal((card as any).list_name);
+        console.log(`Mapeando card "${card.title}" da coluna "${(card as any).list_name}" para column_id: ${columnId}`);
         
         const mappedCard = {
           id: card.id,
-          board_id: board.id,
+          board_id: board.id, // Usar sempre o ID numérico do board
           column_id: columnId, // Mapear list_name para column_id
           title: card.title,
           description: card.description,
           priority: card.importance as 'low' | 'medium' | 'high',
           status: card.status as 'todo' | 'progress' | 'done',
-          assigned_to: card.user_id,
-          created_by: card.user_id || 1,
+          assigned_to: card.assigned_to,
+          created_by: card.created_by || 1,
           created_at: card.created_at,
           updated_at: card.updated_at,
           due_date: card.due_date || undefined,
@@ -330,7 +418,32 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       }));
       
       // Filtrar cards para mostrar apenas os do board atual
-      const boardCards = mappedCards.filter(card => card.board_id === board.id);
+      console.log('=== DEBUG FILTRO ===');
+      console.log('board.id (tipo):', typeof board.id, 'valor:', board.id);
+      console.log('mappedCards antes do filtro:', mappedCards);
+      mappedCards.forEach((card, index) => {
+        console.log(`Card ${index}: board_id=${card.board_id} (tipo: ${typeof card.board_id})`);
+      });
+      
+      const boardCards = mappedCards.filter(card => {
+        const cardBoardId = card.board_id;
+        const currentBoardId = board.id;
+        const currentBoardStringId = board.board_id;
+        
+        // Comparar com o ID numérico do board
+        if (cardBoardId === currentBoardId) return true;
+        
+        // Comparar com o board_id string se existir
+        if (currentBoardStringId) {
+          if (typeof currentBoardStringId === 'string') {
+            return cardBoardId === parseInt(currentBoardStringId);
+          } else if (typeof currentBoardStringId === 'number') {
+            return cardBoardId === currentBoardStringId;
+          }
+        }
+        
+        return false;
+      });
       console.log('=== RESUMO DO CARREGAMENTO ===');
       console.log('Total de cards mapeados:', mappedCards.length);
       console.log('Total de cards filtrados:', boardCards.length);
@@ -504,20 +617,26 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       }
 
       try {
+        console.log('=== MOVENDO CARD ===');
+        console.log('draggedCard.id:', draggedCard.id);
+        console.log('newStatus:', newStatus);
+        console.log('targetColumnId:', targetColumnId);
+        console.log('targetColumn.name:', targetColumn.name);
+        
         // Atualizar o card no banco de dados
         const success = await db.updateCardById(draggedCard.id, {
-          list_name: targetColumn.name,
-          status: newStatus
+          status: newStatus,
+          list_name: targetColumn.name
         });
+        
+        console.log('Resultado da atualização:', success);
 
         if (success) {
-          // Atualizar o card no estado local
-          const updatedCards = cards.map(card =>
-            card.id === draggedCard.id
-              ? { ...card, column_id: targetColumnId, status: newStatus as 'todo' | 'progress' | 'done' }
-              : card
-          );
-          setCards(updatedCards);
+          // Recarregar dados do board para garantir consistência
+          if (currentBoard) {
+            console.log('Recarregando dados do board após mover card...');
+            await loadBoardData(currentBoard);
+          }
           
           // Mostrar toast de sucesso
           addToast({
@@ -683,7 +802,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       description: '',
       priority: 'medium',
       column_id: columnId,
-      due_date: ''
+      due_date: '',
+      members: [user?.id || 1] // Incluir o criador como membro
     });
     setShowCreateCardModal(true);
   };
@@ -711,7 +831,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       // Criar card no Supabase
       const cardData = {
         card_id: `card-${Date.now()}`,
-        board_id: currentBoard.board_id, // Usar board_id correto
+        board_id: String(currentBoard.board_id || currentBoard.id), // Converter para string
         list_name: getColumnName(newCardData.column_id),
         title: newCardData.title,
         description: newCardData.description,
@@ -720,7 +840,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         due_date: newCardData.due_date || undefined,
         subject: '-',
         goal: '-',
-        members: [],
+        members: newCardData.members, // Usar os membros selecionados
         creation_date: new Date().toISOString(),
         is_archived: false,
         git_branch: '',
@@ -796,7 +916,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       description: '',
       priority: 'medium',
       column_id: 1,
-      due_date: ''
+      due_date: '',
+      members: [user?.id || 1] // Resetar com o criador como membro
     });
     setSelectedCardTemplate(null);
   };
@@ -1004,7 +1125,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       description: template.fields.description,
       priority: template.fields.priority,
       column_id: 1, // Primeira coluna por padrão
-      due_date: ''
+      due_date: '',
+      members: [user?.id || 1] // Incluir o criador como membro
     });
     setShowCardTemplateModal(false);
     setShowCreateCardModal(true);
@@ -1026,13 +1148,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
   const applyCardTemplate = (template: CardTemplate) => {
     setSelectedCardTemplate(template);
-    setNewCardData({
+    setNewCardData(prev => ({
+      ...prev,
       title: template.fields.title,
       description: template.fields.description,
-      priority: template.fields.priority,
-      column_id: newCardData.column_id,
-      due_date: newCardData.due_date
-    });
+      priority: template.fields.priority
+    }));
   };
 
   const clearBoardTemplate = () => {
@@ -1074,7 +1195,35 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       description: '',
       priority: cardSettings.defaultPriority as 'low' | 'medium' | 'high' | 'critical',
       column_id: newCardData.column_id,
-      due_date: newCardData.due_date
+      due_date: newCardData.due_date,
+      members: newCardData.members
+    });
+  };
+
+  // Funções para gerenciar membros
+  const handleMemberToggle = (userId: number) => {
+    setNewCardData(prev => {
+      const isSelected = prev.members.includes(userId);
+      if (isSelected) {
+        // Não permitir remover o criador do card
+        if (userId === user?.id) {
+          addToast({
+            type: 'warning',
+            title: 'Aviso',
+            message: 'O criador do card deve sempre ser um membro.'
+          });
+          return prev;
+        }
+        return {
+          ...prev,
+          members: prev.members.filter(id => id !== userId)
+        };
+      } else {
+        return {
+          ...prev,
+          members: [...prev.members, userId]
+        };
+      }
     });
   };
 
@@ -1393,6 +1542,21 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     // Usar subtarefas reais do card se existirem
     const cardSubtasks = card.subtasks || [];
     
+    // Função para gerar cor do avatar baseada no ID
+    const getUserAvatarColor = (userId: number): string => {
+      const colors = [
+        'from-red-400 to-red-600',
+        'from-blue-400 to-blue-600', 
+        'from-green-400 to-green-600',
+        'from-yellow-400 to-yellow-600',
+        'from-purple-400 to-purple-600',
+        'from-pink-400 to-pink-600',
+        'from-indigo-400 to-indigo-600',
+        'from-teal-400 to-teal-600'
+      ];
+      return colors[userId % colors.length];
+    };
+    
     return (
       <div
         draggable={hasPermission('card:edit')}
@@ -1446,7 +1610,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         {cardSubtasks.length > 0 && (
           <div className="mb-2">
             <div className="flex items-center justify-between text-xs text-brand-gray/60 mb-1">
-              <span>Subtarefas</span>
+              <span className="hidden sm:inline">Subtarefas</span>
+              <span className="sm:hidden">Sub</span>
               <span>{cardSubtasks.filter(s => s.completed).length}/{cardSubtasks.length}</span>
             </div>
             <div className="w-full h-1.5 bg-brand-light-gray rounded-full overflow-hidden">
@@ -1457,22 +1622,85 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                 }}
               />
             </div>
+            {/* Detalhes das subtarefas - apenas em telas maiores */}
+            <div className="hidden md:flex items-center justify-between text-xs text-brand-gray/50 mt-1">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1"></div>
+                  <span>{cardSubtasks.filter(s => s.status === 'pending').length} pendentes</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-1"></div>
+                  <span>{cardSubtasks.filter(s => s.status === 'in_progress').length} em progresso</span>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                <span>{cardSubtasks.filter(s => s.completed).length} concluídas</span>
+              </div>
+            </div>
+            {/* Versão simplificada para mobile */}
+            <div className="md:hidden text-xs text-brand-gray/50 mt-1">
+              <span>{cardSubtasks.filter(s => s.completed).length} concluídas</span>
+            </div>
           </div>
         )}
 
         {/* Tags */}
         {card.tags && card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {card.tags.slice(0, 2).map((tag, index) => (
-              <span key={index} className="px-3 py-1.5 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray">
-                {tag}
-              </span>
-            ))}
-            {card.tags.length > 2 && (
-              <span className="px-3 py-1.5 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray">
-                +{card.tags.length - 2}
-              </span>
-            )}
+            {/* Em mobile, mostrar apenas 1 tag */}
+            <div className="block sm:hidden">
+              {card.tags.slice(0, 1).map((tag, index) => (
+                <span key={index} className="px-2 py-1 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray truncate max-w-20">
+                  {tag.length > 8 ? tag.substring(0, 8) + '...' : tag}
+                </span>
+              ))}
+              {card.tags.length > 1 && (
+                <span className="px-2 py-1 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray">
+                  +{card.tags.length - 1}
+                </span>
+              )}
+            </div>
+            {/* Em desktop, mostrar 2 tags */}
+            <div className="hidden sm:flex flex-wrap gap-1">
+              {card.tags.slice(0, 2).map((tag, index) => (
+                <span key={index} className="px-3 py-1.5 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray">
+                  {tag}
+                </span>
+              ))}
+              {card.tags.length > 2 && (
+                <span className="px-3 py-1.5 bg-brand-light-gray/20 text-brand-gray text-xs rounded-full font-medium border border-brand-light-gray">
+                  +{card.tags.length - 2}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Member Avatars */}
+        {card.members && card.members.length > 0 && (
+          <div className="flex items-center mb-2">
+            <div className="flex -space-x-2">
+              {card.members.slice(0, 3).map((memberId, index) => {
+                const initials = `U${memberId}`;
+                const avatarColor = getUserAvatarColor(memberId);
+                return (
+                  <div
+                    key={memberId}
+                    className={`w-6 h-6 bg-gradient-to-br ${avatarColor} rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm`}
+                    title={`Usuário ${memberId}`}
+                  >
+                    {initials}
+                  </div>
+                );
+              })}
+              {card.members.length > 3 && (
+                <div className="w-6 h-6 bg-brand-light-gray rounded-full flex items-center justify-center text-brand-gray text-xs font-semibold border-2 border-white shadow-sm">
+                  +{card.members.length - 3}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1482,16 +1710,17 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1 text-brand-gray/70">
                 <Link className="w-3 h-3" />
-                <span>Dependências ({card.dependencies.length})</span>
+                <span className="hidden sm:inline">Dependências ({card.dependencies.length})</span>
+                <span className="sm:hidden">Dep ({card.dependencies.length})</span>
               </div>
               {checkDependenciesCompleted(card) ? (
-                <span className="text-green-600 font-medium">✓ Pronto</span>
+                <span className="text-green-600 font-medium">✓</span>
               ) : (
-                <span className="text-orange-600 font-medium">⏳ Aguardando</span>
+                <span className="text-orange-600 font-medium">⏳</span>
               )}
             </div>
             {!checkDependenciesCompleted(card) && (
-              <div className="mt-1 text-xs text-brand-gray/60">
+              <div className="mt-1 text-xs text-brand-gray/60 hidden sm:block">
                 {card.dependencies.length} dependência(s) não concluída(s)
               </div>
             )}
@@ -1500,27 +1729,28 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
         {/* Footer */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Due Date */}
             {card.due_date && (
               <div className={`flex items-center space-x-1 text-xs ${isOverdue ? 'text-brand-red' : 'text-brand-gray/70'}`}>
                 <Clock className="w-3 h-3" />
-                <span>{new Date(card.due_date).toLocaleDateString('pt-BR')}</span>
+                <span className="hidden sm:inline">{new Date(card.due_date).toLocaleDateString('pt-BR')}</span>
+                <span className="sm:hidden">{new Date(card.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
                 {isOverdue && <AlertCircle className="w-3 h-3" />}
               </div>
             )}
 
-            {/* Attachments */}
+            {/* Attachments - oculto em mobile */}
             {card.attachments && card.attachments.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-brand-gray/70">
+              <div className="hidden sm:flex items-center space-x-1 text-xs text-brand-gray/70">
                 <Paperclip className="w-3 h-3" />
                 <span>{card.attachments.length}</span>
               </div>
             )}
 
-            {/* Comments */}
+            {/* Comments - oculto em mobile */}
             {card.comments && card.comments.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-brand-gray/70">
+              <div className="hidden sm:flex items-center space-x-1 text-xs text-brand-gray/70">
                 <MessageSquare className="w-3 h-3" />
                 <span>{card.comments.length}</span>
               </div>
@@ -1550,10 +1780,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     const filteredColumnCards = filteredCards.filter(card => card.column_id === column.id);
     
     // Debug: verificar colunas filtradas
-    console.log('Colunas filtradas:', columns.filter(col => col.board_id === currentBoard?.id));
-    console.log('ColumnComponent - column:', column);
-    console.log('ColumnComponent - filteredCards:', filteredCards);
-    console.log('ColumnComponent - filteredColumnCards:', filteredColumnCards);
+    console.log('=== COLUMN COMPONENT DEBUG ===');
+    console.log('Current Board:', currentBoard);
+    console.log('Column:', column);
+    console.log('All columns:', columns);
+    console.log('Filtered cards:', filteredCards);
+    console.log('Cards for this column:', filteredColumnCards);
+    console.log('Column ID:', column.id);
+    console.log('Cards column_ids:', filteredCards.map(c => ({ id: c.id, title: c.title, column_id: c.column_id })));
     
     // Verificar se o card sendo arrastado pode ser movido para esta coluna
     const canDropHere = draggedCard ? canMoveToColumn(draggedCard, column.id).canMove : true;
@@ -1943,7 +2177,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           ) : viewMode === 'kanban' ? (
           /* Kanban View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {columns.filter(col => col.board_id === currentBoard?.id).map((column) => (
+            {columns.filter(col => {
+              // Verificar se a coluna pertence ao board atual
+              const currentBoardId = currentBoard?.id;
+              const currentBoardStringId = currentBoard?.board_id;
+              const colBoardId = col.board_id;
+              
+              // Converter todos para string para comparação segura
+              const currentBoardIdStr = String(currentBoardId || '');
+              const currentBoardStringIdStr = String(currentBoardStringId || '');
+              const colBoardIdStr = String(colBoardId || '');
+              
+              // Comparar IDs como strings
+              const boardIdMatch = 
+                colBoardIdStr === currentBoardIdStr || 
+                colBoardIdStr === currentBoardStringIdStr;
+              
+              return boardIdMatch;
+            }).map((column) => (
               <ColumnComponent key={column.id} column={column} />
             ))}
           </div>
@@ -2314,6 +2565,48 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                         className="w-full p-3 border border-brand-light-gray rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue"
                       />
                     </div>
+                  </div>
+
+                  {/* Seletor de Membros */}
+                  <div>
+                    <label className="block text-sm font-medium text-brand-gray mb-2">
+                      <Users className="inline w-4 h-4 mr-1" />
+                      Membros do Card
+                    </label>
+                    <div className="max-h-40 overflow-y-auto border border-brand-light-gray rounded-xl p-3 bg-white">
+                      {availableUsers.map(userItem => (
+                        <label key={userItem.id} className="flex items-center gap-3 cursor-pointer hover:bg-brand-light-gray/30 p-2 rounded-lg transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={newCardData.members.includes(userItem.id)}
+                            onChange={() => handleMemberToggle(userItem.id)}
+                            className="rounded border-brand-light-gray text-brand-red focus:ring-brand-red"
+                          />
+                          <div className="flex items-center gap-2">
+                            {userItem.avatar_url ? (
+                              <img
+                                src={userItem.avatar_url}
+                                alt={userItem.username}
+                                className="w-6 h-6 rounded-full"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-brand-red flex items-center justify-center text-white text-xs font-semibold">
+                                {userItem.username.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm text-brand-gray">{userItem.username}</span>
+                            {userItem.id === user?.id && (
+                              <span className="text-xs bg-brand-red/10 text-brand-red px-2 py-1 rounded-full font-medium">
+                                Criador
+                              </span>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-brand-gray/60 mt-1">
+                      Selecione os usuários que participarão deste card. O criador sempre será um membro.
+                    </p>
                   </div>
 
                   {/* Template Selecionado */}

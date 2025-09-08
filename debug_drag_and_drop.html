@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Drag and Drop de Subtarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .debug-title {
+            color: #dc2626;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .debug-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .debug-steps {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #dc2626;
+        }
+        .debug-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .debug-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #d97706;
+            font-weight: bold;
+        }
+        .status-info {
+            color: #2563eb;
+            font-weight: bold;
+        }
+        .test-area {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #f59e0b;
+            margin: 20px 0;
+        }
+        .test-area h4 {
+            color: #d97706;
+            margin: 0 0 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🐛 Debug - Drag and Drop de Subtarefas</h1>
+        <p>Este arquivo contém instruções para debug do problema de drag and drop.</p>
+
+        <div class="debug-section">
+            <div class="debug-title">🚨 Problema Reportado</div>
+            <div class="debug-description">
+                <strong>Problema:</strong> "SEGUEN AO FUNCIONANDO ESTOU TENTANDO ENVIAR A SUBSTASK DE A FAZER PARA EM PROGRESSO MAS ELE NAO TROCAM"
+            </div>
+            <div class="debug-steps">
+                <h4>🔍 Análise do Problema:</h4>
+                <ul>
+                    <li><span class="status-error">Drag and Drop não funciona</span> - Subtarefas não podem ser movidas entre colunas</li>
+                    <li><span class="status-error">Especificamente:</span> Da coluna "A Fazer" para "Em Progresso"</li>
+                    <li><span class="status-error">Estado não atualiza</span> - Mudanças não são aplicadas</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">🧪 Teste de Debug Passo a Passo</div>
+            <div class="debug-description">
+                Siga estes passos para identificar exatamente onde está o problema:
+            </div>
+            <div class="debug-steps">
+                <ol>
+                    <li><strong>Recarregue a página</strong> para aplicar as correções</li>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Execute os comandos de debug</strong> no console</li>
+                    <li><strong>Tente mover uma subtarefa</strong> e observe os logs</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-area">
+            <h4>🎯 Teste Específico de Drag and Drop:</h4>
+            <ol>
+                <li><strong>Identifique uma subtarefa</strong> na coluna "A Fazer"</li>
+                <li><strong>Clique e segure</strong> na subtarefa (deve aparecer overlay)</li>
+                <li><strong>Arraste</strong> para a coluna "Em Progresso"</li>
+                <li><strong>Solte</strong> na nova coluna</li>
+                <li><strong>Observe o console</strong> para logs de debug</li>
+            </ol>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">🔧 Comandos de Debug no Console</div>
+            <div class="debug-description">
+                Execute estes comandos no console para verificar o estado:
+            </div>
+            <div class="debug-steps">
+                <h4>📝 Comandos de Debug:</h4>
+                <div class="console-log">
+// 1. Verificar estado das subtarefas
+console.log('=== VERIFICAÇÃO INICIAL ===');
+console.log('Subtarefas internas:', window.internalSubtasks);
+console.log('Total de subtarefas:', window.internalSubtasks?.length || 0);
+
+// 2. Verificar filtragem por coluna
+console.log('=== VERIFICAÇÃO DE COLUNAS ===');
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'));
+console.log('Coluna Em Progresso:', window.getSubtasksByColumn && window.getSubtasksByColumn('in_progress'));
+console.log('Coluna Concluído:', window.getSubtasksByColumn && window.getSubtasksByColumn('completed'));
+
+// 3. Verificar se há subtarefas para mover
+const todoSubtasks = window.getSubtasksByColumn && window.getSubtasksByColumn('todo');
+if (todoSubtasks && todoSubtasks.length > 0) {
+    console.log('✅ Há subtarefas na coluna "A Fazer" para mover');
+    console.log('Primeira subtarefa:', todoSubtasks[0]);
+} else {
+    console.log('❌ Nenhuma subtarefa na coluna "A Fazer"');
+}
+
+// 4. Verificar configuração dos sensores
+console.log('=== VERIFICAÇÃO DE SENSORES ===');
+console.log('Sensores configurados:', window.sensors);
+console.log('PointerSensor:', window.PointerSensor);
+console.log('MouseSensor:', window.MouseSensor);
+
+// 5. Verificar funções de drag and drop
+console.log('=== VERIFICAÇÃO DE FUNÇÕES ===');
+console.log('handleDragStart disponível:', typeof window.handleDragStart);
+console.log('handleDragEnd disponível:', typeof window.handleDragEnd);
+console.log('setInternalSubtasks disponível:', typeof window.setInternalSubtasks);
+
+// 6. Verificar se há erros no console
+console.log('=== VERIFICAÇÃO DE ERROS ===');
+console.log('Verifique se há erros em vermelho no console');
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">📊 Logs Esperados Durante Drag and Drop</div>
+            <div class="debug-description">
+                Se o drag and drop estiver funcionando, você deve ver estes logs:
+            </div>
+            <div class="console-log">
+=== MOUSE DOWN DETECTADO ===
+Subtarefa: [NOME_DA_SUBTAREFA]
+ID: [ID_DA_SUBTAREFA]
+Evento: MouseEvent
+
+=== DRAG START ===
+Evento: {active: {...}, ...}
+Active ID: [ID_DA_SUBTAREFA]
+Active Data: {...}
+
+=== DRAG END ===
+Evento completo: {active: {...}, over: {...}, ...}
+Active: {id: [ID_DA_SUBTAREFA], ...}
+Over: {id: in_progress, ...}
+
+=== DEBUG DRAG AND DROP ===
+Evento detectado: DragEnd
+Active existe: true
+Over existe: true
+Active ID válido: true
+Over ID válido: true
+
+=== ATUALIZANDO ESTADO INTERNO ===
+Subtarefas antes da atualização: [...]
+✅ Atualizando subtarefa [TÍTULO] (ID: [ID])
+   Status: todo → in_progress
+   Completed: false → false
+
+Estado interno atualizado com sucesso
+
+=== CHAMANDO onSubtasksChange APÓS ATUALIZAÇÃO ===
+✅ onSubtasksChange executado com sucesso
+                </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">🚨 Possíveis Causas do Problema</div>
+            <div class="debug-description">
+                Com base nos logs, identifique qual destes problemas está ocorrendo:
+            </div>
+            <div class="debug-steps">
+                <h4>🔍 Diagnóstico por Sintomas:</h4>
+                
+                <h5>1. Nenhum log aparece ao clicar:</h5>
+                <ul>
+                    <li><span class="status-error">Problema:</span> Listeners não estão sendo aplicados</li>
+                    <li><span class="status-info">Solução:</span> Verificar configuração do useSortable</li>
+                </ul>
+                
+                <h5>2. Logs aparecem mas drag não inicia:</h5>
+                <ul>
+                    <li><span class="status-error">Problema:</span> Sensores muito restritivos</li>
+                    <li><span class="status-info">Solução:</span> Ajustar activationConstraint</li>
+                </ul>
+                
+                <h5>3. Drag inicia mas não termina:</h5>
+                <ul>
+                    <li><span class="status-error">Problema:</span> handleDragEnd não está sendo chamado</li>
+                    <li><span class="status-info">Solução:</span> Verificar configuração do DndContext</li>
+                </ul>
+                
+                <h5>4. Drag termina mas estado não atualiza:</h5>
+                <ul>
+                    <li><span class="status-error">Problema:</span> setInternalSubtasks não funciona</li>
+                    <li><span class="status-info">Solução:</span> Verificar lógica de atualização</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">📋 Checklist de Verificação</div>
+            <div class="debug-description">
+                Use este checklist para confirmar que identificou o problema:
+            </div>
+            <div class="debug-steps">
+                <h4>✅ Checklist de Debug:</h4>
+                <ul>
+                    <li><input type="checkbox"> Console aberto e limpo</li>
+                    <li><input type="checkbox"> Modo Kanban ativado</li>
+                    <li><input type="checkbox"> Comandos de debug executados</li>
+                    <li><input type="checkbox"> Logs de mouse down aparecem</li>
+                    <li><input type="checkbox"> Logs de drag start aparecem</li>
+                    <li><input type="checkbox"> Logs de drag end aparecem</li>
+                    <li><input type="checkbox"> Estado é atualizado</li>
+                    <li><input type="checkbox"> Problema específico identificado</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-title">🚀 Próximos Passos</div>
+            <div class="debug-description">
+                Após identificar o problema específico:
+            </div>
+            <div class="debug-steps">
+                <h4>📋 Próximos Passos:</h4>
+                <ol>
+                    <li><strong>Execute o teste</strong> seguindo os passos acima</li>
+                    <li><strong>Execute os comandos de debug</strong> no console</li>
+                    <li><strong>Tente mover uma subtarefa</strong> e observe os logs</li>
+                    <li><strong>Identifique o problema específico</strong> baseado nos sintomas</li>
+                    <li><strong>Compartilhe os logs</strong> do console</li>
+                    <li><strong>Reporte o comportamento</strong> observado</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script para ajudar no debug
+        console.log('🐛 Debug de Drag and Drop de Subtarefas carregado');
+        console.log('Execute os comandos de debug no console para identificar o problema');
+        
+        // Função para verificar estado atual
+        window.debugDragAndDrop = function() {
+            console.log('=== DEBUG COMPLETO DE DRAG AND DROP ===');
+            console.log('Verificando todos os componentes necessários...');
+            
+            // Verificar se as funções estão disponíveis
+            const functions = [
+                'handleDragStart',
+                'handleDragEnd',
+                'setInternalSubtasks',
+                'getSubtasksByColumn'
+            ];
+            
+            functions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    console.log(`✅ ${funcName}: Disponível`);
+                } else {
+                    console.log(`❌ ${funcName}: Não disponível`);
+                }
+            });
+            
+            // Verificar estado das subtarefas
+            if (typeof window.internalSubtasks !== 'undefined') {
+                console.log('✅ Estado interno disponível');
+                console.log('Total de subtarefas:', window.internalSubtasks.length);
+            } else {
+                console.log('❌ Estado interno não disponível');
+            }
+        };
+    </script>
+</body>
+</html>

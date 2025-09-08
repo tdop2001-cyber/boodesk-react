@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Específico da Ordem dos Quadros</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .mock-boards {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .board-tab {
+            padding: 10px 20px;
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: move;
+            user-select: none;
+        }
+        .board-tab:hover {
+            background-color: #dee2e6;
+        }
+        .board-tab.dragging {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 Debug Específico da Ordem dos Quadros</h1>
+        <p>Este teste simula exatamente o que acontece na aplicação React.</p>
+        
+        <button onclick="testCompleteFlow()">🔄 Testar Fluxo Completo</button>
+        <button onclick="testSaveAndLoad()">💾 Testar Salvar e Carregar</button>
+        <button onclick="testWithRealUser()">👤 Testar com Usuário Real</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div class="step">
+            <h3>📋 Quadros Mock (Arraste para reordenar)</h3>
+            <div class="mock-boards" id="mockBoards">
+                <div class="board-tab" draggable="true" data-id="1">Desenvolvimento</div>
+                <div class="board-tab" draggable="true" data-id="2">Design</div>
+                <div class="board-tab" draggable="true" data-id="3">Marketing</div>
+            </div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.2J8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let draggedElement = null;
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Simular drag and drop
+        function setupDragAndDrop() {
+            const boards = document.querySelectorAll('.board-tab');
+            
+            boards.forEach(board => {
+                board.addEventListener('dragstart', (e) => {
+                    draggedElement = e.target;
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                board.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                    draggedElement = null;
+                });
+
+                board.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+
+                board.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    
+                    if (draggedElement && draggedElement !== e.target) {
+                        const container = e.target.parentNode;
+                        const draggedIndex = Array.from(container.children).indexOf(draggedElement);
+                        const targetIndex = Array.from(container.children).indexOf(e.target);
+                        
+                        if (draggedIndex < targetIndex) {
+                            container.insertBefore(draggedElement, e.target.nextSibling);
+                        } else {
+                            container.insertBefore(draggedElement, e.target);
+                        }
+                        
+                        // Simular salvamento da ordem
+                        saveBoardsOrder();
+                    }
+                });
+            });
+        }
+
+        async function saveBoardsOrder() {
+            try {
+                const boards = document.querySelectorAll('.board-tab');
+                const order = Array.from(boards).map(board => parseInt(board.dataset.id));
+                
+                addResult('💾 Salvando ordem dos quadros...', 
+                    `Ordem atual: ${JSON.stringify(order)}`, 'info');
+
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: 1,
+                        setting_key: 'boards_order',
+                        setting_value: JSON.stringify(order)
+                    });
+
+                if (error) {
+                    addResult('❌ Erro ao salvar ordem', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}\n` +
+                        `Detalhes: ${error.details}`, 'error');
+                    return;
+                }
+
+                addResult('✅ Ordem salva com sucesso!', 
+                    `Ordem salva: ${JSON.stringify(order)}\n` +
+                    `Dados retornados: ${JSON.stringify(data, null, 2)}`, 'success');
+
+            } catch (error) {
+                addResult('❌ Erro geral ao salvar', error.toString(), 'error');
+            }
+        }
+
+        async function loadBoardsOrder() {
+            try {
+                addResult('📂 Carregando ordem dos quadros...', 'Executando...', 'info');
+
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('setting_key, setting_value')
+                    .eq('user_id', 1)
+                    .eq('setting_key', 'boards_order')
+                    .single();
+
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        addResult('ℹ️ Nenhuma ordem salva encontrada', 
+                            'Usando ordem padrão dos quadros.', 'info');
+                        return null;
+                    }
+                    
+                    addResult('❌ Erro ao carregar ordem', 
+                        `Erro: ${error.message}\n` +
+                        `Código: ${error.code}`, 'error');
+                    return null;
+                }
+
+                const order = JSON.parse(data.setting_value);
+                addResult('✅ Ordem carregada com sucesso!', 
+                    `Ordem carregada: ${JSON.stringify(order)}`, 'success');
+
+                return order;
+
+            } catch (error) {
+                addResult('❌ Erro geral ao carregar', error.toString(), 'error');
+                return null;
+            }
+        }
+
+        async function applyBoardsOrder(order) {
+            if (!order || order.length === 0) {
+                addResult('ℹ️ Nenhuma ordem para aplicar', 'Mantendo ordem atual.', 'info');
+                return;
+            }
+
+            try {
+                const container = document.getElementById('mockBoards');
+                const boards = Array.from(container.children);
+                const orderedBoards = [];
+                const remainingBoards = [...boards];
+
+                // Aplicar ordem salva
+                order.forEach(boardId => {
+                    const boardIndex = remainingBoards.findIndex(board => 
+                        parseInt(board.dataset.id) === boardId);
+                    if (boardIndex !== -1) {
+                        orderedBoards.push(remainingBoards[boardIndex]);
+                        remainingBoards.splice(boardIndex, 1);
+                    }
+                });
+
+                // Adicionar quadros restantes
+                orderedBoards.push(...remainingBoards);
+
+                // Reordenar no DOM
+                orderedBoards.forEach(board => container.appendChild(board));
+
+                addResult('✅ Ordem aplicada com sucesso!', 
+                    `Ordem aplicada: ${JSON.stringify(order)}\n` +
+                    `Quadros reordenados: ${orderedBoards.map(b => b.textContent).join(', ')}`, 'success');
+
+            } catch (error) {
+                addResult('❌ Erro ao aplicar ordem', error.toString(), 'error');
+            }
+        }
+
+        async function testCompleteFlow() {
+            addResult('🔄 Iniciando teste do fluxo completo...', 'Executando...', 'info');
+            
+            try {
+                // 1. Carregar ordem atual
+                const currentOrder = await loadBoardsOrder();
+                
+                // 2. Aplicar ordem se existir
+                if (currentOrder) {
+                    await applyBoardsOrder(currentOrder);
+                }
+                
+                // 3. Simular mudança de ordem
+                addResult('🔄 Simulando mudança de ordem...', 
+                    'Arraste os quadros acima para testar o salvamento automático.', 'info');
+                
+            } catch (error) {
+                addResult('❌ Erro no fluxo completo', error.toString(), 'error');
+            }
+        }
+
+        async function testSaveAndLoad() {
+            addResult('💾 Testando salvamento e carregamento...', 'Executando...', 'info');
+            
+            try {
+                // 1. Salvar ordem de teste
+                const testOrder = [3, 1, 2];
+                const { data: saveData, error: saveError } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: 1,
+                        setting_key: 'boards_order',
+                        setting_value: JSON.stringify(testOrder)
+                    });
+
+                if (saveError) {
+                    addResult('❌ Erro ao salvar', 
+                        `Erro: ${saveError.message}`, 'error');
+                    return;
+                }
+
+                addResult('✅ Ordem salva', 
+                    `Ordem salva: ${JSON.stringify(testOrder)}`, 'success');
+
+                // 2. Carregar ordem
+                const { data: loadData, error: loadError } = await supabase
+                    .from('user_settings')
+                    .select('setting_key, setting_value')
+                    .eq('user_id', 1)
+                    .eq('setting_key', 'boards_order')
+                    .single();
+
+                if (loadError) {
+                    addResult('❌ Erro ao carregar', 
+                        `Erro: ${loadError.message}`, 'error');
+                    return;
+                }
+
+                const loadedOrder = JSON.parse(loadData.setting_value);
+                const isCorrect = JSON.stringify(testOrder) === JSON.stringify(loadedOrder);
+
+                addResult('✅ Ordem carregada', 
+                    `Ordem carregada: ${JSON.stringify(loadedOrder)}\n` +
+                    `Ordem correta: ${isCorrect ? '✅' : '❌'}`, 
+                    isCorrect ? 'success' : 'error');
+
+                // 3. Aplicar ordem
+                await applyBoardsOrder(loadedOrder);
+
+            } catch (error) {
+                addResult('❌ Erro geral', error.toString(), 'error');
+            }
+        }
+
+        async function testWithRealUser() {
+            addResult('👤 Testando com usuário real...', 'Executando...', 'info');
+            
+            try {
+                // Buscar usuários reais
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('id, username')
+                    .limit(5);
+
+                if (usersError) {
+                    addResult('❌ Erro ao buscar usuários', 
+                        `Erro: ${usersError.message}`, 'error');
+                    return;
+                }
+
+                addResult('👥 Usuários encontrados', 
+                    `Usuários: ${JSON.stringify(users, null, 2)}`, 'info');
+
+                // Testar com o primeiro usuário
+                if (users && users.length > 0) {
+                    const testUser = users[0];
+                    const testOrder = [2, 1, 3];
+
+                    // Salvar para usuário real
+                    const { data: saveData, error: saveError } = await supabase
+                        .from('user_settings')
+                        .upsert({
+                            user_id: testUser.id,
+                            setting_key: 'boards_order',
+                            setting_value: JSON.stringify(testOrder)
+                        });
+
+                    if (saveError) {
+                        addResult('❌ Erro ao salvar para usuário real', 
+                            `Erro: ${saveError.message}`, 'error');
+                        return;
+                    }
+
+                    addResult('✅ Ordem salva para usuário real', 
+                        `Usuário: ${testUser.username} (ID: ${testUser.id})\n` +
+                        `Ordem salva: ${JSON.stringify(testOrder)}`, 'success');
+
+                    // Carregar para usuário real
+                    const { data: loadData, error: loadError } = await supabase
+                        .from('user_settings')
+                        .select('setting_key, setting_value')
+                        .eq('user_id', testUser.id)
+                        .eq('setting_key', 'boards_order')
+                        .single();
+
+                    if (loadError) {
+                        addResult('❌ Erro ao carregar para usuário real', 
+                            `Erro: ${loadError.message}`, 'error');
+                        return;
+                    }
+
+                    const loadedOrder = JSON.parse(loadData.setting_value);
+                    const isCorrect = JSON.stringify(testOrder) === JSON.stringify(loadedOrder);
+
+                    addResult('✅ Ordem carregada para usuário real', 
+                        `Usuário: ${testUser.username}\n` +
+                        `Ordem carregada: ${JSON.stringify(loadedOrder)}\n` +
+                        `Ordem correta: ${isCorrect ? '✅' : '❌'}`, 
+                        isCorrect ? 'success' : 'error');
+                }
+
+            } catch (error) {
+                addResult('❌ Erro geral com usuário real', error.toString(), 'error');
+            }
+        }
+
+        // Inicializar drag and drop
+        window.addEventListener('load', () => {
+            setupDragAndDrop();
+            addResult('ℹ️ Página Carregada', 
+                'Drag and drop configurado. Clique nos botões para testar a funcionalidade.', 'info');
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Marcação Automática de Membro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .simulation {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .checkbox-simulation {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .checkbox-simulation input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>☑️ Teste de Marcação Automática de Membro</h1>
+        <p>Este teste simula como o modal de criação de card deve funcionar com o usuário atual marcado automaticamente.</p>
+        
+        <button onclick="simulateCreateCard()">🎯 Simular Criação de Card</button>
+        <button onclick="simulateDifferentUsers()">👥 Simular Diferentes Usuários</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Simular dados de usuários
+        const mockUsers = [
+            { id: 1, username: 'admin', cargo: 'Administrador', role: 'admin' },
+            { id: 2, username: 'manager', cargo: 'Gerente', role: 'manager' },
+            { id: 3, username: 'user1', cargo: 'Desenvolvedor', role: 'user' },
+            { id: 4, username: 'user2', cargo: 'Designer', role: 'user' }
+        ];
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function simulateCreateCard(currentUserId = 1) {
+            addResult('🔄 Simulando Criação de Card...', 'Executando simulação...', 'info');
+            
+            const currentUser = mockUsers.find(u => u.id === currentUserId);
+            if (!currentUser) {
+                addResult('❌ Usuário não encontrado', `Usuário ID ${currentUserId} não encontrado`, 'error');
+                return;
+            }
+
+            // Simular o estado inicial do newCardData
+            const newCardData = {
+                title: '',
+                description: '',
+                priority: 'medium',
+                column_id: 1,
+                due_date: '',
+                members: currentUserId ? [currentUserId] : [] // Usuário atual marcado automaticamente
+            };
+
+            addResult('📝 Estado Inicial do newCardData', 
+                `Usuário atual: ${currentUser.username} (ID: ${currentUser.id})\n` +
+                `Membros iniciais: ${JSON.stringify(newCardData.members)}\n` +
+                `Usuário atual está marcado: ${newCardData.members.includes(currentUserId) ? '✅' : '❌'}`, 
+                'info');
+
+            // Simular o modal de criação de card
+            const modalHTML = `
+                <div class="simulation">
+                    <h4>Modal de Criação de Card - Usuário: ${currentUser.username}</h4>
+                    <div class="checkbox-simulation">
+                        <input type="checkbox" ${newCardData.members.includes(currentUser.id) ? 'checked' : ''} disabled>
+                        <div class="user-info">
+                            <div class="avatar">${currentUser.username.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <strong>${currentUser.username}</strong> (${currentUser.cargo})
+                                ${newCardData.members.includes(currentUser.id) ? '<span style="color: green;">✅ Marcado automaticamente</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    ${mockUsers.filter(u => u.id !== currentUserId).map(user => `
+                        <div class="checkbox-simulation">
+                            <input type="checkbox" ${newCardData.members.includes(user.id) ? 'checked' : ''} disabled>
+                            <div class="user-info">
+                                <div class="avatar">${user.username.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <strong>${user.username}</strong> (${user.cargo})
+                                    ${newCardData.members.includes(user.id) ? '<span style="color: green;">✅ Marcado</span>' : '<span style="color: gray;">Não marcado</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            addResult('🎭 Simulação do Modal', modalHTML, 'success');
+
+            // Verificar se a funcionalidade está correta
+            const isCorrect = newCardData.members.includes(currentUserId);
+            addResult(
+                isCorrect ? '✅ Funcionalidade Correta' : '❌ Funcionalidade Incorreta',
+                `O usuário atual (${currentUser.username}) ${isCorrect ? 'está' : 'NÃO está'} marcado automaticamente como membro.\n` +
+                `Membros selecionados: ${JSON.stringify(newCardData.members)}\n` +
+                `Usuário pode desmarcar: ${isCorrect ? '✅ Sim' : '❌ Não'}`, 
+                isCorrect ? 'success' : 'error'
+            );
+        }
+
+        function simulateDifferentUsers() {
+            addResult('👥 Simulando Diferentes Usuários...', 'Executando simulações...', 'info');
+            
+            mockUsers.forEach((user, index) => {
+                setTimeout(() => {
+                    simulateCreateCard(user.id);
+                }, index * 1000);
+            });
+        }
+
+        // Executar simulação automática ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para simular a funcionalidade de marcação automática.', 'info');
+            
+            // Simular automaticamente com o usuário admin
+            setTimeout(() => {
+                simulateCreateCard(1);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

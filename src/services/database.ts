@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Card, Activity, User, Board, Cargo } from '../types';
 
 // Configuração do Supabase (substitua pelas suas credenciais)
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://your-project.supabase.co';
@@ -6,28 +7,7 @@ const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'your-anon-key';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Interfaces para tipagem
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-  cargo: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Board {
-  id: number;
-  board_id: string;
-  name: string;
-  description: string;
-  owner_id?: number;
-  color?: string;
-  created_at: string;
-  updated_at: string;
-}
-
+// Interfaces específicas do banco de dados
 export interface List {
   id: number;
   list_id: string;
@@ -39,31 +19,6 @@ export interface List {
   updated_at: string;
 }
 
-export interface Card {
-  id: number;
-  card_id: string;
-  board_id: string;
-  list_name: string;
-  title: string;
-  description: string;
-  status: string;
-  importance: string;
-  due_date?: string;
-  subject: string;
-  goal: string;
-  members: string[];
-  creation_date: string;
-  is_archived: boolean;
-  git_branch: string;
-  git_commit: string;
-  history: any[];
-  dependencies: any[];
-  recurrence: string;
-  user_id?: number;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Subtask {
   id: number;
   card_id: string;
@@ -71,26 +26,17 @@ export interface Subtask {
   description: string;
   status: string;
   priority: string;
-  due_date?: string;
+  due_date?: string | null;
   estimated_time?: string;
   actual_time?: string;
   importance: string;
   tags: string[];
   category?: string;
   completed: boolean;
-  completed_at?: string;
+  completed_at?: string | null;
   user_id?: number;
   created_at: string;
   updated_at: string;
-}
-
-export interface Activity {
-  id: number;
-  card_id: string;
-  user_id: number;
-  action: string;
-  description: string;
-  created_at: string;
 }
 
 export interface Chat {
@@ -168,13 +114,32 @@ export class DatabaseService {
     }
   }
 
+  async getUsersByIds(userIds: number[]): Promise<User[]> {
+    try {
+      if (!userIds || userIds.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .in('id', userIds);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar usuários por IDs:', error);
+      return [];
+    }
+  }
+
   async getUserByUsername(username: string): Promise<User | null> {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('username', username)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -186,6 +151,14 @@ export class DatabaseService {
 
   async createUser(userData: Partial<User>): Promise<User | null> {
     try {
+      // Verificar se o usuário já existe
+      if (userData.username) {
+        const existingUser = await this.getUserByUsername(userData.username);
+        if (existingUser) {
+          throw new Error('Nome de usuário já existe. Escolha outro nome.');
+        }
+      }
+
       const { data, error } = await supabase
         .from('users')
         .insert([userData])
@@ -196,12 +169,20 @@ export class DatabaseService {
       return data;
     } catch (error) {
       console.error('Erro ao criar usuário:', error);
-      return null;
+      throw error; // Re-throw para que o erro seja capturado no componente
     }
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<boolean> {
     try {
+      // Verificar se o username está sendo alterado e se já existe
+      if (updates.username) {
+        const existingUser = await this.getUserByUsername(updates.username);
+        if (existingUser && existingUser.id !== id) {
+          throw new Error('Nome de usuário já existe. Escolha outro nome.');
+        }
+      }
+
       const { error } = await supabase
         .from('users')
         .update(updates)
@@ -211,7 +192,7 @@ export class DatabaseService {
       return true;
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
-      return false;
+      throw error; // Re-throw para que o erro seja capturado no componente
     }
   }
 
@@ -234,20 +215,68 @@ export class DatabaseService {
   // MÉTODOS DE QUADROS
   // ============================================================================
 
-  async getBoards(userId?: number): Promise<Board[]> {
+  async getBoards(userId?: number, userRole?: string): Promise<Board[]> {
     try {
-      let query = supabase
-        .from('boards')
-        .select('*')
-        .order('name');
-
-      if (userId) {
-        query = query.eq('owner_id', userId);
+      // Se for admin, retorna todos os boards
+      if (userRole === 'admin' || !userRole) {
+        console.log('=== DATABASE: getBoards - Admin ou sem role ===');
+        const { data, error } = await supabase
+          .from('boards')
+          .select('*')
+          .order('name');
+        
+        console.log('Boards encontrados:', data);
+        console.log('Quantidade de boards:', (data || []).length);
+        
+        if (error) throw error;
+        return data || [];
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      // Para usuários não-admin, buscar boards onde são membros de algum card
+      if (userId) {
+        console.log('=== DATABASE: getBoards - Usuário não-admin ===');
+        console.log('userId:', userId);
+        console.log('userRole:', userRole);
+        
+        // Buscar todos os cards e filtrar no lado do cliente
+        const { data: allCardsData, error: cardsError } = await supabase
+          .from('cards')
+          .select('board_id, members')
+          .eq('is_archived', false);
+
+        // Filtrar cards onde o usuário é membro
+        const cardsData = allCardsData?.filter(card => {
+          if (!card.members || !Array.isArray(card.members)) return false;
+          return card.members.includes(userId) || card.members.includes(String(userId));
+        }) || [];
+
+        console.log('cardsData (cards onde usuário é membro):', cardsData);
+        console.log('cardsError:', cardsError);
+
+        if (cardsError) throw cardsError;
+
+        if (cardsData && cardsData.length > 0) {
+          // Buscar boards únicos dos cards onde o usuário é membro
+          const boardIds = Array.from(new Set(cardsData.map(card => String(card.board_id))));
+          console.log('boardIds únicos encontrados:', boardIds);
+          
+          const { data, error } = await supabase
+            .from('boards')
+            .select('*')
+            .in('board_id', boardIds)
+            .order('name');
+
+          console.log('boards encontrados:', data);
+          console.log('error:', error);
+
+          if (error) throw error;
+          return data || [];
+        } else {
+          console.log('Nenhum card encontrado onde o usuário é membro');
+        }
+      }
+
+      return [];
     } catch (error) {
       console.error('Erro ao buscar quadros:', error);
       return [];
@@ -279,10 +308,55 @@ export class DatabaseService {
         .single();
 
       if (error) throw error;
+      
+      // Criar listas padrão para o board
+      if (data) {
+        await this.createDefaultLists(data.board_id);
+      }
+      
       return data;
     } catch (error) {
       console.error('Erro ao criar quadro:', error);
       return null;
+    }
+  }
+
+  async createDefaultLists(boardId: string): Promise<void> {
+    try {
+      const defaultLists = [
+        { list_id: `list-${Date.now()}-1`, board_id: boardId, name: 'A Fazer', position: 1 },
+        { list_id: `list-${Date.now()}-2`, board_id: boardId, name: 'Em Progresso', position: 2 },
+        { list_id: `list-${Date.now()}-3`, board_id: boardId, name: 'Concluído', position: 3 }
+      ];
+
+      const { error } = await supabase
+        .from('lists')
+        .insert(defaultLists);
+
+      if (error) throw error;
+      console.log('Listas padrão criadas para o board:', boardId);
+    } catch (error) {
+      console.error('Erro ao criar listas padrão:', error);
+    }
+  }
+
+  async ensureDefaultListsForBoard(boardId: string): Promise<void> {
+    try {
+      // Verificar se já existem listas para este board
+      const { data: existingLists, error: checkError } = await supabase
+        .from('lists')
+        .select('id')
+        .eq('board_id', boardId);
+
+      if (checkError) throw checkError;
+
+      // Se não há listas, criar as padrão
+      if (!existingLists || existingLists.length === 0) {
+        console.log('Board sem listas, criando listas padrão:', boardId);
+        await this.createDefaultLists(boardId);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar/criar listas padrão:', error);
     }
   }
 
@@ -419,6 +493,9 @@ export class DatabaseService {
     console.log('boardId:', boardId);
     
     try {
+      // Primeiro, garantir que o board tenha listas padrão
+      await this.ensureDefaultListsForBoard(boardId);
+      
       const { data, error } = await supabase
         .from('lists')
         .select('*')
@@ -434,6 +511,7 @@ export class DatabaseService {
       }
       
       console.log('Listas encontradas:', data || []);
+      console.log('Quantidade de listas:', (data || []).length);
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar listas:', error);
@@ -469,6 +547,7 @@ export class DatabaseService {
   async getCardsForBoard(boardId: string): Promise<Card[]> {
     console.log('=== DATABASE: getCardsForBoard ===');
     console.log('boardId:', boardId);
+    console.log('Tipo do boardId:', typeof boardId);
     
     try {
       const { data, error } = await supabase
@@ -480,6 +559,7 @@ export class DatabaseService {
 
       console.log('Supabase response - data:', data);
       console.log('Supabase response - error:', error);
+      console.log('Quantidade de cards retornados:', (data || []).length);
 
       if (error) {
         console.error('Erro do Supabase:', error);
@@ -487,6 +567,12 @@ export class DatabaseService {
       }
       
       console.log('Cards encontrados:', data || []);
+      // Log específico para membros
+      if (data) {
+        data.forEach((card, index) => {
+          console.log(`Card ${index + 1} (${card.title}) - board_id: ${card.board_id}, members:`, card.members);
+        });
+      }
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar cards:', error);
@@ -499,12 +585,50 @@ export class DatabaseService {
     }
   }
 
-  async getCardById(cardId: string): Promise<Card | null> {
+  // Função para obter cards baseado na participação do usuário
+  async getCardsForBoardByUser(boardId: string, userId: number, userRole: string): Promise<Card[]> {
+    console.log('=== DATABASE: getCardsForBoardByUser ===');
+    console.log('boardId:', boardId, 'userId:', userId, 'userRole:', userRole);
+    
+    try {
+      // Admin vê todos os cards
+      if (userRole === 'admin') {
+        return await this.getCardsForBoard(boardId);
+      }
+
+      // Para outros usuários, filtrar por participação
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('board_id', boardId)
+        .eq('is_archived', false)
+        .order('created_at');
+
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      // Filtrar cards onde o usuário é membro
+      const filteredCards = (data || []).filter(card => {
+        const members = Array.isArray(card.members) ? card.members : [];
+        return members.includes(userId);
+      });
+
+      console.log(`Cards filtrados para usuário ${userId}:`, filteredCards.length);
+      return filteredCards;
+    } catch (error) {
+      console.error('Erro ao buscar cards por usuário:', error);
+      return [];
+    }
+  }
+
+  async getCardById(cardId: number): Promise<Card | null> {
     try {
       const { data, error } = await supabase
         .from('cards')
         .select('*')
-        .eq('card_id', cardId)
+        .eq('id', cardId)
         .single();
 
       if (error) throw error;
@@ -515,9 +639,55 @@ export class DatabaseService {
     }
   }
 
+  async getCardByNumericId(id: number): Promise<Card | null> {
+    try {
+      console.log('Buscando card por ID numérico:', id);
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar card por ID numérico:', error);
+        throw error;
+      }
+      
+      console.log('Card encontrado:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar card por ID numérico:', error);
+      return null;
+    }
+  }
+
+  async getCardByStringId(cardId: string): Promise<Card | null> {
+    try {
+      console.log('Buscando card por ID string:', cardId);
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('card_id', cardId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar card por ID string:', error);
+        throw error;
+      }
+      
+      console.log('Card encontrado:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar card por ID string:', error);
+      return null;
+    }
+  }
+
   async createCard(cardData: Partial<Card>): Promise<Card | null> {
     console.log('=== DATABASE: createCard ===');
     console.log('cardData recebido:', cardData);
+    console.log('cardData.members:', cardData.members);
+    console.log('Tipo de cardData.members:', typeof cardData.members);
     
     try {
       const { data, error } = await supabase
@@ -528,6 +698,7 @@ export class DatabaseService {
 
       console.log('Supabase response - data:', data);
       console.log('Supabase response - error:', error);
+      console.log('Card criado - members:', data?.members);
 
       if (error) {
         console.error('Erro do Supabase:', error);
@@ -563,13 +734,29 @@ export class DatabaseService {
   }
 
   async updateCardById(id: number, updates: Partial<Card>): Promise<boolean> {
+    console.log('=== DATABASE: updateCardById ===');
+    console.log('id:', id);
+    console.log('updates:', updates);
+    console.log('updates.members:', updates.members);
+    console.log('Tipo de updates.members:', typeof updates.members);
+    console.log('JSON.stringify(updates):', JSON.stringify(updates));
+    
     try {
       const { error } = await supabase
         .from('cards')
         .update(updates)
         .eq('id', id);
 
-      if (error) throw error;
+      console.log('updateCardById - error:', error);
+      if (error) {
+        console.error('Erro detalhado do Supabase:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
       return true;
     } catch (error) {
       console.error('Erro ao atualizar card por ID:', error);
@@ -632,15 +819,45 @@ export class DatabaseService {
   // MÉTODOS DE SUBTAREFAS
   // ============================================================================
 
-  async getSubtasksForCard(cardId: string): Promise<Subtask[]> {
+  // Método de teste para verificar a tabela subtasks
+  async testSubtasksTable(): Promise<{ exists: boolean; error?: string }> {
     try {
+      console.log('=== TESTANDO TABELA SUBTASKS ===');
+      
+      // Tentar fazer um SELECT simples
+      const { data, error } = await supabase
+        .from('subtasks')
+        .select('*')
+        .limit(1);
+      
+      if (error) {
+        console.error('Erro ao acessar tabela subtasks:', error);
+        return { exists: false, error: error.message };
+      }
+      
+      console.log('Tabela subtasks acessível, dados:', data);
+      return { exists: true };
+    } catch (error) {
+      console.error('Erro inesperado ao testar tabela subtasks:', error);
+      return { exists: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+    }
+  }
+
+  async getSubtasksForCard(cardId: number): Promise<Subtask[]> {
+    try {
+      console.log('Buscando subtarefas para card_id:', cardId);
       const { data, error } = await supabase
         .from('subtasks')
         .select('*')
         .eq('card_id', cardId)
         .order('created_at');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar subtarefas:', error);
+        throw error;
+      }
+      
+      console.log('Subtarefas encontradas:', data);
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar subtarefas:', error);
@@ -648,51 +865,81 @@ export class DatabaseService {
     }
   }
 
-  async createSubtask(subtaskData: Partial<Subtask>): Promise<Subtask | null> {
+  // Função para obter subtarefas baseado na participação do usuário
+  async getSubtasksForCardByUser(cardId: number, userId: number, userRole: string): Promise<Subtask[]> {
     try {
+      console.log('Buscando subtarefas para card_id:', cardId, 'userId:', userId, 'userRole:', userRole);
+      
+      // Admin vê todas as subtarefas
+      if (userRole === 'admin') {
+        return await this.getSubtasksForCard(cardId);
+      }
+
+      // Para outros usuários, buscar todas as subtarefas do card
+      console.log('=== EXECUTANDO CONSULTA SUPABASE ===');
+      console.log('cardId para consulta:', cardId);
+      console.log('Tipo do cardId:', typeof cardId);
+      
       const { data, error } = await supabase
         .from('subtasks')
-        .insert([subtaskData])
-        .select()
-        .single();
+        .select('*')
+        .eq('card_id', cardId)
+        .order('created_at');
+        
+      console.log('=== RESULTADO DA CONSULTA ===');
+      console.log('Erro da consulta:', error);
+      console.log('Dados retornados:', data);
+      console.log('Quantidade de registros:', data?.length || 0);
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Erro ao buscar subtarefas:', error);
+        throw error;
+      }
+
+      console.log('Todas as subtarefas encontradas para o card:', data?.length || 0);
+      console.log('Dados das subtarefas:', data);
+      console.log('Card ID sendo buscado:', cardId);
+      console.log('User ID:', userId);
+      console.log('User Role:', userRole);
+
+      // Filtrar subtarefas onde o usuário é membro OU é o criador
+      const filteredSubtasks = (data || []).filter(subtask => {
+        console.log('Analisando subtarefa:', {
+          id: subtask.id,
+          title: subtask.title,
+          members: subtask.members,
+          created_by: subtask.created_by,
+          userId: userId
+        });
+
+        // Se não há membros definidos, incluir a subtarefa (compatibilidade com dados antigos)
+        if (!subtask.members || subtask.members.length === 0) {
+          console.log('Subtarefa sem membros definidos, incluindo:', subtask.title);
+          return true;
+        }
+
+        // Verificar se o usuário é membro
+        const members = Array.isArray(subtask.members) ? subtask.members : [];
+        const isMember = members.includes(userId.toString());
+        
+        // Verificar se o usuário é o criador
+        const isCreator = subtask.created_by === userId;
+        
+        const shouldInclude = isMember || isCreator;
+        console.log(`Subtarefa "${subtask.title}": isMember=${isMember}, isCreator=${isCreator}, shouldInclude=${shouldInclude}`);
+        
+        return shouldInclude;
+      });
+
+      console.log(`Subtarefas filtradas para usuário ${userId}:`, filteredSubtasks.length);
+      console.log('Subtarefas filtradas:', filteredSubtasks);
+      return filteredSubtasks;
     } catch (error) {
-      console.error('Erro ao criar subtarefa:', error);
-      return null;
+      console.error('Erro ao buscar subtarefas por usuário:', error);
+      return [];
     }
   }
 
-  async updateSubtask(id: number, updates: Partial<Subtask>): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('subtasks')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erro ao atualizar subtarefa:', error);
-      return false;
-    }
-  }
-
-  async deleteSubtask(id: number): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('subtasks')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erro ao deletar subtarefa:', error);
-      return false;
-    }
-  }
 
   // ============================================================================
   // MÉTODOS DE ATIVIDADES
@@ -1102,6 +1349,531 @@ export class DatabaseService {
     } catch (error) {
       console.error('Erro ao inserir templates padrão:', error);
       return false;
+    }
+  }
+
+  // ============================================================================
+  // MÉTODOS DE CARGOS
+  // ============================================================================
+
+  async getCargos(): Promise<Cargo[]> {
+    try {
+      const { data, error } = await supabase
+        .from('cargos')
+        .select('*')
+        .order('nome');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar cargos:', error);
+      return [];
+    }
+  }
+
+  async getCargoById(id: number): Promise<Cargo | null> {
+    try {
+      const { data, error } = await supabase
+        .from('cargos')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar cargo:', error);
+      return null;
+    }
+  }
+
+  async createCargo(cargoData: Partial<Cargo>): Promise<Cargo | null> {
+    try {
+      const { data, error } = await supabase
+        .from('cargos')
+        .insert([{
+          nome: cargoData.nome,
+          descricao: cargoData.descricao || '',
+          is_active: cargoData.is_active !== undefined ? cargoData.is_active : true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar cargo:', error);
+      return null;
+    }
+  }
+
+  async updateCargo(id: number, updates: Partial<Cargo>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('cargos')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar cargo:', error);
+      return false;
+    }
+  }
+
+  async deleteCargo(id: number): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('cargos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar cargo:', error);
+      return false;
+    }
+  }
+
+  async ensureDefaultCargos(): Promise<boolean> {
+    try {
+      const defaultCargos = [
+        { nome: 'Administrador', descricao: 'Administrador do sistema' },
+        { nome: 'Gerente de Projetos', descricao: 'Gerencia projetos e equipes' },
+        { nome: 'Desenvolvedor', descricao: 'Desenvolve funcionalidades' },
+        { nome: 'Designer', descricao: 'Cria interfaces e experiências' },
+        { nome: 'Analista', descricao: 'Analisa requisitos e processos' },
+        { nome: 'Usuário', descricao: 'Usuário padrão do sistema' }
+      ];
+
+      for (const cargo of defaultCargos) {
+        // Verificar se já existe
+        const { data: existing } = await supabase
+          .from('cargos')
+          .select('id')
+          .eq('nome', cargo.nome)
+          .single();
+
+        if (!existing) {
+          await this.createCargo(cargo);
+        }
+      }
+
+      console.log('Cargos padrão garantidos no banco');
+      return true;
+    } catch (error) {
+      console.error('Erro ao garantir cargos padrão:', error);
+      return false;
+    }
+  }
+
+  // ==================== FUNÇÕES DE SUBTAREFAS ====================
+
+  async getSubtasks(cardId: number, userId?: number): Promise<any[]> {
+    try {
+      console.log('Database: Buscando subtarefas para card ID:', cardId);
+      
+      const { data, error } = await supabase
+        .from('subtasks')
+        .select(`
+          *,
+          created_by_user:users!subtasks_created_by_fkey(id, username)
+        `)
+        .eq('card_id', cardId)
+        .order('position', { ascending: true });
+
+      if (error) {
+        console.error('Database: Erro ao buscar subtarefas:', error);
+        throw error;
+      }
+
+      let subtasks = data || [];
+
+      // Se userId fornecido, filtrar apenas subtarefas onde o usuário é membro
+      if (userId) {
+        subtasks = subtasks.filter(subtask => {
+          if (!subtask.members) return false;
+          // Verificar se members é string ou array
+          let members = subtask.members;
+          if (typeof members === 'string') {
+            try {
+              members = JSON.parse(members);
+            } catch (e) {
+              return false;
+            }
+          }
+          return Array.isArray(members) && members.includes(userId.toString());
+        });
+      }
+
+      console.log('Database: Subtarefas encontradas:', subtasks?.length || 0);
+      return subtasks;
+    } catch (error) {
+      console.error('Database: Erro ao buscar subtarefas:', error);
+      throw error;
+    }
+  }
+
+  async createSubtask(subtaskData: {
+    card_id: number;
+    title: string;
+    description?: string;
+    priority?: string;
+    due_date?: string;
+    members?: string[];
+    created_by: number;
+  }): Promise<any> {
+    try {
+      console.log('Database: Criando subtarefa:', subtaskData);
+
+      // Garantir que o criador seja membro da subtarefa
+      const members = subtaskData.members || [];
+      if (!members.includes(subtaskData.created_by.toString())) {
+        members.push(subtaskData.created_by.toString());
+      }
+
+      const insertData = {
+        card_id: parseInt(subtaskData.card_id.toString()),
+        title: subtaskData.title,
+        description: subtaskData.description || '',
+        priority: subtaskData.priority || 'medium',
+        due_date: subtaskData.due_date || null,
+        members: members,
+        created_by: subtaskData.created_by,
+        status: 'todo',
+        position: 0
+      };
+      
+      console.log('Database: Dados para inserção:', insertData);
+      console.log('Database: Tipo do card_id:', typeof insertData.card_id);
+      console.log('Database: Valor do card_id:', insertData.card_id);
+
+      // Verificar se o card existe
+      const { data: cardCheck, error: cardError } = await supabase
+        .from('cards')
+        .select('id')
+        .eq('id', insertData.card_id)
+        .single();
+      
+      if (cardError || !cardCheck) {
+        console.error('Database: Card não encontrado com ID:', insertData.card_id);
+        throw new Error(`Card com ID ${insertData.card_id} não encontrado`);
+      }
+      
+      console.log('Database: Card encontrado:', cardCheck);
+
+      const { data, error } = await supabase
+        .from('subtasks')
+        .insert([insertData])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao criar subtarefa:', error);
+        throw error;
+      }
+
+      console.log('Database: Subtarefa criada com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao criar subtarefa:', error);
+      throw error;
+    }
+  }
+
+  async updateSubtask(subtaskId: number, updates: {
+    title?: string;
+    description?: string;
+    priority?: string;
+    due_date?: string;
+    status?: string;
+    members?: string[];
+    position?: number;
+  }): Promise<any> {
+    try {
+      console.log('Database: Atualizando subtarefa ID:', subtaskId, 'Updates:', updates);
+
+      const { data, error } = await supabase
+        .from('subtasks')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', subtaskId)
+        .select(`
+          *,
+          created_by_user:users!subtasks_created_by_fkey(id, username)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao atualizar subtarefa:', error);
+        throw error;
+      }
+
+      console.log('Database: Subtarefa atualizada com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao atualizar subtarefa:', error);
+      throw error;
+    }
+  }
+
+  async deleteSubtask(subtaskId: number): Promise<boolean> {
+    try {
+      console.log('Database: Deletando subtarefa ID:', subtaskId);
+
+      const { error } = await supabase
+        .from('subtasks')
+        .delete()
+        .eq('id', subtaskId);
+
+      if (error) {
+        console.error('Database: Erro ao deletar subtarefa:', error);
+        throw error;
+      }
+
+      console.log('Database: Subtarefa deletada com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao deletar subtarefa:', error);
+      throw error;
+    }
+  }
+
+  async updateSubtaskStatus(subtaskId: number, status: string): Promise<any> {
+    try {
+      console.log('Database: Atualizando status da subtarefa ID:', subtaskId, 'Status:', status);
+
+      const { data, error } = await supabase
+        .from('subtasks')
+        .update({
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', subtaskId)
+        .select(`
+          *,
+          created_by_user:users!subtasks_created_by_fkey(id, username)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao atualizar status da subtarefa:', error);
+        throw error;
+      }
+
+      console.log('Database: Status da subtarefa atualizado com sucesso:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao atualizar status da subtarefa:', error);
+      throw error;
+    }
+  }
+
+  async reorderSubtasks(cardId: number, subtaskIds: number[]): Promise<boolean> {
+    try {
+      console.log('Database: Reordenando subtarefas do card ID:', cardId, 'Ordem:', subtaskIds);
+
+      // Atualizar posição de cada subtarefa
+      for (let i = 0; i < subtaskIds.length; i++) {
+        const { error } = await supabase
+          .from('subtasks')
+          .update({ position: i })
+          .eq('id', subtaskIds[i])
+          .eq('card_id', cardId);
+
+        if (error) {
+          console.error('Database: Erro ao reordenar subtarefa ID:', subtaskIds[i], error);
+          throw error;
+        }
+      }
+
+      console.log('Database: Subtarefas reordenadas com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao reordenar subtarefas:', error);
+      throw error;
+    }
+  }
+
+  // ===== PREFERÊNCIAS DO USUÁRIO =====
+  
+  /**
+   * Salva as preferências do usuário (filtros, modo de visualização, etc.)
+   */
+  async saveUserPreferences(userId: string, preferences: any): Promise<boolean> {
+    try {
+      console.log('Database: Salvando preferências do usuário:', { userId, preferences });
+      
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: userId,
+          preferences: preferences,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Database: Erro ao salvar preferências:', error);
+        throw error;
+      }
+
+      console.log('Database: Preferências salvas com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao salvar preferências do usuário:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Carrega as preferências do usuário
+   */
+  async getUserPreferences(userId: string): Promise<any> {
+    try {
+      console.log('Database: Carregando preferências do usuário:', userId);
+      
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('preferences')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Database: Erro ao carregar preferências:', error);
+        throw error;
+      }
+
+      const preferences = data?.preferences || {};
+      console.log('Database: Preferências carregadas:', preferences);
+      return preferences;
+    } catch (error) {
+      console.error('Database: Erro ao carregar preferências do usuário:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Atualiza uma preferência específica do usuário
+   */
+  async updateUserPreference(userId: string, key: string, value: any): Promise<boolean> {
+    try {
+      console.log('Database: Atualizando preferência específica:', { userId, key, value });
+      
+      // Primeiro, carrega as preferências atuais
+      const currentPreferences = await this.getUserPreferences(userId);
+      
+      // Atualiza a preferência específica
+      const updatedPreferences = {
+        ...currentPreferences,
+        [key]: value
+      };
+      
+      // Salva as preferências atualizadas
+      return await this.saveUserPreferences(userId, updatedPreferences);
+    } catch (error) {
+      console.error('Database: Erro ao atualizar preferência específica:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove uma preferência específica do usuário
+   */
+  async removeUserPreference(userId: string, key: string): Promise<boolean> {
+    try {
+      console.log('Database: Removendo preferência específica:', { userId, key });
+      
+      // Primeiro, carrega as preferências atuais
+      const currentPreferences = await this.getUserPreferences(userId);
+      
+      // Remove a preferência específica
+      const { [key]: removed, ...updatedPreferences } = currentPreferences;
+      
+      // Salva as preferências atualizadas
+      return await this.saveUserPreferences(userId, updatedPreferences);
+    } catch (error) {
+      console.error('Database: Erro ao remover preferência específica:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atualiza o status do card baseado no status das subtarefas
+   */
+  async updateCardStatusBasedOnSubtasks(cardId: string): Promise<boolean> {
+    try {
+      console.log('Database: Atualizando status do card baseado nas subtarefas:', cardId);
+      
+      // Busca todas as subtarefas do card
+      const subtasks = await this.getSubtasksForCardByUser(parseInt(cardId), 0, '');
+      
+      if (!subtasks || subtasks.length === 0) {
+        console.log('Database: Nenhuma subtarefa encontrada, mantendo status atual');
+        return true;
+      }
+
+      // Calcula o novo status baseado nas subtarefas
+      let newStatus = 'pending'; // padrão
+      
+      const totalSubtasks = subtasks.length;
+      const completedSubtasks = subtasks.filter(sub => sub.completed || sub.status === 'completed').length;
+      const inProgressSubtasks = subtasks.filter(sub => sub.status === 'in_progress' && !sub.completed).length;
+      const pendingSubtasks = subtasks.filter(sub => sub.status === 'pending' || sub.status === 'todo').length;
+
+      console.log('Database: Status das subtarefas:', {
+        total: totalSubtasks,
+        completed: completedSubtasks,
+        inProgress: inProgressSubtasks,
+        pending: pendingSubtasks
+      });
+
+      // Lógica de determinação do status
+      if (inProgressSubtasks > 0) {
+        // Se há subtarefas em progresso, card fica em progresso
+        newStatus = 'in_progress';
+      } else if (completedSubtasks === totalSubtasks) {
+        // Se todas as subtarefas estão concluídas, card fica concluído
+        newStatus = 'completed';
+      } else if (pendingSubtasks === totalSubtasks) {
+        // Se todas as subtarefas estão pendentes, card fica pendente
+        newStatus = 'pending';
+      } else {
+        // Caso misto (algumas concluídas, outras pendentes), fica em progresso
+        newStatus = 'in_progress';
+      }
+
+      console.log('Database: Novo status calculado:', newStatus);
+
+      // Atualiza o status do card
+      const { error } = await supabase
+        .from('cards')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cardId);
+
+      if (error) {
+        console.error('Database: Erro ao atualizar status do card:', error);
+        throw error;
+      }
+
+      console.log('Database: Status do card atualizado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao atualizar status do card baseado nas subtarefas:', error);
+      throw error;
     }
   }
 }

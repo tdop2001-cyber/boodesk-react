@@ -42,3 +42,4 @@ INSERT INTO user_settings (user_id, setting_key, setting_value) VALUES
 
 -- 6. Verificar se a tabela foi criada corretamente
 SELECT 'Tabela user_settings criada com sucesso!' as status;
+

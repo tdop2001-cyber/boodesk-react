@@ -7,6 +7,14 @@ export interface User {
   password_hash: string;
   role: 'admin' | 'manager' | 'user';
   cargo: string;
+  nome_completo?: string;
+  telefone?: string;
+  biografia?: string;
+  fuso_horario?: string;
+  pais?: string;
+  tipo_localizacao?: 'brasil' | 'internacional';
+  cidade?: string;
+  estado?: string;
   created_at: string;
   updated_at: string;
   member_id?: number;
@@ -24,12 +32,22 @@ export interface Member {
   updated_at: string;
 }
 
+export interface Cargo {
+  id: number;
+  nome: string;
+  descricao?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Board {
   id: number;
   board_id?: string; // ID único do board no Supabase
   name: string;
   description?: string;
   created_by: number;
+  owner_id?: number; // ID do proprietário do board
   created_at: string;
   updated_at: string;
   is_active: boolean;
@@ -38,7 +56,7 @@ export interface Board {
 
 export interface Column {
   id: number;
-  board_id: number;
+  board_id: number | string; // Pode ser number ou string para compatibilidade
   name: string;
   order: number;
   color?: string;
@@ -49,7 +67,7 @@ export interface Column {
 export interface Card {
   id: number;
   card_id?: string; // ID único do card (string)
-  board_id: number;
+  board_id: number | string; // Pode ser number ou string
   column_id: number;
   title: string;
   description?: string;
@@ -64,7 +82,7 @@ export interface Card {
   attachments?: string[];
   comments?: Comment[];
   // Novos campos baseados no app23a.py
-  members?: string[];
+  members?: number[];
   dependencies?: string[] | CardDependency[];
   subtasks?: any[];
   git_branch?: string;
@@ -76,6 +94,7 @@ export interface Card {
   recurrence?: string;
   board_name?: string;
   column_name?: string;
+  list_name?: string; // Nome da lista/coluna no banco de dados
 }
 
 export interface CardDependency {
@@ -125,7 +144,9 @@ export interface PomodoroSession {
 export interface Activity {
   id: number;
   user_id: number;
+  card_id?: string; // ID do card relacionado à atividade
   type: 'card_created' | 'card_updated' | 'card_moved' | 'meeting_created' | 'pomodoro_completed';
+  action?: string; // Ação específica da atividade
   description: string;
   related_id?: number;
   created_at: string;
@@ -300,6 +321,102 @@ export interface ExportOptions {
   dateRange?: {
     from: string;
     to: string;
+  };
+}
+
+// Novos tipos para atividades baseados no app23a.py
+export interface ActivityItem {
+  id: string;
+  type: 'card' | 'subtask' | 'individual_subtask';
+  title: string;
+  description?: string;
+  status: 'pending' | 'completed' | 'in_progress';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  dueDate?: string;
+  members?: string[];
+  dependencies?: string[];
+  subtasks?: ActivityItem[];
+  parentCardId?: string;
+  importance?: string;
+  tags?: string[];
+  estimatedTime?: string;
+  actualTime?: string;
+  category?: string;
+  recurrence?: string;
+  created_at?: string;
+  updated_at?: string;
+  board_id?: string;
+  list_id?: string;
+  position?: number;
+  is_archived?: boolean;
+  assigned_to?: string;
+  completed_at?: string;
+  user_id?: number;
+}
+
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
+  description: string;
+  maxItems?: number;
+}
+
+export interface KanbanItem {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  importance: string;
+  category: string;
+  dueDate?: string;
+  assignedTo?: string;
+  estimatedTime?: number;
+  actualTime?: number;
+  tags: string[];
+  createdAt: Date;
+  completed: boolean;
+  parentCardId?: string;
+}
+
+export interface ActivityFilter {
+  type: 'all' | 'cards' | 'subtasks';
+  status: 'all' | 'pending' | 'completed' | 'in_progress';
+  priority: 'all' | 'low' | 'medium' | 'high' | 'urgent';
+  category: 'all' | string;
+  assignedTo: 'all' | string;
+  dueDate: 'all' | 'today' | 'week' | 'month' | 'overdue';
+  searchTerm: string;
+}
+
+export interface ActivityStats {
+  total: number;
+  cards: number;
+  subtasks: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  overdue: number;
+  dueToday: number;
+  dueThisWeek: number;
+  highPriority: number;
+  urgent: number;
+}
+
+export interface ActivityGroup {
+  id: string;
+  title: string;
+  type: 'board' | 'category' | 'priority' | 'status' | 'assigned';
+  activities: ActivityItem[];
+  stats: {
+    total: number;
+    completed: number;
+    pending: number;
+    inProgress: number;
   };
 }
 

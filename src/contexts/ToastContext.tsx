@@ -112,11 +112,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       case 'warning':
         return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
       case 'info':
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-green-500" />;
       case 'popup':
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-green-500" />;
       default:
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-green-500" />;
     }
   };
 
@@ -129,11 +129,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       case 'warning':
         return 'bg-yellow-50 border-yellow-200 text-yellow-800';
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-green-50 border-green-200 text-green-800';
       case 'popup':
         return 'bg-white border-gray-200 text-gray-800';
       default:
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-green-50 border-green-200 text-green-800';
     }
   };
 
@@ -174,8 +174,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
           <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-xl animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Info className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Info className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{toast.title}</h3>
@@ -203,7 +203,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
                     toast.onConfirm?.();
                     removeToast(toast.id);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   {toast.confirmText || 'OK'}
                 </button>

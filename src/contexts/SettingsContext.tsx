@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
+import { db } from '../services/database';
 
 interface PriorityColors {
   critical: string;
@@ -31,6 +33,7 @@ interface CardSettings {
 interface SettingsContextType {
   cardSettings: CardSettings;
   updateCardSettings: (settings: Partial<CardSettings>) => void;
+  reloadSettings: () => Promise<void>;
   getPriorityColor: (priority: string) => string;
   getPriorityBgColor: (priority: string) => string;
   getPriorityTextColor: (priority: string) => string;
@@ -51,7 +54,7 @@ const defaultCardSettings: CardSettings = {
     critical: '#DC2626',
     high: '#EF4444',
     medium: '#F59E0B',
-    low: '#6B7280'
+    low: '#3d961d'
   },
   customTags: [
     { id: 1, name: 'Urgent', type: 'priority' },
@@ -77,9 +80,35 @@ interface SettingsProviderProps {
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
   const [cardSettings, setCardSettings] = useState<CardSettings>(defaultCardSettings);
+  const { user } = useAuth();
+
+  // Função para carregar configurações do banco de dados
+  const loadSettings = async () => {
+    if (!user?.id) return;
+
+    try {
+      const savedSettings = await db.getUserSettings(user.id);
+      
+      if (savedSettings.cardSettings) {
+        console.log('SettingsContext: Carregando configurações salvas:', savedSettings.cardSettings);
+        setCardSettings(savedSettings.cardSettings);
+      }
+    } catch (error) {
+      console.error('SettingsContext: Erro ao carregar configurações:', error);
+    }
+  };
+
+  // Carregar configurações do banco de dados quando o usuário estiver autenticado
+  useEffect(() => {
+    loadSettings();
+  }, [user?.id]);
 
   const updateCardSettings = (newSettings: Partial<CardSettings>) => {
     setCardSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  const reloadSettings = async () => {
+    await loadSettings();
   };
 
   const getPriorityColor = (priority: string): string => {
@@ -111,6 +140,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   const value: SettingsContextType = {
     cardSettings,
     updateCardSettings,
+    reloadSettings,
     getPriorityColor,
     getPriorityBgColor,
     getPriorityTextColor

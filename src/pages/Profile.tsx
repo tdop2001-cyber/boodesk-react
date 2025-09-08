@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   User, 
-  Mail, 
-  Phone, 
-  MapPin, 
   Calendar, 
   Edit, 
   Save, 
@@ -11,7 +8,6 @@ import {
   Camera, 
   Shield, 
   Bell, 
-  Palette,
   Key,
   LogOut,
   Trash2,
@@ -20,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { db } from '../services/database';
 
 interface UserProfile {
   id: number;
@@ -58,6 +55,7 @@ const Profile: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   // Dados do usuário do contexto de autenticação
   const [profile, setProfile] = useState<UserProfile>({
@@ -89,6 +87,82 @@ const Profile: React.FC = () => {
     }
   });
 
+  // Função para carregar dados completos do usuário
+  const loadUserData = useCallback(async () => {
+    if (!user?.id) {
+      console.log('Usuário não encontrado ou sem ID:', user);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Carregando dados do usuário ID:', user.id);
+      const userData = await db.getUserById(user.id);
+      console.log('Dados carregados do banco:', userData);
+      
+      if (userData) {
+        // Construir localização baseada nos dados do usuário
+        let location = '';
+        if (userData.tipo_localizacao === 'brasil' && userData.cidade && userData.estado) {
+          location = `${userData.cidade}, ${userData.estado}`;
+        } else if (userData.tipo_localizacao === 'internacional' && userData.cidade && userData.pais) {
+          location = `${userData.cidade}, ${userData.pais}`;
+        }
+        
+        const updatedProfile = {
+          id: userData.id,
+          username: userData.username,
+          email: userData.email,
+          fullName: userData.nome_completo || userData.username,
+          role: userData.role,
+          cargo: userData.cargo || 'Não definido',
+          phone: userData.telefone || 'Não informado',
+          location: location || 'Não informado',
+          bio: userData.biografia || 'Nenhuma biografia disponível.',
+          avatar: userData.username?.charAt(0).toUpperCase() || 'A',
+          memberSince: userData.created_at,
+          lastLogin: userData.updated_at,
+          preferences: profile.preferences // Manter preferências existentes
+        };
+        
+        console.log('Atualizando perfil com:', updatedProfile);
+        setProfile(updatedProfile);
+        
+        // Atualizar o usuário no contexto de autenticação com dados completos
+        const updatedUser = {
+          ...user,
+          ...userData
+        };
+        
+        // Atualizar localStorage com dados completos
+        localStorage.setItem('boodesk_user', JSON.stringify(updatedUser));
+        console.log('Usuário atualizado no localStorage:', updatedUser);
+      } else {
+        console.log('Nenhum dado encontrado para o usuário ID:', user.id);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível carregar os dados do perfil.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user, addToast, profile.preferences]);
+
+  // Carregar dados do usuário quando o componente montar
+  useEffect(() => {
+    console.log('Profile useEffect - user:', user);
+    if (user?.id) {
+      console.log('Carregando dados para usuário ID:', user.id);
+      loadUserData();
+    } else {
+      console.log('Usuário não encontrado ou sem ID');
+    }
+  }, [loadUserData, user]);
+
   const [editForm, setEditForm] = useState(profile);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -96,16 +170,43 @@ const Profile: React.FC = () => {
     confirmPassword: ''
   });
 
-  const handleSaveProfile = () => {
-    setProfile(editForm);
-    setIsEditing(false);
-    // Aqui você faria a chamada para a API
-    console.log('Perfil salvo:', editForm);
-    addToast({
-      type: 'success',
-      title: 'Perfil atualizado',
-      message: 'Suas informações foram salvas com sucesso!'
-    });
+  const handleSaveProfile = async () => {
+    try {
+      if (!user?.id) return;
+      
+      // Preparar dados para atualização
+      const updateData = {
+        nome_completo: editForm.fullName,
+        telefone: editForm.phone,
+        biografia: editForm.bio,
+        // Manter outros campos como estão
+      };
+      
+      // Atualizar no banco de dados
+      const success = await db.updateUser(user.id, updateData);
+      
+      if (success) {
+        setProfile(editForm);
+        setIsEditing(false);
+        addToast({
+          type: 'success',
+          title: 'Perfil atualizado',
+          message: 'Suas informações foram salvas com sucesso!'
+        });
+        
+        // Recarregar dados para garantir sincronização
+        await loadUserData();
+      } else {
+        throw new Error('Falha ao atualizar perfil');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível salvar as alterações. Tente novamente.'
+      });
+    }
   };
 
   const handleCancelEdit = () => {
@@ -148,14 +249,21 @@ const Profile: React.FC = () => {
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-light-gray/30 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-sm border border-brand-light-gray p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-green"></div>
+              <span className="ml-3 text-brand-gray">Carregando perfil...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-light-gray/30 p-6">

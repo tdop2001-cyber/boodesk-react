@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Botões de Movimento de Subtarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #16a34a;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .test-steps {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+        }
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .console-log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status-success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-info {
+            color: #2563eb;
+            font-weight: bold;
+        }
+        .button-preview {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            margin: 20px 0;
+        }
+        .button-preview h4 {
+            color: #374151;
+            margin: 0 0 15px 0;
+        }
+        .button-example {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-todo { background: #dbeafe; color: #1e40af; }
+        .btn-progress { background: #fed7aa; color: #ea580c; }
+        .btn-completed { background: #bbf7d0; color: #16a34a; }
+        .btn-delete { background: #fecaca; color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste - Botões de Movimento de Subtarefas</h1>
+        <p>Este arquivo testa se os botões para mover subtarefas entre colunas estão funcionando.</p>
+
+        <div class="test-section">
+            <div class="test-title">✅ Implementação Concluída</div>
+            <div class="test-description">
+                <strong>Solução:</strong> Substituí o drag and drop por botões de ação para mover subtarefas entre colunas.
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Funcionalidades Implementadas:</h4>
+                <ul>
+                    <li><span class="status-success">Botões de Movimento:</span> Cada subtarefa tem botões para mover entre colunas</li>
+                    <li><span class="status-success">Coluna "A Fazer":</span> Botão para mover para "Em Progresso" (ícone de relógio)</li>
+                    <li><span class="status-success">Coluna "Em Progresso":</span> Botão para mover para "Concluído" (ícone de check)</li>
+                    <li><span class="status-success">Coluna "Concluído":</span> Botão para mover para "A Fazer" (ícone de círculo)</li>
+                    <li><span class="status-success">Persistência:</span> Mudanças são salvas no banco de dados</li>
+                    <li><span class="status-success">Feedback Visual:</span> Toast notifications para confirmar movimentação</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="button-preview">
+            <h4>🎯 Visualização dos Botões:</h4>
+            <p><strong>Coluna "A Fazer":</strong></p>
+            <div class="button-example btn-progress">🕐 Mover para Em Progresso</div>
+            <div class="button-example btn-delete">🗑️ Excluir</div>
+            
+            <p><strong>Coluna "Em Progresso":</strong></p>
+            <div class="button-example btn-completed">✅ Mover para Concluído</div>
+            <div class="button-example btn-delete">🗑️ Excluir</div>
+            
+            <p><strong>Coluna "Concluído":</strong></p>
+            <div class="button-example btn-todo">⭕ Mover para A Fazer</div>
+            <div class="button-example btn-delete">🗑️ Excluir</div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Teste da Funcionalidade</div>
+            <div class="test-description">
+                Siga estes passos para testar se os botões estão funcionando:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Recarregue a página</strong> para aplicar as correções</li>
+                    <li><strong>Abra o console</strong> do navegador (F12)</li>
+                    <li><strong>Navegue</strong> para "Minhas Atividades"</li>
+                    <li><strong>Expanda</strong> uma atividade com subtarefas</li>
+                    <li><strong>Ative o modo Kanban</strong></li>
+                    <li><strong>Identifique os botões</strong> em cada subtarefa</li>
+                    <li><strong>Clique nos botões</strong> para mover subtarefas entre colunas</li>
+                    <li><strong>Observe os logs</strong> no console</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Logs Esperados Durante Movimentação</div>
+            <div class="test-description">
+                Quando você clicar nos botões, deve ver estes logs no console:
+            </div>
+            <div class="console-log">
+=== MOVENDO SUBTAREFA ENTRE COLUNAS ===
+Subtarefa: [NOME_DA_SUBTAREFA]
+Status atual: [STATUS_ATUAL]
+Novo status: [NOVO_STATUS]
+
+Subtarefa atualizada: {...}
+
+=== ATUALIZANDO NO BANCO ===
+ID da subtarefa: [ID]
+Resultado da atualização no banco: {...}
+
+✅ Movendo subtarefa [TÍTULO] para [NOVO_STATUS]
+
+Toast: "Subtarefa movida - [TÍTULO] foi movida para [NOVA_COLUNA]"
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Verificações Específicas</div>
+            <div class="test-description">
+                Durante o teste, verifique especificamente:
+            </div>
+            <div class="test-steps">
+                <h4>🔍 Pontos de Verificação:</h4>
+                <ol>
+                    <li><strong>Botões Visíveis:</strong> Cada subtarefa tem botões de ação apropriados</li>
+                    <li><strong>Funcionalidade:</strong> Clicar nos botões move as subtarefas</li>
+                    <li><strong>Contadores:</strong> Números das colunas são atualizados</li>
+                    <li><strong>Persistência:</strong> Mudanças persistem após recarregar</li>
+                    <li><strong>Console:</strong> Logs mostram processo completo</li>
+                    <li><strong>Toast:</strong> Notificações de sucesso aparecem</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Teste de Múltiplas Movimentações</div>
+            <div class="test-description">
+                Após confirmar que os botões básicos funcionam, teste:
+            </div>
+            <div class="test-steps">
+                <ol>
+                    <li><strong>Mova uma subtarefa</strong> da coluna "A Fazer" para "Em Progresso"</li>
+                    <li><strong>Mova a mesma subtarefa</strong> de "Em Progresso" para "Concluído"</li>
+                    <li><strong>Mova de volta</strong> de "Concluído" para "A Fazer"</li>
+                    <li><strong>Verifique se os contadores</strong> são atualizados corretamente</li>
+                    <li><strong>Confirme se as mudanças</strong> persistem após recarregar</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Comandos de Debug Úteis</div>
+            <div class="test-description">
+                Use estes comandos no console para verificar o estado:
+            </div>
+            <div class="test-steps">
+                <h4>🔧 Comandos de Debug:</h4>
+                <div class="console-log">
+// Verificar estado das subtarefas
+console.log('Subtarefas internas:', window.internalSubtasks);
+
+// Verificar filtragem por coluna
+console.log('Coluna A Fazer:', window.getSubtasksByColumn && window.getSubtasksByColumn('todo'));
+console.log('Coluna Em Progresso:', window.getSubtasksByColumn && window.getSubtasksByColumn('in_progress'));
+console.log('Coluna Concluído:', window.getSubtasksByColumn && window.getSubtasksByColumn('completed'));
+
+// Verificar se há subtarefas para mover
+const todoSubtasks = window.getSubtasksByColumn && window.getSubtasksByColumn('todo');
+if (todoSubtasks && todoSubtasks.length > 0) {
+    console.log('✅ Há subtarefas na coluna "A Fazer" para mover');
+    console.log('Primeira subtarefa:', todoSubtasks[0]);
+} else {
+    console.log('❌ Nenhuma subtarefa na coluna "A Fazer"');
+}
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📋 Checklist de Verificação</div>
+            <div class="test-description">
+                Use este checklist para confirmar que os botões estão funcionando:
+            </div>
+            <div class="test-steps">
+                <h4>✅ Checklist:</h4>
+                <ul>
+                    <li><input type="checkbox"> Página recarregada com sucesso</li>
+                    <li><input type="checkbox"> Console aberto e limpo</li>
+                    <li><input type="checkbox"> Modo Kanban ativado</li>
+                    <li><input type="checkbox"> Botões visíveis em cada subtarefa</li>
+                    <li><input type="checkbox"> Botões funcionam ao clicar</li>
+                    <li><input type="checkbox"> Subtarefas são movidas entre colunas</li>
+                    <li><input type="checkbox"> Contadores são atualizados</li>
+                    <li><input type="checkbox"> Logs mostram processo completo</li>
+                    <li><input type="checkbox"> Toast notifications aparecem</li>
+                    <li><input type="checkbox"> Mudanças persistem após recarregar</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🎯 Resultado Esperado</div>
+            <div class="test-description">
+                Após a implementação, você deve ter:
+            </div>
+            <div class="test-steps">
+                <h4>✅ Funcionalidades Implementadas:</h4>
+                <ul>
+                    <li><strong>Botões de Movimento:</strong> Cada subtarefa tem botões para mover entre colunas</li>
+                    <li><strong>Funcionalidade Completa:</strong> Subtarefas podem ser movidas entre todas as colunas</li>
+                    <li><strong>Persistência:</strong> Mudanças são salvas no banco de dados</li>
+                    <li><strong>Feedback Visual:</strong> Toast notifications para confirmar ações</li>
+                    <li><strong>Contadores Atualizados:</strong> Números das colunas refletem o estado real</li>
+                    <li><strong>Interface Limpa:</strong> Sem erros de drag and drop</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🚀 Próximos Passos</div>
+            <div class="test-description">
+                Após confirmar que os botões funcionam:
+            </div>
+            <div class="test-steps">
+                <h4>📋 Próximos Passos:</h4>
+                <ol>
+                    <li><strong>Execute o teste</strong> seguindo os passos acima</li>
+                    <li><strong>Confirme que os botões funcionam</strong></li>
+                    <li><strong>Teste múltiplas movimentações</strong></li>
+                    <li><strong>Verifique se os contadores são atualizados</strong></li>
+                    <li><strong>Reporte o resultado</strong> do teste</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script para ajudar nos testes
+        console.log('🧪 Teste de Botões de Movimento de Subtarefas carregado');
+        console.log('A implementação foi concluída - teste agora a aplicação principal');
+        
+        // Função para verificar estado atual
+        window.checkButtonState = function() {
+            console.log('=== VERIFICAÇÃO DOS BOTÕES ===');
+            console.log('Verificando se os botões de movimento estão funcionando...');
+            
+            if (typeof window.internalSubtasks !== 'undefined') {
+                console.log('Estado interno das subtarefas:', window.internalSubtasks);
+                
+                const subtasks = window.internalSubtasks;
+                if (subtasks.length > 0) {
+                    console.log('✅ Há subtarefas disponíveis para mover');
+                    console.log('Primeira subtarefa:', subtasks[0]);
+                } else {
+                    console.log('⚠️ Nenhuma subtarefa disponível para mover');
+                }
+            } else {
+                console.log('Estado interno não disponível');
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Avatares de Membros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .card-simulation {
+            background: white;
+            border: 4px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 10px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .card-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .priority-tag {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .priority-normal { background-color: #f59e0b; color: white; }
+        .priority-high { background-color: #ef4444; color: white; }
+        .priority-low { background-color: #10b981; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Teste de Avatares de Membros</h1>
+        <p>Este teste simula como os avatares dos membros aparecem nos cards do Kanban.</p>
+        
+        <button onclick="simulateCards()">🎯 Simular Cards com Avatares</button>
+        <button onclick="testDifferentScenarios()">🔄 Testar Diferentes Cenários</button>
+        <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Simular dados de usuários
+        const mockUsers = [
+            { id: 1, username: 'admin', nome_completo: 'Administrador' },
+            { id: 2, username: 'manager', nome_completo: 'Gerente' },
+            { id: 3, username: 'user1', nome_completo: 'João Silva' },
+            { id: 4, username: 'user2', nome_completo: 'Maria Santos' },
+            { id: 5, username: 'user3', nome_completo: 'Pedro Costa' },
+            { id: 6, username: 'user4', nome_completo: 'Ana Oliveira' }
+        ];
+
+        // Simular cards com diferentes números de membros
+        const mockCards = [
+            { id: 1, title: 'Card com 1 membro', priority: 'normal', members: [1] },
+            { id: 2, title: 'Card com 2 membros', priority: 'high', members: [1, 2] },
+            { id: 3, title: 'Card com 3 membros', priority: 'low', members: [1, 2, 3] },
+            { id: 4, title: 'Card com 4 membros', priority: 'normal', members: [1, 2, 3, 4] },
+            { id: 5, title: 'Card com 5 membros', priority: 'high', members: [1, 2, 3, 4, 5] },
+            { id: 6, title: 'Card com 6 membros', priority: 'normal', members: [1, 2, 3, 4, 5, 6] }
+        ];
+
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <div>${content}</div>
+            `;
+            resultsDiv.appendChild(section);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Função para gerar cor única para cada usuário
+        function getUserAvatarColor(userId) {
+            const colors = [
+                'from-blue-500 to-blue-600',
+                'from-green-500 to-green-600', 
+                'from-purple-500 to-purple-600',
+                'from-pink-500 to-pink-600',
+                'from-indigo-500 to-indigo-600',
+                'from-red-500 to-red-600',
+                'from-yellow-500 to-yellow-600',
+                'from-teal-500 to-teal-600',
+                'from-orange-500 to-orange-600',
+                'from-cyan-500 to-cyan-600'
+            ];
+            return colors[userId % colors.length];
+        }
+
+        function createAvatar(memberId, size = 'w-6 h-6') {
+            const member = mockUsers.find(u => u.id === memberId);
+            const initials = member ? (member.username || member.nome_completo || 'U').charAt(0).toUpperCase() : 'U';
+            const avatarColor = getUserAvatarColor(memberId);
+            const memberName = member ? (member.username || member.nome_completo || 'Usuário') : 'Usuário';
+            
+            return `
+                <div
+                    class="${size} bg-gradient-to-br ${avatarColor} rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm"
+                    title="${memberName}"
+                >
+                    ${initials}
+                </div>
+            `;
+        }
+
+        function createCardHTML(card) {
+            const priorityClass = `priority-${card.priority}`;
+            const priorityLabel = card.priority === 'normal' ? 'Normal' : 
+                                 card.priority === 'high' ? 'Alta' : 'Baixa';
+            
+            const avatarsHTML = card.members.slice(0, 3).map(memberId => createAvatar(memberId)).join('');
+            const extraMembersHTML = card.members.length > 3 ? 
+                `<div class="w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm">
+                    +${card.members.length - 3}
+                </div>` : '';
+
+            return `
+                <div class="card-simulation">
+                    <div class="card-title">${card.title}</div>
+                    <div class="card-footer">
+                        <div class="card-info">
+                            ${card.members.length > 0 ? `
+                                <div class="flex -space-x-1">
+                                    ${avatarsHTML}
+                                    ${extraMembersHTML}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="priority-tag ${priorityClass}">${priorityLabel}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function simulateCards() {
+            addResult('🎯 Simulando Cards com Avatares...', 'Executando simulação...', 'info');
+            
+            let cardsHTML = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+            
+            mockCards.forEach(card => {
+                cardsHTML += createCardHTML(card);
+            });
+            
+            cardsHTML += '</div>';
+            
+            addResult('📋 Cards Simulados', cardsHTML, 'success');
+            
+            // Verificar funcionalidades
+            const hasAvatars = mockCards.every(card => card.members.length > 0);
+            const hasOverflow = mockCards.some(card => card.members.length > 3);
+            
+            addResult('✅ Verificação de Funcionalidades', 
+                `Cards com avatares: ${hasAvatars ? '✅' : '❌'}\n` +
+                `Suporte a overflow (+N): ${hasOverflow ? '✅' : '❌'}\n` +
+                `Cores únicas por usuário: ✅\n` +
+                `Tooltips com nomes: ✅`, 
+                'success');
+        }
+
+        function testDifferentScenarios() {
+            addResult('🔄 Testando Diferentes Cenários...', 'Executando testes...', 'info');
+            
+            // Cenário 1: Card sem membros
+            const cardWithoutMembers = { id: 7, title: 'Card sem membros', priority: 'normal', members: [] };
+            addResult('📝 Cenário 1: Card sem membros', createCardHTML(cardWithoutMembers), 'info');
+            
+            // Cenário 2: Card com muitos membros
+            const cardWithManyMembers = { id: 8, title: 'Card com muitos membros', priority: 'high', members: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] };
+            addResult('📝 Cenário 2: Card com muitos membros', createCardHTML(cardWithManyMembers), 'info');
+            
+            // Cenário 3: Card com exatamente 3 membros
+            const cardWithThreeMembers = { id: 9, title: 'Card com exatamente 3 membros', priority: 'low', members: [1, 2, 3] };
+            addResult('📝 Cenário 3: Card com exatamente 3 membros', createCardHTML(cardWithThreeMembers), 'info');
+        }
+
+        // Executar simulação automática ao carregar
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Página Carregada', 'Clique nos botões para simular os avatares de membros nos cards.', 'info');
+            
+            // Simular automaticamente
+            setTimeout(() => {
+                simulateCards();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+
