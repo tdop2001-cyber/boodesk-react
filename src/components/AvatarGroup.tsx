@@ -44,14 +44,14 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({
 
   const getAvatarColor = (userId: number) => {
     const colors = [
-      'from-blue-500 to-blue-600',
+      'from-green-400 to-green-500',
       'from-green-500 to-green-600', 
-      'from-red-500 to-red-600',
-      'from-purple-500 to-purple-600',
-      'from-yellow-500 to-yellow-600',
-      'from-pink-500 to-pink-600',
-      'from-indigo-500 to-indigo-600',
-      'from-teal-500 to-teal-600'
+      'from-emerald-400 to-emerald-500',
+      'from-emerald-500 to-emerald-600',
+      'from-teal-400 to-teal-500',
+      'from-teal-500 to-teal-600',
+      'from-lime-400 to-lime-500',
+      'from-lime-500 to-lime-600'
     ];
     return colors[userId % colors.length];
   };
@@ -74,9 +74,9 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({
                 text-white 
                 font-semibold 
                 border-2 border-white 
-                shadow-lg
-                hover:scale-110 
-                transition-transform duration-200
+                shadow-md
+                hover:scale-105 
+                transition-all duration-200
                 cursor-pointer
                 relative
                 z-10
@@ -93,15 +93,15 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({
           <div 
             className={`
               ${getSizeClasses()} 
-              bg-gradient-to-br from-slate-400 to-slate-500 
+              bg-gradient-to-br from-green-300 to-green-400 
               rounded-full 
               flex items-center justify-center 
               text-white 
               font-semibold 
               border-2 border-white 
-              shadow-lg
-              hover:scale-110 
-              transition-transform duration-200
+              shadow-md
+              hover:scale-105 
+              transition-all duration-200
               cursor-pointer
             `}
             title={`+${remainingCount} membros`}

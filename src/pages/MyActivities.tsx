@@ -38,7 +38,11 @@ import {
   ArrowLeft,
   X,
   List,
-  LayoutGrid
+  LayoutGrid,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Layers
 } from 'lucide-react';
 
 interface ActivityItem {
@@ -90,6 +94,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   const [preferencesLoaded, setPreferencesLoaded] = useState<boolean>(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [membersCache, setMembersCache] = useState<Map<number, UserType>>(new Map());
+  const [sortBy, setSortBy] = useState<'title' | 'dueDate' | 'priority' | 'status' | 'createdAt'>('title');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // ===== FUNÇÕES DE PERSISTÊNCIA =====
   
@@ -176,6 +182,14 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           console.log('MyActivities: Aplicando showOptions:', preferences.showOptions);
           setShowOptions(preferences.showOptions);
         }
+        if (preferences.sortBy) {
+          console.log('MyActivities: Aplicando sortBy:', preferences.sortBy);
+          setSortBy(preferences.sortBy);
+        }
+        if (preferences.sortOrder) {
+          console.log('MyActivities: Aplicando sortOrder:', preferences.sortOrder);
+          setSortOrder(preferences.sortOrder);
+        }
         
         console.log('MyActivities: ✅ Preferências aplicadas com sucesso');
       } else {
@@ -249,6 +263,52 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     }, 500);
     
     setSaveTimeout(timeout);
+  };
+
+  const getCardStatus = (card: ActivityItem): { status: string; statusLabel: string; statusColor: string; } => {
+    if (!card.subtasks || card.subtasks.length === 0) {
+      return {
+        status: 'no_subtasks',
+        statusLabel: 'Sem Subtarefas',
+        statusColor: 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 shadow-gray-200/25',
+      };
+    }
+
+    const totalSubtasks = card.subtasks.length;
+    const completedSubtasks = card.subtasks.filter(s => s.status === 'completed').length;
+    const inProgressSubtasks = card.subtasks.filter(s => s.status === 'in_progress').length;
+    const pendingSubtasks = card.subtasks.filter(s => s.status === 'pending').length;
+
+    if (inProgressSubtasks > 0) {
+      return {
+        status: 'in_progress',
+        statusLabel: 'Em Progresso',
+        statusColor: 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25',
+      };
+    }
+
+    if (completedSubtasks === totalSubtasks) {
+      return {
+        status: 'completed',
+        statusLabel: 'Concluído',
+        statusColor: 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25',
+      };
+    }
+
+    if (pendingSubtasks === totalSubtasks) {
+      return {
+        status: 'pending',
+        statusLabel: 'A Fazer',
+        statusColor: 'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25',
+      };
+    }
+
+    // Default case (mix of pending and completed)
+    return {
+      status: 'in_progress',
+      statusLabel: 'Em Progresso',
+      statusColor: 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25',
+    };
   };
 
   const kanbanColumns: KanbanColumnDef[] = [
@@ -644,6 +704,18 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     }
   }, [showOptions, preferencesLoaded]);
 
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('sortBy', sortBy);
+    }
+  }, [sortBy, preferencesLoaded]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      savePreference('sortOrder', sortOrder);
+    }
+  }, [sortOrder, preferencesLoaded]);
+
   // Cleanup do timeout quando componente for desmontado
   useEffect(() => {
     return () => {
@@ -678,6 +750,47 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     return matchesSearch && matchesType && matchesStatus && matchesPriority && matchesBoard && hasSubtasks;
   });
 
+  // Função para ordenar as atividades
+  const sortActivities = (activities: ActivityItem[]) => {
+    return [...activities].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'dueDate':
+          aValue = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          bValue = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          break;
+        case 'priority':
+          const priorityOrder = { 'urgent': 4, 'high': 3, 'medium': 2, 'low': 1 };
+          aValue = priorityOrder[a.priority] || 0;
+          bValue = priorityOrder[b.priority] || 0;
+          break;
+        case 'status':
+          const statusOrder = { 'completed': 3, 'in_progress': 2, 'pending': 1 };
+          aValue = statusOrder[a.status] || 0;
+          bValue = statusOrder[b.status] || 0;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.id).getTime(); // Usando ID como proxy para data de criação
+          bValue = new Date(b.id).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedAndFilteredActivities = sortActivities(filteredActivities);
+
   const toggleExpanded = (itemId: string) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(itemId)) {
@@ -711,10 +824,11 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             }
             ${isSubtask 
               ? 'border-l-4 border-l-red-400 bg-gradient-to-r from-red-50/50 to-white' 
-              : 'border-l-4 border-l-[#16704E]'
+              : 'border-l-4'
             }
             ${activity.status === 'completed' ? 'opacity-75' : ''}
           `}
+          style={!isSubtask ? { borderLeftColor: getPriorityColor(activity.priority) } : {}}
           onClick={() => setSelectedActivity(activity)}
         >
           <div className="relative flex items-center p-5">
@@ -779,14 +893,16 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
             <div className="flex items-center space-x-4">
               <div>
-                <span 
-                  className="px-3 py-1.5 text-xs font-bold rounded-full border shadow-lg"
-                  style={{ 
-                    backgroundColor: getPriorityColor(activity.priority),
-                    color: getPriorityTextColor(activity.priority)
-                  }}
-                >
-                  {activity.priority}
+                <span className="inline-flex items-center text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                  <div 
+                    className="w-2 h-2 rounded-full mr-2"
+                    style={{ backgroundColor: getPriorityColor(activity.priority) }}
+                  />
+                  {activity.priority === 'urgent' ? 'Urgente' :
+                   activity.priority === 'high' ? 'Alta' :
+                   activity.priority === 'medium' ? 'Normal' :
+                   activity.priority === 'low' ? 'Baixa' :
+                   'Normal'}
                 </span>
               </div>
 
@@ -1155,6 +1271,34 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
                   </div>
+
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
+                    >
+                      <option value="title">Ordenar por Título</option>
+                      <option value="dueDate">Ordenar por Data de Vencimento</option>
+                      <option value="priority">Ordenar por Prioridade</option>
+                      <option value="status">Ordenar por Status</option>
+                      <option value="createdAt">Ordenar por Data de Criação</option>
+                    </select>
+                    <ArrowUpDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
+                      sortOrder === 'asc' 
+                        ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
+                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                    }`}
+                    title={`Ordenação ${sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}`}
+                  >
+                    {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                    {sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
+                  </button>
                 </div>
               </div>
             )}
@@ -1178,12 +1322,14 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
                   <button
                     onClick={() => setGroupByBoard(!groupByBoard)}
-                    className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
+                    className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
                       groupByBoard 
                         ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
                         : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
                     }`}
+                    title={groupByBoard ? 'Desagrupar cards' : 'Agrupar cards por quadro'}
                   >
+                    <Layers className="w-4 h-4" />
                     {groupByBoard ? 'Agrupado por Quadro' : 'Agrupar por Quadro'}
                   </button>
                 </div>
@@ -1227,10 +1373,47 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           ) : (
             <div className="space-y-8">
               {groupByBoard ? (
-                // Agrupado por quadro
-                availableBoards.map(board => {
-                  const boardCards = filteredActivities.filter(card => card.boardId === board.id);
-                  if (boardCards.length === 0) return null;
+                <>
+                  {/* Resumo do agrupamento */}
+                  <div className="bg-gradient-to-r from-[#16704E]/10 to-[#0F5A3A]/10 border border-[#16704E]/20 rounded-2xl p-4">
+                    <div className="flex items-center space-x-3">
+                      <Layers className="w-5 h-5 text-[#16704E]" />
+                      <div>
+                        <h3 className="font-semibold text-[#16704E]">Agrupado por Quadro</h3>
+                        <p className="text-sm text-slate-600">
+                          {availableBoards.filter(board => sortedAndFilteredActivities.some(card => card.boardId === board.id)).length} quadro(s) com cards • {sortedAndFilteredActivities.length} card(s) total
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Lista de quadros */}
+                  {availableBoards.map(board => {
+                  const boardCards = sortedAndFilteredActivities.filter(card => card.boardId === board.id);
+                  if (boardCards.length === 0) {
+                    // Mostrar quadro vazio apenas se não há filtros ativos
+                    if (filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all' || searchTerm) {
+                      return null;
+                    }
+                    
+                    return (
+                      <div key={board.id} className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-1 h-8 bg-gradient-to-b from-slate-300 to-slate-400 rounded-full"></div>
+                          <h2 className="text-xl font-bold text-slate-500">{board.name}</h2>
+                          <span className="text-sm text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                            0 cards
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center h-32 text-slate-400 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                          <div className="text-center">
+                            <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Nenhum card neste quadro</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                   
                   return (
                     <div key={board.id} className="space-y-4">
@@ -1246,20 +1429,15 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                           <div key={card.id} onClick={() => {
                             console.log('Card clicked:', card);
                             setSelectedCardForKanban(card)
-                          }} className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border border-slate-200/50 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md">
-                            {/* Barra lateral de prioridade melhorada */}
-                            <div className={`h-full w-2 absolute left-0 top-0 rounded-l-3xl shadow-lg ${
-                              card.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600' :
-                              card.priority === 'high' ? 'bg-gradient-to-b from-orange-500 to-orange-600' :
-                              card.priority === 'medium' ? 'bg-gradient-to-b from-yellow-500 to-yellow-600' :
-                              card.priority === 'low' ? 'bg-gradient-to-b from-green-500 to-green-600' :
-                              'bg-gradient-to-b from-gray-400 to-gray-500'
-                            }`} />
+                          }}
+                          className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border-l-4 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md"
+                          style={{ borderLeftColor: getPriorityColor(card.priority) }}
+                          >
                             
                             {/* Efeito de brilho no hover */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                             
-                            <div className="p-6 pl-10 relative z-10">
+                            <div className="p-6 relative z-10">
                               <div className="flex items-start justify-between mb-3">
                                 <h3 className="font-bold text-xl mb-2 text-slate-800 group-hover:text-slate-900 transition-colors duration-300 leading-tight">{card.title}</h3>
                                 <div className="flex items-center space-x-2">
@@ -1304,12 +1482,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                                 </div>
                                 
                                 {/* Status tag melhorado */}
-                                <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${
-                                  card.status === 'completed' ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' : 
-                                  card.status === 'in_progress' ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25' : 
-                                  'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25'
-                                }`}>
-                                  {card.status === 'pending' ? 'A Fazer' : card.status === 'in_progress' ? 'Em Progresso' : card.status === 'completed' ? 'Concluído' : card.status}
+                                <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${getCardStatus(card).statusColor}`}>
+                                  {getCardStatus(card).statusLabel}
                                 </span>
                               </div>
                             </div>
@@ -1321,28 +1495,24 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                       </div>
                     </div>
                   );
-                })
+                })}
+                </>
               ) : (
                 // Não agrupado
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredActivities.map(card => (
+                  {sortedAndFilteredActivities.map(card => (
                     <div key={card.id} onClick={() => {
                       console.log('Card clicked:', card);
                       setSelectedCardForKanban(card)
-                    }} className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border border-slate-200/50 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md">
-                      {/* Barra lateral de prioridade melhorada */}
-                      <div className={`h-full w-2 absolute left-0 top-0 rounded-l-3xl shadow-lg ${
-                        card.priority === 'urgent' ? 'bg-gradient-to-b from-red-500 to-red-600' :
-                        card.priority === 'high' ? 'bg-gradient-to-b from-orange-500 to-orange-600' :
-                        card.priority === 'medium' ? 'bg-gradient-to-b from-yellow-500 to-yellow-600' :
-                        card.priority === 'low' ? 'bg-gradient-to-b from-green-500 to-green-600' :
-                        'bg-gradient-to-b from-gray-400 to-gray-500'
-                      }`} />
+                    }}
+                    className="group relative bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-xl shadow-slate-200/60 cursor-pointer hover:shadow-2xl hover:shadow-slate-300/80 transition-all duration-500 hover:scale-[1.03] border-l-4 overflow-hidden backdrop-blur-sm hover:backdrop-blur-md"
+                    style={{ borderLeftColor: getPriorityColor(card.priority) }}
+                    >
                       
                       {/* Efeito de brilho no hover */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                       
-                      <div className="p-6 pl-10 relative z-10">
+                      <div className="p-6 relative z-10">
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="font-bold text-xl mb-2 text-slate-800 group-hover:text-slate-900 transition-colors duration-300 leading-tight">{card.title}</h3>
                           <div className="flex items-center space-x-2">
@@ -1369,15 +1539,12 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                         
                         <div className="flex justify-between items-center">
                           <div className="flex items-center space-x-2">
-                            {/* Ícone de prioridade */}
-                            <div className={`w-3 h-3 rounded-full ${
-                              card.priority === 'urgent' ? 'bg-red-500' :
-                              card.priority === 'high' ? 'bg-orange-500' :
-                              card.priority === 'medium' ? 'bg-yellow-500' :
-                              card.priority === 'low' ? 'bg-green-500' :
-                              'bg-gray-400'
-                            }`}></div>
-                            <span className="text-xs font-medium text-slate-500">
+                            {/* Tag de importância no estilo kanban */}
+                            <span className="inline-flex items-center text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                              <div 
+                                className="w-2 h-2 rounded-full mr-2"
+                                style={{ backgroundColor: getPriorityColor(card.priority) }}
+                              />
                               {card.priority === 'urgent' ? 'Urgente' :
                                card.priority === 'high' ? 'Alta' :
                                card.priority === 'medium' ? 'Normal' :
@@ -1387,12 +1554,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                           </div>
                           
                           {/* Status tag melhorado */}
-                          <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${
-                            card.status === 'completed' ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' : 
-                            card.status === 'in_progress' ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25' : 
-                            'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25'
-                          }`}>
-                            {card.status === 'pending' ? 'A Fazer' : card.status === 'in_progress' ? 'Em Progresso' : card.status === 'completed' ? 'Concluído' : card.status}
+                          <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${getCardStatus(card).statusColor}`}>
+                            {getCardStatus(card).statusLabel}
                           </span>
                         </div>
                       </div>
@@ -1419,14 +1582,14 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   </h2>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-slate-600 bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 rounded-full border border-slate-300 shadow-sm">
-                      {filteredActivities.length} resultado{filteredActivities.length !== 1 ? 's' : ''}
+                      {sortedAndFilteredActivities.length} resultado{sortedAndFilteredActivities.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="max-h-[calc(100vh-350px)] overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
                 <div>
-                    {filteredActivities.length === 0 ? (
+                    {sortedAndFilteredActivities.length === 0 ? (
                       <div className="flex items-center justify-center h-64 text-slate-500">
                         <div className="text-center">
                           <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
@@ -1438,7 +1601,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {filteredActivities.map(activity => renderActivityItem(activity))}
+                        {sortedAndFilteredActivities.map(activity => renderActivityItem(activity))}
                       </div>
                     )}
                 </div>

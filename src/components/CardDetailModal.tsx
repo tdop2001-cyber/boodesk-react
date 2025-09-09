@@ -31,8 +31,9 @@ import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Card, Column } from '../types';
+import { Card, Column, User as UserType } from '../types';
 import SubtaskManager, { Subtask } from './SubtaskManager';
+import AvatarGroup from './AvatarGroup';
 import UnifiedKanban, { KanbanItem as UnifiedKanbanItem, KanbanColumnDef } from './UnifiedKanban';
 import SubtaskModal from './SubtaskModal';
 import { db } from '../services/database';
@@ -410,6 +411,15 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                     <span className="text-brand-gray">{new Date(card.updated_at || Date.now()).toLocaleDateString()}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-brand-light-gray p-6">
+                <h3 className="text-sm font-medium text-brand-gray mb-4">Membros</h3>
+                <AvatarGroup
+                  members={availableUsers.filter(user => editedCard.members?.includes(user.id))}
+                  maxVisible={5}
+                  size="md"
+                />
               </div>
             </div>
           </div>

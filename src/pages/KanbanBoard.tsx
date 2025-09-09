@@ -7,8 +7,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { useDatabase } from '../hooks/useDatabase';
 import { db } from '../services/database';
-import { Board, Card, Column, CardDependency } from '../types';
+import { Board, Card, Column, CardDependency, User as UserType } from '../types';
 import SubtaskManager, { Subtask } from '../components/SubtaskManager';
+import AvatarGroup from '../components/AvatarGroup';
 import CardDetailModal from '../components/CardDetailModal';
 import {
   Plus,
@@ -91,6 +92,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [groupByBoard, setGroupByBoard] = useState(true);
+  const [hideCardsWithoutSubtasks, setHideCardsWithoutSubtasks] = useState(false);
+  const [allCards, setAllCards] = useState<Card[]>([]);
+  const [membersCache, setMembersCache] = useState<Map<number, UserType>>(new Map());
 
   // Estados para modais
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
@@ -226,6 +231,39 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   // Templates de cards padrão (serão carregados do banco quando implementado)
   const [cardTemplates, setCardTemplates] = useState<CardTemplate[]>([]);
 
+  // Função para carregar todos os cards (para modo lista)
+  const loadAllCards = async () => {
+    if (!user) return;
+    
+    try {
+      // Usar type assertion temporariamente
+      const allCardsData = await (db as any).getAllCardsForUser(user.id, user.role || 'member');
+      console.log('Todos os cards carregados:', allCardsData);
+      
+      // Carregar informações dos membros
+      const allMemberIds = new Set<number>();
+      allCardsData.forEach((card: Card) => {
+        if (card.members && Array.isArray(card.members)) {
+          card.members.forEach(memberId => {
+            if (typeof memberId === 'number') {
+              allMemberIds.add(memberId);
+            } else if (typeof memberId === 'string') {
+              allMemberIds.add(parseInt(memberId));
+            }
+          });
+        }
+      });
+
+      if (allMemberIds.size > 0) {
+        await loadMembersInfo(Array.from(allMemberIds));
+      }
+      
+      setAllCards(allCardsData);
+    } catch (error) {
+      console.error('Erro ao carregar todos os cards:', error);
+    }
+  };
+
   const loadKanbanData = async () => {
     await loadBoards();
     await loadBoardTemplates();
@@ -292,6 +330,30 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       setBoardTemplates(templatesData);
     } catch (error) {
       console.error('Erro ao carregar templates de quadros:', error);
+    }
+  };
+
+  const loadMembersInfo = async (memberIds: number[]) => {
+    if (!memberIds || memberIds.length === 0) return;
+
+    try {
+      // Verificar quais membros já estão no cache
+      const missingIds = memberIds.filter(id => !membersCache.has(id));
+
+      if (missingIds.length > 0) {
+        const members = await db.getUsersByIds(missingIds);
+
+        // Atualizar o cache
+        setMembersCache(prev => {
+          const newCache = new Map(prev);
+          members.forEach(member => {
+            newCache.set(member.id, member);
+          });
+          return newCache;
+        });
+      }
+    } catch (error) {
+      console.error('KanbanBoard: Erro ao carregar informações dos membros:', error);
     }
   };
 
@@ -376,7 +438,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       const mappedCards: Card[] = await Promise.all(cardsData.map(async (card) => {
         const cardIdValue = card.card_id || card.id.toString();
         const cardId = parseInt(cardIdValue);
-        const subtasks = await db.getSubtasksForCard(cardId);
+        const subtasks = await db.getSubtasksForCardByUser(cardId, user?.id || 1, user?.role || 'member');
         const mappedSubtasks = subtasks.map(subtask => ({
           id: subtask.id.toString(),
           title: subtask.title,
@@ -408,6 +470,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           created_at: card.created_at,
           updated_at: card.updated_at,
           due_date: card.due_date || undefined,
+          members: card.members || [], // Incluir os membros do card
           tags: [],
           attachments: [],
           comments: [],
@@ -452,6 +515,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       console.log('Cards antes de setCards:', cards);
       setCards(boardCards);
       console.log('=== CARREGAMENTO CONCLUÍDO ===');
+      
+      // Carregar informações dos membros
+      const allMemberIds = new Set<number>();
+        boardCards.forEach(card => {
+          if (card.members && Array.isArray(card.members)) {
+          card.members.forEach(memberId => {
+            if (typeof memberId === 'number') {
+              allMemberIds.add(memberId);
+            } else if (typeof memberId === 'string') {
+              allMemberIds.add(parseInt(memberId));
+            }
+          });
+        }
+      });
+
+      if (allMemberIds.size > 0) {
+        await loadMembersInfo(Array.from(allMemberIds));
+      }
       
       // Verificar se os cards foram definidos corretamente
       setTimeout(() => {
@@ -875,6 +956,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           created_at: createdCard.created_at,
           updated_at: createdCard.updated_at,
           due_date: createdCard.due_date,
+          members: createdCard.members || newCardData.members, // Incluir os membros
           tags: [],
           attachments: [],
           comments: []
@@ -883,10 +965,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         console.log('newCard a ser adicionado:', newCard);
         console.log('cards atuais:', cards);
         
-        // Recarregar dados do board para garantir sincronização
-        if (currentBoard) {
-          await loadBoardData(currentBoard);
-        }
+        // Adicionar o card à lista local sem recarregar tudo
+        setCards(prev => [...prev, newCard]);
         
         addToast({
           type: 'success',
@@ -1525,15 +1605,135 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
 
 
-  const filteredCards = cards.filter(card => {
+  // Usar allCards no modo lista, cards no modo kanban
+  const cardsToFilter = viewMode === 'list' ? allCards : cards;
+  
+  const filteredCards = cardsToFilter.filter(card => {
     const matchesSearch = card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (card.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPriority = filterPriority === 'all' || card.priority === filterPriority;
     const matchesStatus = filterStatus === 'all' || card.status === filterStatus;
     const matchesCompleted = showCompleted || card.status !== 'done';
     
-    return matchesSearch && matchesPriority && matchesStatus && matchesCompleted;
+    // Filtro para ocultar cards sem subtarefas (apenas no modo lista)
+    const hasSubtasks = card.subtasks && card.subtasks.length > 0;
+    const matchesSubtasksFilter = viewMode === 'kanban' || !hideCardsWithoutSubtasks || hasSubtasks;
+    
+    return matchesSearch && matchesPriority && matchesStatus && matchesCompleted && matchesSubtasksFilter;
   });
+
+  // Função para agrupar cards por board
+  const getGroupedCards = () => {
+    // Se não está no modo lista ou agrupamento está desabilitado, retorna lista simples
+    if (viewMode !== 'list' || !groupByBoard) {
+      return { 'Todos os Cards': filteredCards };
+    }
+
+    const grouped: { [key: string]: Card[] } = {};
+    
+    filteredCards.forEach(card => {
+      const board = boards.find(b => b.id === card.board_id);
+      const boardName = board ? board.name : 'Quadro Desconhecido';
+      
+      if (!grouped[boardName]) {
+        grouped[boardName] = [];
+      }
+      grouped[boardName].push(card);
+    });
+
+    return grouped;
+  };
+
+  // Componente para exibir card na lista
+  const ListCardComponent: React.FC<{ card: Card }> = ({ card }) => {
+    const cardSubtasks = card.subtasks || [];
+    const completedSubtasks = cardSubtasks.filter(s => s.completed).length;
+    const totalSubtasks = cardSubtasks.length;
+    
+    return (
+      <div 
+        className="p-4 hover:bg-brand-light-gray/30 dark:hover:bg-gray-700/30 transition-colors border-l-4 cursor-pointer"
+        style={{ borderLeftColor: getPriorityColor(card.priority) }}
+        onClick={() => setSelectedCard(card)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Status do card */}
+            <div className="flex items-center space-x-2">
+              {card.status === 'done' ? (
+                <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                </div>
+              ) : (
+                <div className="w-5 h-5 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                </div>
+              )}
+            </div>
+            
+            {/* Tipo e título */}
+            <div className="flex items-center space-x-3">
+              <span className="px-2 py-1 bg-brand-green text-white text-xs font-medium rounded-full">
+                Tarefa
+              </span>
+              <h4 className="font-medium text-brand-gray dark:text-gray-100">{card.title}</h4>
+              {totalSubtasks > 0 && (
+                <span className="text-xs text-brand-gray/70 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                  {totalSubtasks} {totalSubtasks === 1 ? 'subtarefa' : 'subtarefas'}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            {/* Prioridade */}
+            <span className="inline-flex items-center text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">
+              <div 
+                className="w-2 h-2 rounded-full mr-2"
+                style={{ backgroundColor: getPriorityColor(card.priority) }}
+              />
+              {getPriorityLabel(card.priority)}
+            </span>
+            
+            {/* Membros */}
+            {card.members && card.members.length > 0 ? (
+              <AvatarGroup
+                members={card.members.map(memberId => membersCache.get(typeof memberId === 'string' ? parseInt(memberId) : memberId)).filter(Boolean) as UserType[]}
+                maxVisible={3}
+                size="sm"
+              />
+            ) : (
+              <div className="flex items-center text-gray-400 text-xs">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+                {card.members ? card.members.length : 0}
+              </div>
+            )}
+            
+            {/* Data de vencimento */}
+            {card.due_date && (
+              <span className="text-xs text-brand-gray/70 dark:text-gray-400 flex items-center space-x-1">
+                <Clock className="w-3 h-3" />
+                <span>{new Date(card.due_date).toLocaleDateString('pt-BR')}</span>
+              </span>
+            )}
+            
+            {/* Botão de visualizar */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCard(card);
+              }}
+              className="p-1 text-brand-gray/50 dark:text-gray-400 hover:text-brand-gray dark:hover:text-gray-100"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const CardComponent: React.FC<{ card: Card }> = ({ card }) => {
     const { hasPermission } = usePermissions();
@@ -1565,7 +1765,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           setSelectedCard(card);
           setShowCardDetailModal(true);
         }}
-        className={`card-hover bg-white dark:bg-gray-800 border-2 rounded-xl p-3 mb-2 cursor-pointer hover:shadow-lg transition-all duration-200 shadow-sm ${
+                className={`card-hover bg-white dark:bg-gray-800 border-2 rounded-xl p-3 mb-2 cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-300 shadow-sm relative overflow-hidden ${
           card.dependencies && card.dependencies.length > 0 && !checkDependenciesCompleted(card)
             ? 'border-orange-300 bg-orange-50/30 dark:bg-orange-900/20' 
             : ''
@@ -1573,7 +1773,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         style={{
           borderColor: card.dependencies && card.dependencies.length > 0 && !checkDependenciesCompleted(card)
             ? undefined
-            : getPriorityColor(card.priority)
+                    : '#e5e7eb'
         }}
         title={
           card.dependencies && card.dependencies.length > 0 && !checkDependenciesCompleted(card)
@@ -1581,8 +1781,23 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
             : undefined
         }
       >
+                {/* Barra lateral elegante com gradiente - mais fina e arredondada */}
+                <div
+                  className="absolute left-0 top-0 w-1 h-full shadow-sm"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${getPriorityColor(card.priority)}, ${getPriorityColor(card.priority)}dd)`,
+                    borderTopLeftRadius: '0.75rem',
+                    borderBottomLeftRadius: '0.75rem',
+                    borderTopRightRadius: '0.25rem',
+                    borderBottomRightRadius: '0.25rem'
+                  }}
+                />
+                
+                {/* Efeito de brilho sutil no hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 transform -skew-x-12 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-700 rounded-xl" />
+        
         {/* Header */}
-        <div className="flex items-start justify-between mb-1">
+        <div className="flex items-start justify-between mb-1 pl-1">
           <h3 className="font-medium text-brand-gray dark:text-gray-50 text-sm line-clamp-2 flex-1">
             {card.title}
           </h3>
@@ -1601,14 +1816,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
         {/* Description */}
         {card.description && (
-          <p className="text-xs text-brand-gray/70 dark:text-gray-300 mb-2 line-clamp-2">
+          <p className="text-xs text-brand-gray/70 dark:text-gray-300 mb-2 line-clamp-2 pl-1">
             {card.description}
           </p>
         )}
 
         {/* Subtasks Progress */}
         {cardSubtasks.length > 0 && (
-          <div className="mb-2">
+          <div className="mb-2 pl-1">
             <div className="flex items-center justify-between text-xs text-brand-gray/60 mb-1">
               <span className="hidden sm:inline">Subtarefas</span>
               <span className="sm:hidden">Sub</span>
@@ -1648,7 +1863,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
         {/* Tags */}
         {card.tags && card.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-1 mb-2 pl-1">
             {/* Em mobile, mostrar apenas 1 tag */}
             <div className="block sm:hidden">
               {card.tags.slice(0, 1).map((tag, index) => (
@@ -1678,35 +1893,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           </div>
         )}
 
-        {/* Member Avatars */}
-        {card.members && card.members.length > 0 && (
-          <div className="flex items-center mb-2">
-            <div className="flex -space-x-2">
-              {card.members.slice(0, 3).map((memberId, index) => {
-                const initials = `U${memberId}`;
-                const avatarColor = getUserAvatarColor(memberId);
-                return (
-                  <div
-                    key={memberId}
-                    className={`w-6 h-6 bg-gradient-to-br ${avatarColor} rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm`}
-                    title={`Usuário ${memberId}`}
-                  >
-                    {initials}
-                  </div>
-                );
-              })}
-              {card.members.length > 3 && (
-                <div className="w-6 h-6 bg-brand-light-gray rounded-full flex items-center justify-center text-brand-gray text-xs font-semibold border-2 border-white shadow-sm">
-                  +{card.members.length - 3}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        
 
         {/* Dependencies Status */}
         {card.dependencies && card.dependencies.length > 0 && (
-          <div className="mb-2 p-2 bg-brand-light-gray/20 rounded-lg">
+          <div className="mb-2 p-2 bg-brand-light-gray/20 rounded-lg ml-4 mr-4">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1 text-brand-gray/70">
                 <Link className="w-3 h-3" />
@@ -1755,21 +1946,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                 <span>{card.comments.length}</span>
               </div>
             )}
-
-            {/* Members */}
-            {card.members && card.members.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-brand-gray/70">
-                <Users className="w-3 h-3" />
-                <span>{card.members.length}</span>
-              </div>
-            )}
           </div>
 
-          {/* Assigned User */}
-          <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-white text-xs font-semibold">
-              {card.assigned_to ? 'U' : '?'}
-            </span>
+          <div className="flex items-center space-x-2">
+            {/* Member Avatars */}
+            {card.members && card.members.length > 0 ? (
+              <AvatarGroup
+                members={card.members.map(memberId => membersCache.get(typeof memberId === 'string' ? parseInt(memberId) : memberId)).filter(Boolean) as UserType[]}
+                maxVisible={3}
+                size="sm"
+              />
+            ) : (
+              <div className="flex items-center text-gray-400 text-xs">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+                {card.members ? card.members.length : 0}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2058,7 +2252,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                   <Grid className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => {
+                    setViewMode('list');
+                    loadAllCards(); // Carregar todos os cards quando mudar para modo lista
+                  }}
                   className={`p-2 rounded transition-colors ${
                     viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-brand-gray dark:text-gray-100 shadow-sm' : 'text-brand-gray/70 dark:text-gray-400 hover:text-brand-gray dark:hover:text-gray-100'
                   }`}
@@ -2157,7 +2354,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       </div>
 
               {/* Main Content */}
-        <div className="p-6">
+        <div className={`p-6 ${viewMode === 'list' ? 'flex' : ''}`}>
           {boards.length === 0 ? (
             /* Estado vazio - sem quadros */
             <div className="text-center py-12">
@@ -2200,53 +2397,164 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           </div>
         ) : (
           /* List View */
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm flex-1">
             <div className="p-4 border-b border-brand-light-gray dark:border-gray-700">
-              <h3 className="font-semibold text-brand-gray dark:text-gray-100">Todos os Cartões</h3>
-            </div>
-            <div className="divide-y divide-brand-light-gray dark:divide-gray-700">
-              {filteredCards.map((card) => (
-                <div 
-                  key={card.id} 
-                  className="p-4 hover:bg-brand-light-gray/30 dark:hover:bg-gray-700/30 transition-colors border-l-4"
-                  style={{ borderLeftColor: getPriorityColor(card.priority) }}
-                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(card.status)}`}>
-                        {card.status.toUpperCase()}
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-brand-green rounded-full"></div>
+                    <h3 className="font-semibold text-brand-gray dark:text-gray-100">Lista de Atividades</h3>
+                  </div>
+                  <span className="text-sm text-brand-gray/70 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                    {filteredCards.length} resultados
                       </span>
-                      <h4 className="font-medium text-brand-gray dark:text-gray-100">{card.title}</h4>
-                      <span 
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold"
-                        style={{ 
-                          backgroundColor: getPriorityColor(card.priority),
-                          color: getPriorityTextColor(card.priority)
-                        }}
-                      >
-                        {getPriorityLabel(card.priority)}
+                </div>
+                
+                {/* Controles de Agrupamento */}
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center space-x-2 text-sm text-brand-gray dark:text-gray-100">
+                    <input
+                      type="checkbox"
+                      checked={hideCardsWithoutSubtasks}
+                      onChange={(e) => setHideCardsWithoutSubtasks(e.target.checked)}
+                      className="rounded border-brand-light-gray dark:border-gray-600 text-brand-blue focus:ring-brand-blue"
+                    />
+                    <span>Ocultar cards sem subtarefas</span>
+                  </label>
+                  
+                  <button
+                    onClick={() => setGroupByBoard(!groupByBoard)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      groupByBoard 
+                        ? 'bg-gradient-to-r from-brand-green to-brand-blue text-white shadow-sm' 
+                        : 'bg-brand-light-gray dark:bg-gray-700 text-brand-gray dark:text-gray-300 hover:bg-brand-gray dark:hover:bg-gray-600 hover:text-white'
+                    }`}
+                  >
+                    <div className="w-4 h-4 bg-white/20 rounded flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-sm"></div>
+                    </div>
+                    <span>Agrupado por Quadro</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="max-h-[600px] overflow-y-auto">
+              {(() => {
+                const groupedCards = getGroupedCards();
+                const isGrouped = Object.keys(groupedCards).length > 1 || (Object.keys(groupedCards).length === 1 && Object.keys(groupedCards)[0] !== 'Todos os Cards');
+                
+                return Object.entries(groupedCards).map(([groupName, groupCards]) => (
+                  <div key={groupName} className="mb-6">
+                    {/* Cabeçalho do grupo - só mostra se estiver agrupado */}
+                    {isGrouped && (
+                      <div className="px-4 py-3 bg-brand-light-gray/30 dark:bg-gray-700/30 border-l-4 border-brand-green">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-brand-gray dark:text-gray-100">{groupName}</h4>
+                          <span className="text-sm text-brand-gray/70 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full">
+                            {groupCards.length} {groupCards.length === 1 ? 'card' : 'cards'}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {card.due_date && (
-                        <span className="text-xs text-brand-gray/70 dark:text-gray-400">
-                          {new Date(card.due_date).toLocaleDateString('pt-BR')}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => setSelectedCard(card)}
-                        className="p-1 text-brand-gray/50 dark:text-gray-400 hover:text-brand-gray dark:hover:text-gray-100"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      </div>
+                    )}
+                    
+                    {/* Cards do grupo */}
+                    <div className="divide-y divide-brand-light-gray dark:divide-gray-700">
+                      {groupCards.map((card) => (
+                        <ListCardComponent key={card.id} card={card} />
+                      ))}
                     </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         )}
       </div>
+
+      {/* Sidebar de Detalhes - Modo Lista */}
+      {viewMode === 'list' && (
+        <div className="w-80 bg-white dark:bg-gray-800 border-l border-brand-light-gray dark:border-gray-700 flex flex-col">
+          <div className="p-4 border-b border-brand-light-gray dark:border-gray-700">
+                    <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                <Eye className="w-2 h-2 text-white" />
+              </div>
+              <h3 className="font-semibold text-brand-gray dark:text-gray-100">Detalhes</h3>
+            </div>
+          </div>
+          
+          <div className="flex-1 p-4">
+            {selectedCard ? (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-brand-gray dark:text-gray-100 mb-2">{selectedCard.title}</h4>
+                  {selectedCard.description && (
+                    <p className="text-sm text-brand-gray/70 dark:text-gray-400">{selectedCard.description}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-xs font-medium text-brand-gray/60 dark:text-gray-500 uppercase tracking-wide">Status</span>
+                    <div className="mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedCard.status)}`}>
+                        {selectedCard.status.toUpperCase()}
+                        </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <span className="text-xs font-medium text-brand-gray/60 dark:text-gray-500 uppercase tracking-wide">Prioridade</span>
+                    <div className="mt-1 flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getPriorityColor(selectedCard.priority) }}
+                      />
+                      <span className="text-sm text-brand-gray dark:text-gray-100">{getPriorityLabel(selectedCard.priority)}</span>
+                    </div>
+                  </div>
+                  
+                  {selectedCard.due_date && (
+                    <div>
+                      <span className="text-xs font-medium text-brand-gray/60 dark:text-gray-500 uppercase tracking-wide">Data de Vencimento</span>
+                      <div className="mt-1 flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-brand-gray/60 dark:text-gray-500" />
+                        <span className="text-sm text-brand-gray dark:text-gray-100">
+                          {new Date(selectedCard.due_date).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedCard.subtasks && selectedCard.subtasks.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium text-brand-gray/60 dark:text-gray-500 uppercase tracking-wide">Subtarefas</span>
+                      <div className="mt-1">
+                        <div className="flex items-center justify-between text-sm text-brand-gray dark:text-gray-100 mb-2">
+                          <span>{selectedCard.subtasks.filter(s => s.completed).length} de {selectedCard.subtasks.length} concluídas</span>
+                    </div>
+                        <div className="w-full h-2 bg-brand-light-gray dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-brand-green to-brand-blue transition-all duration-300"
+                            style={{ 
+                              width: `${(selectedCard.subtasks.filter(s => s.completed).length / selectedCard.subtasks.length) * 100}%` 
+                            }}
+                          />
+                  </div>
+                </div>
+            </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-brand-gray/60 dark:text-gray-500">
+                <p className="text-sm">Nenhum</p>
+                <p className="text-xs mt-1">Clique em um card para ver os detalhes</p>
+          </div>
+        )}
+      </div>
+        </div>
+      )}
 
       {/* Create Board Modal */}
       {showCreateBoardModal && (

@@ -271,8 +271,11 @@ const UnifiedKanban: React.FC<UnifiedKanbanProps> = ({
           
           <div className="flex flex-wrap gap-2 mb-3">
             {item.priority && (
-              <span className={`inline-flex items-center text-xs ${getPriorityColor(item.priority)}`}>
-                <AlertTriangle className="w-3 h-3 mr-1" />
+              <span className="inline-flex items-center text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                <div 
+                  className="w-2 h-2 rounded-full mr-2"
+                  style={{ backgroundColor: getPriorityColor(item.priority) }}
+                />
                 {item.priority === 'urgent' ? 'Urgente' :
                  item.priority === 'high' ? 'Alta' :
                  item.priority === 'medium' ? 'Normal' :

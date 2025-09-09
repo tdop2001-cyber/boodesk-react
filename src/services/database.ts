@@ -219,60 +219,37 @@ export class DatabaseService {
     try {
       // Se for admin, retorna todos os boards
       if (userRole === 'admin' || !userRole) {
-        console.log('=== DATABASE: getBoards - Admin ou sem role ===');
         const { data, error } = await supabase
           .from('boards')
           .select('*')
           .order('name');
-        
-        console.log('Boards encontrados:', data);
-        console.log('Quantidade de boards:', (data || []).length);
-        
         if (error) throw error;
         return data || [];
       }
 
       // Para usuários não-admin, buscar boards onde são membros de algum card
       if (userId) {
-        console.log('=== DATABASE: getBoards - Usuário não-admin ===');
-        console.log('userId:', userId);
-        console.log('userRole:', userRole);
-        
-        // Buscar todos os cards e filtrar no lado do cliente
-        const { data: allCardsData, error: cardsError } = await supabase
+        // 1. Buscar os 'board_id's dos cards onde o usuário é membro.
+        const { data: cards, error: cardsError } = await supabase
           .from('cards')
-          .select('board_id, members')
-          .eq('is_archived', false);
-
-        // Filtrar cards onde o usuário é membro
-        const cardsData = allCardsData?.filter(card => {
-          if (!card.members || !Array.isArray(card.members)) return false;
-          return card.members.includes(userId) || card.members.includes(String(userId));
-        }) || [];
-
-        console.log('cardsData (cards onde usuário é membro):', cardsData);
-        console.log('cardsError:', cardsError);
+          .select('board_id')
+          // Removido .contains para filtrar no lado do cliente;
 
         if (cardsError) throw cardsError;
 
-        if (cardsData && cardsData.length > 0) {
-          // Buscar boards únicos dos cards onde o usuário é membro
-          const boardIds = Array.from(new Set(cardsData.map(card => String(card.board_id))));
-          console.log('boardIds únicos encontrados:', boardIds);
-          
-          const { data, error } = await supabase
+        if (cards && cards.length > 0) {
+          // 2. Extrair os 'board_id's únicos.
+          const boardIds = Array.from(new Set(cards.map(card => card.board_id)));
+
+          // 3. Buscar os boards correspondentes a esses 'board_id's.
+          const { data: boards, error: boardsError } = await supabase
             .from('boards')
             .select('*')
-            .in('board_id', boardIds)
+            .in('id', boardIds)
             .order('name');
 
-          console.log('boards encontrados:', data);
-          console.log('error:', error);
-
-          if (error) throw error;
-          return data || [];
-        } else {
-          console.log('Nenhum card encontrado onde o usuário é membro');
+          if (boardsError) throw boardsError;
+          return boards || [];
         }
       }
 
@@ -567,10 +544,27 @@ export class DatabaseService {
       }
       
       console.log('Cards encontrados:', data || []);
-      // Log específico para membros
+      // Log específico para membros e processar dados
       if (data) {
         data.forEach((card, index) => {
-          console.log(`Card ${index + 1} (${card.title}) - board_id: ${card.board_id}, members:`, card.members);
+          console.log(`Card ${index + 1} (${card.title}) - board_id: ${card.board_id}, members:`, card.members, 'tipo:', typeof card.members);
+          
+          // Processar membros se for string
+          if (card.members && typeof card.members === 'string') {
+            try {
+              const parsedMembers = JSON.parse(card.members);
+              console.log(`Card ${index + 1} - members parsed:`, parsedMembers);
+              // Atualizar o card com os membros parseados
+              card.members = parsedMembers;
+            } catch (e) {
+              console.log(`Card ${index + 1} - erro ao fazer parse dos members:`, e);
+              // Se não conseguir fazer parse, definir como array vazio
+              card.members = [];
+            }
+          } else if (!card.members) {
+            // Se não há membros, definir como array vazio
+            card.members = [];
+          }
         });
       }
       return data || [];
@@ -585,18 +579,13 @@ export class DatabaseService {
     }
   }
 
-  // Função para obter cards baseado na participação do usuário
   async getCardsForBoardByUser(boardId: string, userId: number, userRole: string): Promise<Card[]> {
-    console.log('=== DATABASE: getCardsForBoardByUser ===');
-    console.log('boardId:', boardId, 'userId:', userId, 'userRole:', userRole);
-    
     try {
-      // Admin vê todos os cards
       if (userRole === 'admin') {
         return await this.getCardsForBoard(boardId);
       }
 
-      // Para outros usuários, filtrar por participação
+      // Buscar todos os cards do board e filtrar no lado do cliente
       const { data, error } = await supabase
         .from('cards')
         .select('*')
@@ -611,14 +600,55 @@ export class DatabaseService {
 
       // Filtrar cards onde o usuário é membro
       const filteredCards = (data || []).filter(card => {
-        const members = Array.isArray(card.members) ? card.members : [];
-        return members.includes(userId);
+        if (!card.members || !Array.isArray(card.members)) return false;
+        return card.members.includes(userId) || card.members.includes(String(userId));
       });
 
-      console.log(`Cards filtrados para usuário ${userId}:`, filteredCards.length);
       return filteredCards;
     } catch (error) {
       console.error('Erro ao buscar cards por usuário:', error);
+      return [];
+    }
+  }
+
+  async getAllCardsForUser(userId: number, userRole: string): Promise<Card[]> {
+    try {
+      if (userRole === 'admin') {
+        const { data, error } = await supabase
+          .from('cards')
+          .select('*')
+          .eq('is_archived', false)
+          .order('created_at');
+
+        if (error) {
+          console.error('Erro do Supabase:', error);
+          throw error;
+        }
+
+        return data || [];
+      }
+
+      // Buscar todos os cards e filtrar no lado do cliente
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('is_archived', false)
+        .order('created_at');
+
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      // Filtrar cards onde o usuário é membro
+      const filteredCards = (data || []).filter(card => {
+        if (!card.members || !Array.isArray(card.members)) return false;
+        return card.members.includes(userId) || card.members.includes(String(userId));
+      });
+
+      return filteredCards;
+    } catch (error) {
+      console.error('Erro ao buscar todos os cards por usuário:', error);
       return [];
     }
   }
@@ -865,74 +895,30 @@ export class DatabaseService {
     }
   }
 
-  // Função para obter subtarefas baseado na participação do usuário
   async getSubtasksForCardByUser(cardId: number, userId: number, userRole: string): Promise<Subtask[]> {
     try {
-      console.log('Buscando subtarefas para card_id:', cardId, 'userId:', userId, 'userRole:', userRole);
-      
-      // Admin vê todas as subtarefas
       if (userRole === 'admin') {
         return await this.getSubtasksForCard(cardId);
       }
 
-      // Para outros usuários, buscar todas as subtarefas do card
-      console.log('=== EXECUTANDO CONSULTA SUPABASE ===');
-      console.log('cardId para consulta:', cardId);
-      console.log('Tipo do cardId:', typeof cardId);
-      
       const { data, error } = await supabase
         .from('subtasks')
         .select('*')
         .eq('card_id', cardId)
+        // Removido .contains para filtrar no lado do cliente
         .order('created_at');
-        
-      console.log('=== RESULTADO DA CONSULTA ===');
-      console.log('Erro da consulta:', error);
-      console.log('Dados retornados:', data);
-      console.log('Quantidade de registros:', data?.length || 0);
 
       if (error) {
         console.error('Erro ao buscar subtarefas:', error);
         throw error;
       }
 
-      console.log('Todas as subtarefas encontradas para o card:', data?.length || 0);
-      console.log('Dados das subtarefas:', data);
-      console.log('Card ID sendo buscado:', cardId);
-      console.log('User ID:', userId);
-      console.log('User Role:', userRole);
-
-      // Filtrar subtarefas onde o usuário é membro OU é o criador
+      // Filtrar subtarefas onde o usuário é membro
       const filteredSubtasks = (data || []).filter(subtask => {
-        console.log('Analisando subtarefa:', {
-          id: subtask.id,
-          title: subtask.title,
-          members: subtask.members,
-          created_by: subtask.created_by,
-          userId: userId
-        });
-
-        // Se não há membros definidos, incluir a subtarefa (compatibilidade com dados antigos)
-        if (!subtask.members || subtask.members.length === 0) {
-          console.log('Subtarefa sem membros definidos, incluindo:', subtask.title);
-          return true;
-        }
-
-        // Verificar se o usuário é membro
-        const members = Array.isArray(subtask.members) ? subtask.members : [];
-        const isMember = members.includes(userId.toString());
-        
-        // Verificar se o usuário é o criador
-        const isCreator = subtask.created_by === userId;
-        
-        const shouldInclude = isMember || isCreator;
-        console.log(`Subtarefa "${subtask.title}": isMember=${isMember}, isCreator=${isCreator}, shouldInclude=${shouldInclude}`);
-        
-        return shouldInclude;
+        if (!subtask.members || !Array.isArray(subtask.members)) return false;
+        return subtask.members.includes(userId) || subtask.members.includes(String(userId));
       });
 
-      console.log(`Subtarefas filtradas para usuário ${userId}:`, filteredSubtasks.length);
-      console.log('Subtarefas filtradas:', filteredSubtasks);
       return filteredSubtasks;
     } catch (error) {
       console.error('Erro ao buscar subtarefas por usuário:', error);
