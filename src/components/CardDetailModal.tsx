@@ -130,7 +130,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
       const updatedSubtasks = subtasks.map(s => 
         s.id === itemId 
-          ? { ...s, status: newStatus, completed: newStatus === 'completed' }
+          ? { ...s, status: newStatus as 'pending' | 'in_progress' | 'completed', completed: newStatus === 'completed' }
           : s
       );
 
@@ -172,7 +172,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
               importance: 'normal' as 'low' | 'high' | 'normal' | 'critical',
               category: 'Geral',
               tags: [],
-              status: mappedStatus,
+              status: mappedStatus as 'pending' | 'in_progress' | 'completed',
               createdAt: new Date()
             };
           });

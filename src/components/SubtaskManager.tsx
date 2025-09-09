@@ -12,13 +12,10 @@ import {
   Calendar,
   Clock,
   User,
-  Flag,
   MessageSquare,
   Paperclip,
   AlertCircle,
-  Star,
   Target,
-  Users,
   Tag,
   Kanban
 } from 'lucide-react';
@@ -33,6 +30,7 @@ export interface Subtask {
   id: string | number;
   title: string;
   completed: boolean;
+  status?: 'pending' | 'in_progress' | 'completed';
   createdAt: Date;
   completedAt?: Date;
   // Novos campos
@@ -51,7 +49,6 @@ export interface Subtask {
   members?: number[]; // IDs dos usuários membros da subtarefa
   // Campos do banco
   card_id?: string;
-  status?: string;
   due_date?: string;
   estimated_time?: string;
   actual_time?: string;

@@ -51,10 +51,10 @@ const defaultCardSettings: CardSettings = {
   enableSubtasks: true,
   maxTagsPerCard: 5,
   priorityColors: {
-    critical: '#DC2626',
-    high: '#EF4444',
-    medium: '#F59E0B',
-    low: '#3d961d'
+    critical: '#3d961d', // Verde escuro (era low)
+    high: '#F59E0B',     // Amarelo (era medium) 
+    medium: '#3B82F6',   // Azul (nova cor para medium)
+    low: '#DC2626'       // Vermelho (era critical)
   },
   customTags: [
     { id: 1, name: 'Urgent', type: 'priority' },

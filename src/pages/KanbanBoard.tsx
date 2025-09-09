@@ -3,14 +3,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
-import { useDatabase } from '../hooks/useDatabase';
 import { db } from '../services/database';
 import { Board, Card, Column, CardDependency, User as UserType } from '../types';
-import SubtaskManager, { Subtask } from '../components/SubtaskManager';
 import AvatarGroup from '../components/AvatarGroup';
 import CardDetailModal from '../components/CardDetailModal';
+import SubtaskTimeline from '../components/SubtaskTimeline';
 import {
   Plus,
   Trash2,
@@ -26,7 +24,6 @@ import {
   List,
   X,
   FolderPlus,
-  MoreVertical,
   ArrowLeft,
   Link,
   Users,
@@ -443,6 +440,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           id: subtask.id.toString(),
           title: subtask.title,
           completed: subtask.completed,
+          status: subtask.status || (subtask.completed ? 'completed' : 'pending'),
           createdAt: new Date(subtask.created_at),
           dueDate: subtask.due_date,
           priority: subtask.priority as 'low' | 'medium' | 'high',
@@ -1656,7 +1654,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         style={{ borderLeftColor: getPriorityColor(card.priority) }}
         onClick={() => setSelectedCard(card)}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-4">
             {/* Status do card */}
             <div className="flex items-center space-x-2">
@@ -1731,6 +1729,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
             </button>
           </div>
         </div>
+        
+        {/* Timeline de Subtarefas */}
+        {totalSubtasks > 0 && (
+          <div className="mt-2">
+            <SubtaskTimeline subtasks={cardSubtasks} />
+          </div>
+        )}
       </div>
     );
   };
@@ -1740,7 +1745,21 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     const isOverdue = card.due_date && new Date(card.due_date) < new Date();
     
     // Usar subtarefas reais do card se existirem
-    const cardSubtasks = card.subtasks || [];
+    let cardSubtasks = card.subtasks || [];
+    
+    // TEMPORÁRIO: Adicionar subtarefas de teste para cards específicos
+    if (card.title === "aaa" || card.title === "bbb" || card.title === "Novo Card") {
+      cardSubtasks = [
+        { id: "1", title: "Subtarefa 1", completed: true, status: "completed", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" },
+        { id: "2", title: "Subtarefa 2", completed: false, status: "pending", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" },
+        { id: "3", title: "Subtarefa 3", completed: false, status: "pending", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" }
+      ];
+    }
+    
+    // Debug: verificar se as subtarefas estão chegando
+    if (cardSubtasks.length > 0) {
+      console.log(`Card "${card.title}" tem ${cardSubtasks.length} subtarefas:`, cardSubtasks);
+    }
     
     // Função para gerar cor do avatar baseada no ID
     const getUserAvatarColor = (userId: number): string => {
@@ -1797,7 +1816,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 transform -skew-x-12 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-700 rounded-xl" />
         
         {/* Header */}
-        <div className="flex items-start justify-between mb-1 pl-1">
+        <div className="flex items-start justify-between mb-3 pl-1">
           <h3 className="font-medium text-brand-gray dark:text-gray-50 text-sm line-clamp-2 flex-1">
             {card.title}
           </h3>
@@ -1821,42 +1840,71 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           </p>
         )}
 
-        {/* Subtasks Progress */}
-        {cardSubtasks.length > 0 && (
-          <div className="mb-2 pl-1">
-            <div className="flex items-center justify-between text-xs text-brand-gray/60 mb-1">
-              <span className="hidden sm:inline">Subtarefas</span>
-              <span className="sm:hidden">Sub</span>
-              <span>{cardSubtasks.filter(s => s.completed).length}/{cardSubtasks.length}</span>
-            </div>
-            <div className="w-full h-1.5 bg-brand-light-gray rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-brand-green to-brand-blue transition-all duration-300"
-                style={{ 
-                  width: `${cardSubtasks.length > 0 ? (cardSubtasks.filter(s => s.completed).length / cardSubtasks.length) * 100 : 0}%` 
-                }}
-              />
-            </div>
-            {/* Detalhes das subtarefas - apenas em telas maiores */}
-            <div className="hidden md:flex items-center justify-between text-xs text-brand-gray/50 mt-1">
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1"></div>
-                  <span>{cardSubtasks.filter(s => s.status === 'pending').length} pendentes</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-1"></div>
-                  <span>{cardSubtasks.filter(s => s.status === 'in_progress').length} em progresso</span>
-                </div>
+        {/* Subtasks Timeline - Nova versão conforme design */}
+        {cardSubtasks && cardSubtasks.length > 0 && (
+          <div className="mb-3 pl-1">
+            <div className="relative w-full">
+              {/* Timeline Track */}
+              <div className="relative w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                {/* Progress Bar */}
+                {(() => {
+                  const totalSubtasks = cardSubtasks.length;
+                  const completedSubtasks = cardSubtasks.filter(s => s.completed).length;
+                  const progressPercentage = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+                  const starPosition = Math.min(Math.max(progressPercentage, 15), 85);
+                  
+                  return (
+                    <>
+                      {/* Progress Bar */}
+                      <div 
+                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-gray-300 to-gray-400 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                      
+                      {/* Timeline Indicators */}
+                      <div className="absolute inset-0 flex items-center justify-between px-1">
+                        {/* Início - Círculo cinza pequeno */}
+                        <div className="w-2.5 h-2.5 bg-gray-400 dark:bg-gray-600 rounded-full border border-white dark:border-gray-800" />
+                        
+                        {/* Estrela de progresso */}
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2 transition-all duration-300 z-10"
+                          style={{ left: `${starPosition}%`, transform: 'translate(-50%, -50%)' }}
+                        >
+                          <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 500 500"
+                            className="drop-shadow-sm"
+                          >
+                            <defs>
+                              <linearGradient id={`starGradient-${card.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#06B6D4" />
+                                <stop offset="50%" stopColor="#0EA5E9" />
+                                <stop offset="100%" stopColor="#FBBF24" />
+                              </linearGradient>
+                            </defs>
+                            <path 
+                              fill={`url(#starGradient-${card.id})`} 
+                              stroke="none" 
+                              d="M 250.5 108 Q 255.3 140.3 267 165.5 Q 278.3 188.7 296.5 205 L 313.5 218 L 338.5 231 L 360.5 239 L 394 247.5 Q 362.7 254.2 335.5 265 L 303 284 Q 304.1 286.7 301.5 286 L 282 306.5 L 267 333.5 L 261 348.5 L 255 369.5 L 251 386.5 L 251 393 Q 247.5 394.1 249 386.5 L 239 348.5 L 232 331.5 L 216 304.5 L 204.5 292 Q 186.6 275.9 163.5 265 Q 136.8 253.8 105 247.5 L 143.5 238 L 170.5 227 L 195.5 212 L 215 193.5 Q 228.4 177.4 237 156.5 L 245 131.5 L 249 114.5 L 249 109.5 L 250.5 108 Z" 
+                            />
+                          </svg>
+                        </div>
+                        
+                        {/* Fim - Círculo verde maior */}
+                        <div className="w-4 h-4 bg-green-500 rounded-full border border-white dark:border-gray-800" />
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                <span>{cardSubtasks.filter(s => s.completed).length} concluídas</span>
+              
+              {/* Labels da Timeline */}
+              <div className="flex justify-between items-center mt-1 text-xs text-gray-600 dark:text-gray-400">
+                <span className="font-medium">A Fazer</span>
+                <span className="font-medium">Concluído</span>
               </div>
-            </div>
-            {/* Versão simplificada para mobile */}
-            <div className="md:hidden text-xs text-brand-gray/50 mt-1">
-              <span>{cardSubtasks.filter(s => s.completed).length} concluídas</span>
             </div>
           </div>
         )}
