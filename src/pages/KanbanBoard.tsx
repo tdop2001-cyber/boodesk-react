@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
+// Temporariamente comentar para debug
+// import { useSync } from '../contexts/SyncContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { db } from '../services/database';
 import { Board, Card, Column, CardDependency, User as UserType } from '../types';
@@ -67,6 +69,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const { user } = useAuth();
   const { addToast, showPopup, showSuccessPopup } = useToast();
   const { getPriorityColor, getPriorityBgColor, getPriorityTextColor, cardSettings } = useSettings();
+  // Temporariamente comentar para debug
+  // const { 
+  //   onCardStatusChange, 
+  //   onSubtaskStatusChange, 
+  //   onCardUpdate, 
+  //   onSubtaskUpdate,
+  //   triggerCardStatusChange,
+  //   triggerCardUpdate
+  // } = useSync();
 
   const getPriorityLabel = (priority: string): string => {
     switch (priority.toLowerCase()) {
@@ -222,6 +233,98 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     }
   }, [currentBoard?.id, user?.id]); // Usar currentBoard?.id para evitar recarregamentos desnecessários
 
+  // ===== LISTENERS DE SINCRONIZAÇÃO =====
+  
+  // Temporariamente comentar para debug
+  /*
+  // Escutar mudanças de status de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardStatusChange((cardId, newStatus, source) => {
+      if (source !== 'kanban_board') { // Evitar loops
+        console.log('🔄 Sync: Card status change received from', source, { cardId, newStatus });
+        
+        // Mapear status para o formato correto do Card
+        let mappedStatus: 'todo' | 'progress' | 'done' = 'todo';
+        if (newStatus === 'pending') {
+          mappedStatus = 'todo';
+        } else if (newStatus === 'in_progress') {
+          mappedStatus = 'progress';
+        } else if (newStatus === 'completed') {
+          mappedStatus = 'done';
+        }
+        
+        const finalMappedStatus = mappedStatus as 'todo' | 'progress' | 'done';
+        
+        // Atualizar o card na lista local
+        setCards(prevCards => {
+          const updatedCards = prevCards.map(card => {
+            if (card.id === cardId) {
+              return { ...card, status: finalMappedStatus };
+            }
+            return card;
+          });
+          return updatedCards;
+        });
+        
+        // Atualizar o card selecionado se for o mesmo
+        if (selectedCard && selectedCard.id === cardId) {
+          setSelectedCard(prev => prev ? { ...prev, status: finalMappedStatus } : null);
+        }
+        
+        addToast({
+          type: 'info',
+          title: 'Card atualizado',
+          message: `Status do card foi atualizado para "${newStatus}"`
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardStatusChange, selectedCard, addToast]);
+
+  // Escutar mudanças de status de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskStatusChange((cardId, subtaskId, newStatus, source) => {
+      if (source !== 'kanban_board') { // Evitar loops
+        console.log('🔄 Sync: Subtask status change received from', source, { cardId, subtaskId, newStatus });
+        
+        // Atualizar as subtarefas do card
+        updateCardSubtasks(cardId);
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskStatusChange]);
+
+  // Escutar atualizações de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardUpdate((cardId, source) => {
+      if (source !== 'kanban_board') { // Evitar loops
+        console.log('🔄 Sync: Card update received from', source, { cardId });
+        
+        // Recarregar o card específico
+        updateCardSubtasks(cardId);
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardUpdate]);
+
+  // Escutar atualizações de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskUpdate((cardId, subtaskId, source) => {
+      if (source !== 'kanban_board') { // Evitar loops
+        console.log('🔄 Sync: Subtask update received from', source, { cardId, subtaskId });
+        
+        // Atualizar as subtarefas do card
+        updateCardSubtasks(cardId);
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskUpdate]);
+  */
+
   // Templates de quadros carregados do banco
   const [boardTemplates, setBoardTemplates] = useState<BoardTemplate[]>([]);
 
@@ -258,6 +361,75 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       setAllCards(allCardsData);
     } catch (error) {
       console.error('Erro ao carregar todos os cards:', error);
+    }
+  };
+
+  // Função para atualizar um card específico quando suas subtarefas mudarem
+  const updateCardSubtasks = async (cardId: number) => {
+    try {
+      // Debug reduzido para performance
+      // console.log('=== ATUALIZANDO SUBTAREFAS DO CARD ===', cardId);
+      
+      // Recarregar subtarefas do card
+      const updatedSubtasks = await db.getSubtasksForCardByUser(cardId, user?.id || 1, user?.role || 'member');
+      // console.log('Subtarefas encontradas no banco:', updatedSubtasks);
+      
+      // Mapear subtarefas para o formato correto
+      const mappedSubtasks = updatedSubtasks.map(subtask => ({
+        id: subtask.id.toString(),
+        title: subtask.title,
+        completed: subtask.status === 'completed',
+        status: subtask.status || 'pending',
+        createdAt: new Date(subtask.created_at),
+        dueDate: subtask.due_date,
+        priority: subtask.priority as 'low' | 'medium' | 'high',
+        assignedTo: 'Usuário',
+        importance: subtask.importance as 'normal' | 'low' | 'high' | 'critical',
+        category: subtask.category || 'Geral',
+        members: []
+      }));
+      
+      console.log('Subtarefas mapeadas:', mappedSubtasks);
+      
+      // Atualizar o card na lista de cards
+      setCards(prevCards => {
+        const updatedCards = prevCards.map(card => {
+          if (card.id === cardId) {
+            // console.log('Atualizando card:', card.title, 'com subtarefas:', mappedSubtasks);
+            return { ...card, subtasks: mappedSubtasks };
+          }
+          return card;
+        });
+        // console.log('Total de cards atualizados:', updatedCards.length);
+        return updatedCards;
+      });
+      
+      // Atualizar o card selecionado se for o mesmo
+      if (selectedCard && selectedCard.id === cardId) {
+        console.log('Atualizando card selecionado');
+        setSelectedCard(prev => 
+          prev ? { ...prev, subtasks: mappedSubtasks } : null
+        );
+      }
+      
+      // Atualizar o status do card baseado nas subtarefas
+      await db.updateCardStatusBasedOnSubtasks(cardId.toString());
+      
+      // console.log('Card atualizado com novas subtarefas:', mappedSubtasks);
+      
+      // Mostrar toast de sucesso
+      addToast({
+        type: 'success',
+        title: 'Timeline atualizada',
+        message: 'O progresso das subtarefas foi atualizado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar subtarefas do card:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro ao atualizar',
+        message: 'Não foi possível atualizar a timeline das subtarefas.'
+      });
     }
   };
 
@@ -356,10 +528,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
   const loadBoardData = async (board: Board) => {
     try {
-      console.log('=== INICIANDO CARREGAMENTO DO BOARD ===');
-      console.log('Board:', board.name);
-      console.log('Board ID:', board.id);
-      console.log('Board Board ID:', board.board_id);
+      // Debug reduzido para performance
+      // console.log('=== INICIANDO CARREGAMENTO DO BOARD ===');
+      // console.log('Board:', board.name);
       
       // Verificar se board_id existe
       if (!board.board_id) {
@@ -369,9 +540,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       
       // Carregar listas/colunas para o board
       const listsData = await db.getListsForBoard(board.board_id);
-      console.log('=== CARREGANDO COLUNAS ===');
-      console.log('listsData do banco:', listsData);
-      console.log('Quantidade de listas encontradas:', listsData.length);
+      // console.log('=== CARREGANDO COLUNAS ===');
+      // console.log('listsData do banco:', listsData);
+      // console.log('Quantidade de listas encontradas:', listsData.length);
       
       const mappedColumns: Column[] = listsData.map(list => ({
         id: list.id,
@@ -383,23 +554,23 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         updated_at: list.updated_at
       }));
       
-      console.log('mappedColumns:', mappedColumns);
+      // console.log('mappedColumns:', mappedColumns);
       setColumns(mappedColumns);
       
       // Carregar cards para o board
       const boardIdForCards = String(board.board_id || board.id);
-      console.log('=== CARREGANDO CARDS ===');
-      console.log('board.board_id:', board.board_id);
-      console.log('board.id:', board.id);
-      console.log('boardIdForCards:', boardIdForCards);
+      // console.log('=== CARREGANDO CARDS ===');
+      // console.log('board.board_id:', board.board_id);
+      // console.log('board.id:', board.id);
+      // console.log('boardIdForCards:', boardIdForCards);
       
       const cardsData = await db.getCardsForBoardByUser(
         boardIdForCards, 
         user?.id || 1, 
         user?.role || 'member'
       );
-      console.log('cardsData do banco:', cardsData);
-      console.log('Quantidade de cards encontrados:', cardsData.length);
+      // console.log('cardsData do banco:', cardsData);
+      // console.log('Quantidade de cards encontrados:', cardsData.length);
       
       // Função auxiliar para obter ID da coluna pelo nome (usando as colunas mapeadas)
       const getColumnIdFromNameLocal = (columnName: string): number => {
@@ -433,14 +604,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       
       // Carregar subtarefas para cada card
       const mappedCards: Card[] = await Promise.all(cardsData.map(async (card) => {
-        const cardIdValue = card.card_id || card.id.toString();
-        const cardId = parseInt(cardIdValue);
-        const subtasks = await db.getSubtasksForCardByUser(cardId, user?.id || 1, user?.role || 'member');
+        const subtasks = await db.getSubtasksForCardByUser(card.id, user?.id || 1, user?.role || 'member');
         const mappedSubtasks = subtasks.map(subtask => ({
           id: subtask.id.toString(),
           title: subtask.title,
-          completed: subtask.completed,
-          status: subtask.status || (subtask.completed ? 'completed' : 'pending'),
+          completed: subtask.status === 'completed',
+          status: subtask.status || 'pending',
           createdAt: new Date(subtask.created_at),
           dueDate: subtask.due_date,
           priority: subtask.priority as 'low' | 'medium' | 'high',
@@ -505,14 +674,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         
         return false;
       });
-      console.log('=== RESUMO DO CARREGAMENTO ===');
-      console.log('Total de cards mapeados:', mappedCards.length);
-      console.log('Total de cards filtrados:', boardCards.length);
-      console.log('Board ID para filtro:', board.id);
-      console.log('Cards filtrados:', boardCards);
-      console.log('Cards antes de setCards:', cards);
+      // console.log('=== RESUMO DO CARREGAMENTO ===');
+      // console.log('Total de cards mapeados:', mappedCards.length);
+      // console.log('Total de cards filtrados:', boardCards.length);
+      // console.log('Board ID para filtro:', board.id);
+      // console.log('Cards filtrados:', boardCards);
+      // console.log('Cards antes de setCards:', cards);
       setCards(boardCards);
-      console.log('=== CARREGAMENTO CONCLUÍDO ===');
+      // console.log('=== CARREGAMENTO CONCLUÍDO ===');
       
       // Carregar informações dos membros
       const allMemberIds = new Set<number>();
@@ -711,6 +880,25 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         console.log('Resultado da atualização:', success);
 
         if (success) {
+          // Temporariamente comentar para debug
+          /*
+          // Mapear status do KanbanBoard para formato do MyActivities
+          let syncStatus: string = newStatus;
+          if (newStatus === 'todo') {
+            syncStatus = 'pending';
+          } else if (newStatus === 'progress') {
+            syncStatus = 'in_progress';
+          } else if (newStatus === 'done') {
+            syncStatus = 'completed';
+          }
+          
+          // Disparar eventos de sincronização
+          // triggerCardStatusChange(draggedCard.id, syncStatus, 'kanban_board');
+          // triggerCardUpdate(draggedCard.id, 'kanban_board');
+          
+          // console.log('🔄 Sync: Card status change triggered from KanbanBoard', { cardId: draggedCard.id, newStatus, syncStatus });
+          */
+          
           // Recarregar dados do board para garantir consistência
           if (currentBoard) {
             console.log('Recarregando dados do board após mover card...');
@@ -1745,21 +1933,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     const isOverdue = card.due_date && new Date(card.due_date) < new Date();
     
     // Usar subtarefas reais do card se existirem
-    let cardSubtasks = card.subtasks || [];
+    const cardSubtasks = card.subtasks || [];
     
-    // TEMPORÁRIO: Adicionar subtarefas de teste para cards específicos
-    if (card.title === "aaa" || card.title === "bbb" || card.title === "Novo Card") {
-      cardSubtasks = [
-        { id: "1", title: "Subtarefa 1", completed: true, status: "completed", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" },
-        { id: "2", title: "Subtarefa 2", completed: false, status: "pending", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" },
-        { id: "3", title: "Subtarefa 3", completed: false, status: "pending", createdAt: new Date(), dueDate: null, priority: "medium", assignedTo: "Usuário", importance: "normal", category: "Geral" }
-      ];
-    }
-    
-    // Debug: verificar se as subtarefas estão chegando
-    if (cardSubtasks.length > 0) {
-      console.log(`Card "${card.title}" tem ${cardSubtasks.length} subtarefas:`, cardSubtasks);
-    }
+    // Debug: verificar se as subtarefas estão chegando (comentado para performance)
+    // if (cardSubtasks.length > 0) {
+    //   console.log(`Card "${card.title}" tem ${cardSubtasks.length} subtarefas:`, cardSubtasks);
+    // }
     
     // Função para gerar cor do avatar baseada no ID
     const getUserAvatarColor = (userId: number): string => {
@@ -1890,15 +2069,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                               d="M 250.5 108 Q 255.3 140.3 267 165.5 Q 278.3 188.7 296.5 205 L 313.5 218 L 338.5 231 L 360.5 239 L 394 247.5 Q 362.7 254.2 335.5 265 L 303 284 Q 304.1 286.7 301.5 286 L 282 306.5 L 267 333.5 L 261 348.5 L 255 369.5 L 251 386.5 L 251 393 Q 247.5 394.1 249 386.5 L 239 348.5 L 232 331.5 L 216 304.5 L 204.5 292 Q 186.6 275.9 163.5 265 Q 136.8 253.8 105 247.5 L 143.5 238 L 170.5 227 L 195.5 212 L 215 193.5 Q 228.4 177.4 237 156.5 L 245 131.5 L 249 114.5 L 249 109.5 L 250.5 108 Z" 
                             />
                           </svg>
-                        </div>
+            </div>
                         
                         {/* Fim - Círculo verde maior */}
                         <div className="w-4 h-4 bg-green-500 rounded-full border border-white dark:border-gray-800" />
-                      </div>
+                </div>
                     </>
                   );
                 })()}
-              </div>
+                </div>
               
               {/* Labels da Timeline */}
               <div className="flex justify-between items-center mt-1 text-xs text-gray-600 dark:text-gray-400">
@@ -2021,15 +2200,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const ColumnComponent: React.FC<{ column: Column }> = ({ column }) => {
     const filteredColumnCards = filteredCards.filter(card => card.column_id === column.id);
     
-    // Debug: verificar colunas filtradas
-    console.log('=== COLUMN COMPONENT DEBUG ===');
-    console.log('Current Board:', currentBoard);
-    console.log('Column:', column);
-    console.log('All columns:', columns);
-    console.log('Filtered cards:', filteredCards);
-    console.log('Cards for this column:', filteredColumnCards);
-    console.log('Column ID:', column.id);
-    console.log('Cards column_ids:', filteredCards.map(c => ({ id: c.id, title: c.title, column_id: c.column_id })));
+    // Debug: verificar colunas filtradas (comentado para performance)
+    // console.log('=== COLUMN COMPONENT DEBUG ===');
+    // console.log('Current Board:', currentBoard);
+    // console.log('Column:', column);
+    // console.log('All columns:', columns);
+    // console.log('Filtered cards:', filteredCards);
+    // console.log('Cards for this column:', filteredColumnCards);
+    // console.log('Column ID:', column.id);
+    // console.log('Cards column_ids:', filteredCards.map(c => ({ id: c.id, title: c.title, column_id: c.column_id })));
     
     // Verificar se o card sendo arrastado pode ser movido para esta coluna
     const canDropHere = draggedCard ? canMoveToColumn(draggedCard, column.id).canMove : true;
@@ -3155,6 +3334,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
             setShowCardDetailModal(false);
             setSelectedCard(null);
           }}
+          onSubtaskUpdate={updateCardSubtasks}
         />
       )}
 

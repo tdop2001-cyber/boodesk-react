@@ -31,6 +31,8 @@ import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+// Temporariamente comentar para debug
+// import { useSync } from '../contexts/SyncContext';
 import { Card, Column, User as UserType } from '../types';
 import SubtaskManager, { Subtask } from './SubtaskManager';
 import AvatarGroup from './AvatarGroup';
@@ -45,6 +47,7 @@ interface CardDetailModalProps {
   onSave: (updatedCard: Card) => void;
   onDelete: (cardNumericId: number) => void;
   onClose: () => void;
+  onSubtaskUpdate?: (cardId: number) => void; // Nova prop para notificar atualizações
 }
 
  
@@ -75,12 +78,25 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   allCards,
   onSave,
   onDelete,
-  onClose
+  onClose,
+  onSubtaskUpdate
 }) => {
   const { addToast, showPopup } = useToast();
   const { hasPermission } = usePermissions();
   const { cardSettings, getPriorityColor, getPriorityTextColor } = useSettings();
   const { user } = useAuth();
+  // Temporariamente comentar para debug
+  /*
+  const { 
+    triggerSubtaskStatusChange, 
+    triggerSubtaskUpdate, 
+    triggerCardUpdate,
+    onCardStatusChange,
+    onSubtaskStatusChange,
+    onCardUpdate,
+    onSubtaskUpdate: onSubtaskUpdateSync
+  } = useSync();
+  */
 
   const [editedCard, setEditedCard] = useState<Card>(card);
   const [isEditing, setIsEditing] = useState(false);
@@ -90,6 +106,9 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskDescription, setNewSubtaskDescription] = useState('');
+  const [newSubtaskPriority, setNewSubtaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
 
   const kanbanColumns: KanbanColumnDef[] = [
     {
@@ -136,9 +155,183 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
       setSubtasks(updatedSubtasks);
       addToast({ type: 'success', title: 'Status atualizado', message: `Subtarefa movida para ${newStatus}` });
+      if (onSubtaskUpdate && card.id) {
+        onSubtaskUpdate(card.id);
+      }
+      
+      // Temporariamente comentar para debug
+      /*
+      // Disparar eventos de sincronização
+      if (card.id && numericId) {
+        triggerSubtaskStatusChange(card.id, numericId, newStatus, 'card_modal');
+        triggerSubtaskUpdate(card.id, numericId, 'card_modal');
+        triggerCardUpdate(card.id, 'card_modal');
+        
+        console.log('🔄 Sync: Subtask status change triggered from CardDetailModal');
+      }
+      */
     } catch (error) {
       console.error('Erro ao mover subtarefa:', error);
       addToast({ type: 'error', title: 'Erro ao atualizar', message: 'Não foi possível mover a subtarefa.' });
+    }
+  };
+
+  // Função para alternar o status de conclusão de uma subtarefa
+  const handleToggleSubtask = async (subtaskId: string | number) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+
+    const numericId = typeof subtaskId === 'string' ? parseInt(subtaskId) : subtaskId;
+    if (isNaN(numericId)) {
+      addToast({ type: 'error', title: 'Erro', message: 'ID da subtarefa é inválido.' });
+      return;
+    }
+
+    try {
+      const newCompleted = !subtask.completed;
+      const newStatus = newCompleted ? 'completed' : 'pending';
+      
+      await db.updateSubtask(numericId, { 
+        status: newStatus
+      });
+
+      const updatedSubtasks = subtasks.map(s => 
+        s.id === subtaskId 
+          ? { 
+              ...s, 
+              completed: newCompleted, 
+              status: newStatus as 'pending' | 'in_progress' | 'completed',
+              completedAt: newCompleted ? new Date() : undefined
+            }
+          : s
+      );
+
+      setSubtasks(updatedSubtasks);
+      
+      addToast({ 
+        type: 'success', 
+        title: newCompleted ? 'Subtarefa concluída' : 'Subtarefa reaberta',
+        message: newCompleted ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
+      });
+
+      if (onSubtaskUpdate && card.id) {
+        onSubtaskUpdate(card.id);
+      }
+        } catch (error) {
+      console.error('Erro ao alternar subtarefa:', error);
+      addToast({ type: 'error', title: 'Erro ao atualizar', message: 'Não foi possível atualizar a subtarefa.' });
+    }
+  };
+
+  // Função para editar uma subtarefa
+  const handleEditSubtask = (subtaskId: string | number) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+
+    // Por enquanto, vamos apenas mostrar um toast
+    // Em uma implementação completa, abriria um modal de edição
+    addToast({ 
+      type: 'info', 
+      title: 'Editar Subtarefa',
+      message: `Funcionalidade de edição será implementada para: ${subtask.title}`
+    });
+  };
+
+  // Função para deletar uma subtarefa
+  const handleDeleteSubtask = async (subtaskId: string | number) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+
+    const numericId = typeof subtaskId === 'string' ? parseInt(subtaskId) : subtaskId;
+    if (isNaN(numericId)) {
+      addToast({ type: 'error', title: 'Erro', message: 'ID da subtarefa é inválido.' });
+      return;
+    }
+
+    showPopup({
+      title: 'Confirmar Exclusão',
+      message: `Tem certeza que deseja excluir a subtarefa "${subtask.title}"? Esta ação não pode ser desfeita.`,
+      onConfirm: async () => {
+        try {
+          await db.deleteSubtask(numericId);
+          
+          const updatedSubtasks = subtasks.filter(s => s.id !== subtaskId);
+          setSubtasks(updatedSubtasks);
+          
+          addToast({ 
+            type: 'success', 
+            title: 'Subtarefa excluída',
+            message: 'A subtarefa foi excluída com sucesso.'
+          });
+
+          if (onSubtaskUpdate && card.id) {
+            onSubtaskUpdate(card.id);
+          }
+    } catch (error) {
+          console.error('Erro ao deletar subtarefa:', error);
+          addToast({ type: 'error', title: 'Erro ao excluir', message: 'Não foi possível excluir a subtarefa.' });
+        }
+      }
+    });
+  };
+
+  // Função para criar uma nova subtarefa
+  const handleCreateSubtask = async () => {
+    if (!newSubtaskTitle.trim()) {
+      addToast({ type: 'error', title: 'Erro', message: 'O título da subtarefa é obrigatório.' });
+      return;
+    }
+
+    if (!card.id) {
+      addToast({ type: 'error', title: 'Erro', message: 'ID do card não encontrado.' });
+      return;
+    }
+
+    try {
+      const newSubtask = {
+        card_id: card.id,
+        title: newSubtaskTitle.trim(),
+        description: newSubtaskDescription.trim(),
+        priority: newSubtaskPriority,
+        created_by: user?.id || 1
+      };
+
+      const createdSubtask = await db.createSubtask(newSubtask);
+      
+      if (createdSubtask) {
+        const subtaskWithId = {
+          id: createdSubtask.id || Date.now(),
+          title: newSubtask.title,
+          description: newSubtask.description,
+          priority: newSubtask.priority,
+          status: 'pending' as const,
+          completed: false,
+          createdAt: new Date(),
+          importance: newSubtask.priority === 'high' ? 'high' as const : 
+                     newSubtask.priority === 'medium' ? 'normal' as const : 'low' as const
+        };
+
+        setSubtasks(prev => [...prev, subtaskWithId]);
+        
+        // Limpar campos
+        setNewSubtaskTitle('');
+        setNewSubtaskDescription('');
+        setNewSubtaskPriority('medium');
+        setShowCreateSubtaskModal(false);
+        
+        addToast({ 
+          type: 'success', 
+          title: 'Subtarefa criada',
+          message: 'A subtarefa foi criada com sucesso!'
+        });
+
+        if (onSubtaskUpdate && card.id) {
+          onSubtaskUpdate(card.id);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar subtarefa:', error);
+      addToast({ type: 'error', title: 'Erro ao criar', message: 'Não foi possível criar a subtarefa.' });
     }
   };
 
@@ -161,19 +354,19 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
             }
             
             return {
-              id: (subtask.id || '').toString(),
-              title: subtask.title || '',
-              description: subtask.description || '',
-              completed: subtask.completed || false,
-              priority: (subtask.priority || 'medium') as 'low' | 'medium' | 'high',
-              dueDate: subtask.due_date || '',
+          id: (subtask.id || '').toString(),
+          title: subtask.title || '',
+          description: subtask.description || '',
+              completed: subtask.status === 'completed',
+          priority: (subtask.priority || 'medium') as 'low' | 'medium' | 'high',
+          dueDate: subtask.due_date || '',
               estimatedTime: 0,
               actualTime: 0,
               importance: 'normal' as 'low' | 'high' | 'normal' | 'critical',
               category: 'Geral',
               tags: [],
               status: mappedStatus as 'pending' | 'in_progress' | 'completed',
-              createdAt: new Date()
+          createdAt: new Date()
             };
           });
         
@@ -192,6 +385,170 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
       loadCardData();
     }
   }, [card.id, card.card_id]);
+
+  // ===== LISTENERS DE SINCRONIZAÇÃO =====
+  
+  // Temporariamente comentar para debug
+  /*
+  // Escutar mudanças de status de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardStatusChange((cardId, newStatus, source) => {
+      if (source !== 'card_modal' && cardId === card.id) { // Evitar loops e atualizar apenas o card atual
+        console.log('🔄 Sync: Card status change received in CardDetailModal from', source, { cardId, newStatus });
+        
+        // Atualizar o card local
+        setEditedCard(prevCard => ({
+          ...prevCard,
+          status: newStatus === 'completed' ? 'done' : 
+                 newStatus === 'in_progress' ? 'progress' : 'todo'
+        }));
+        
+    addToast({
+          type: 'info',
+      title: 'Card atualizado',
+          message: `Status do card foi atualizado para "${newStatus}"`
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardStatusChange, card.id, addToast]);
+
+  // Escutar mudanças de status de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskStatusChange((cardId, subtaskId, newStatus, source) => {
+      if (source !== 'card_modal' && cardId === card.id) { // Evitar loops e atualizar apenas o card atual
+        console.log('🔄 Sync: Subtask status change received in CardDetailModal from', source, { cardId, subtaskId, newStatus });
+        
+        // Atualizar a subtarefa específica
+        setSubtasks(prevSubtasks => {
+          return prevSubtasks.map(subtask => {
+            if (subtask.id === subtaskId.toString()) {
+              return { 
+                ...subtask, 
+                status: newStatus as any, 
+                completed: newStatus === 'completed' 
+              };
+            }
+            return subtask;
+          });
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskStatusChange, card.id]);
+
+  // Escutar atualizações de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardUpdate((cardId, source) => {
+      if (source !== 'card_modal' && cardId === card.id) { // Evitar loops e atualizar apenas o card atual
+        console.log('🔄 Sync: Card update received in CardDetailModal from', source, { cardId });
+        
+        // Recarregar dados do card
+        const reloadCardData = async () => {
+          try {
+            const cardNumericId = card.card_id || card.id;
+            
+            if (cardNumericId) {
+              const cardSubtasks = await db.getSubtasksForCardByUser(
+                Number(cardNumericId), 
+                user?.id || 1, 
+                String(user?.role || 'member')
+              );
+              
+              const mappedSubtasks = cardSubtasks.map(subtask => {
+                let mappedStatus = subtask.status || 'pending';
+                if (mappedStatus === 'pending') {
+                  mappedStatus = 'todo';
+                }
+                
+                return {
+                  id: (subtask.id || '').toString(),
+                  title: subtask.title || '',
+                  description: subtask.description || '',
+                  completed: subtask.completed || false,
+                  priority: (subtask.priority || 'medium') as 'low' | 'medium' | 'high',
+                  dueDate: subtask.due_date || '',
+                  estimatedTime: 0,
+                  actualTime: 0,
+                  importance: 'normal' as 'low' | 'high' | 'normal' | 'critical',
+                  category: 'Geral',
+                  tags: [],
+                  status: mappedStatus as 'pending' | 'in_progress' | 'completed',
+                  createdAt: new Date()
+                };
+              });
+            
+              setSubtasks(mappedSubtasks);
+            }
+          } catch (error) {
+            console.error('Erro ao recarregar dados do card:', error);
+          }
+        };
+        
+        reloadCardData();
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardUpdate, card.id, card.card_id, user?.id, user?.role]);
+
+  // Escutar atualizações de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskUpdateSync((cardId: number, subtaskId: number, source: string) => {
+      if (source !== 'card_modal' && cardId === card.id) { // Evitar loops e atualizar apenas o card atual
+        console.log('🔄 Sync: Subtask update received in CardDetailModal from', source, { cardId, subtaskId });
+        
+        // Recarregar subtarefas do card
+        const reloadSubtasks = async () => {
+          try {
+            const cardNumericId = card.card_id || card.id;
+            
+            if (cardNumericId) {
+              const cardSubtasks = await db.getSubtasksForCardByUser(
+                Number(cardNumericId), 
+                user?.id || 1, 
+                String(user?.role || 'member')
+              );
+              
+              const mappedSubtasks = cardSubtasks.map(subtask => {
+                let mappedStatus = subtask.status || 'pending';
+                if (mappedStatus === 'pending') {
+                  mappedStatus = 'todo';
+                }
+                
+                return {
+                  id: (subtask.id || '').toString(),
+                  title: subtask.title || '',
+                  description: subtask.description || '',
+                  completed: subtask.completed || false,
+                  priority: (subtask.priority || 'medium') as 'low' | 'medium' | 'high',
+                  dueDate: subtask.due_date || '',
+                  estimatedTime: 0,
+                  actualTime: 0,
+                  importance: 'normal' as 'low' | 'high' | 'normal' | 'critical',
+                  category: 'Geral',
+                  tags: [],
+                  status: mappedStatus as 'pending' | 'in_progress' | 'completed',
+                  createdAt: new Date()
+                };
+              });
+            
+              setSubtasks(mappedSubtasks);
+            }
+          } catch (error) {
+            console.error('Erro ao recarregar subtarefas:', error);
+          }
+        };
+        
+        reloadSubtasks();
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskUpdateSync, card.id, card.card_id, user?.id, user?.role]);
+  */
 
   const handleSave = () => {
     const updatedCard = {
@@ -319,14 +676,15 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                       <p className="text-brand-gray/70">{editedCard.description || 'Sem descrição'}</p>
                     )}
                   </div>
-                </div>
+                    </div>
               )}
 
               {activeTab === 'subtasks' && (
                  <div className="space-y-4">
                        <div className="flex items-center justify-between">
+                         <div>
                          <h4 className="text-sm font-medium text-brand-gray">Gerenciamento de Subtarefas</h4>
-                         <div className="flex items-center space-x-2">
+                           <div className="flex items-center space-x-4 mt-2">
                            <div className="flex items-center space-x-1 bg-brand-light-gray/30 rounded-lg p-1">
                              <button
                                onClick={() => setSubtaskViewMode('list')}
@@ -348,6 +706,11 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                              >
                                Kanban
                              </button>
+                             </div>
+                             <div className="text-xs text-brand-gray/60">
+                               {subtasks.filter(s => s.completed).length}/{subtasks.length} concluídas
+                             </div>
+                           </div>
                            </div>
                            <button
                              onClick={() => setShowCreateSubtaskModal(true)}
@@ -356,8 +719,27 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                              <Plus className="w-4 h-4" />
                              <span>Nova Subtarefa</span>
                            </button>
-                         </div>
                        </div>
+
+                       {/* Barra de Progresso */}
+                       {subtasks.length > 0 && (
+                         <div className="bg-brand-light-gray/20 rounded-lg p-3">
+                           <div className="flex items-center justify-between mb-2">
+                             <span className="text-sm font-medium text-brand-gray">Progresso das Subtarefas</span>
+                             <span className="text-sm text-brand-gray/60">
+                               {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
+                           </span>
+                         </div>
+                           <div className="w-full bg-brand-light-gray/30 rounded-full h-2">
+                           <div 
+                             className="bg-brand-green h-2 rounded-full transition-all duration-300"
+                             style={{ 
+                                 width: `${(subtasks.filter(s => s.completed).length / subtasks.length) * 100}%` 
+                             }}
+                             />
+                         </div>
+                             </div>
+                       )}
 
                        <div className="space-y-3">
                          {subtasks.length === 0 ? (
@@ -379,20 +761,72 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                              cardId={String(card.id)}
                            />
                          ) : (
-                           <SubtaskManager
-                             subtasks={subtasks}
-                             onSubtasksChange={(updatedSubtasks) => {
-                               setSubtasks(updatedSubtasks);
-                             }}
-                             isExpanded={true}
-                             cardId={card.id}
-                             showSubtasks={true}
-                           />
+                           <div className="space-y-2">
+                             {subtasks.map((subtask, index) => (
+                               <div key={subtask.id} className="bg-white border border-brand-light-gray/30 rounded-lg p-3 hover:shadow-sm transition-shadow">
+                                 <div className="flex items-center space-x-3">
+                                   <button
+                                     onClick={() => handleToggleSubtask(subtask.id)}
+                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                       subtask.completed 
+                                         ? 'bg-brand-green border-brand-green text-white' 
+                                         : 'border-brand-gray/30 hover:border-brand-green'
+                                     }`}
+                                   >
+                                     {subtask.completed && <CheckSquare className="w-3 h-3" />}
+                                   </button>
+                                   
+                                   <div className="flex-1 min-w-0">
+                                     <div className="flex items-center space-x-2">
+                                       <h5 className={`text-sm font-medium ${
+                                         subtask.completed ? 'line-through text-brand-gray/60' : 'text-brand-gray'
+                                       }`}>
+                                         {subtask.title}
+                                       </h5>
+                                       {subtask.priority && (
+                                         <span className={`px-2 py-1 text-xs rounded-full ${
+                                           subtask.priority === 'high' ? 'bg-red-100 text-red-600' :
+                                           subtask.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                                           'bg-green-100 text-green-600'
+                                         }`}>
+                                           {subtask.priority === 'high' ? 'Alta' : 
+                                            subtask.priority === 'medium' ? 'Normal' : 'Baixa'}
+                                         </span>
                          )}
                        </div>
-                     </div>
-                  )}
+                                     {subtask.description && (
+                                       <p className="text-xs text-brand-gray/60 mt-1">{subtask.description}</p>
+                                     )}
+                          </div>
+                                   
+                                   <div className="flex items-center space-x-2">
+                                     {subtask.dueDate && (
+                                       <span className="text-xs text-brand-gray/60">
+                                         {new Date(subtask.dueDate).toLocaleDateString()}
+                                       </span>
+                                     )}
+                        <button
+                                       onClick={() => handleEditSubtask(subtask.id)}
+                                       className="p-1 text-brand-gray/60 hover:text-brand-blue transition-colors"
+                        >
+                                       <Edit className="w-4 h-4" />
+                        </button>
+                                <button
+                                       onClick={() => handleDeleteSubtask(subtask.id)}
+                                       className="p-1 text-brand-gray/60 hover:text-brand-red transition-colors"
+                                >
+                                       <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                      </div>
+                    </div>
+                             ))}
             </div>
+                  )}
+                </div>
+                      </div>
+                  )}
+              </div>
 
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-brand-light-gray p-6">
@@ -494,6 +928,90 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         currentUserId={user?.id || 1}
         cardMembers={(card.members || []).map(id => id.toString())}
       />
+
+      {/* Modal para criar nova subtarefa */}
+      {showCreateSubtaskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-brand-light-gray">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-brand-green/10 rounded-lg">
+                  <Plus className="w-5 h-5 text-brand-green" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-brand-gray">Nova Subtarefa</h3>
+                  <p className="text-sm text-brand-gray/60">Adicione uma nova subtarefa ao card</p>
+                </div>
+              </div>
+                <button
+                onClick={() => setShowCreateSubtaskModal(false)}
+                className="p-2 text-brand-gray/60 hover:text-brand-gray transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-gray mb-2">
+                  Título da Subtarefa *
+                </label>
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  placeholder="Digite o título da subtarefa..."
+                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-brand-gray mb-2">
+                  Descrição
+                </label>
+                <textarea
+                  value={newSubtaskDescription}
+                  onChange={(e) => setNewSubtaskDescription(e.target.value)}
+                  placeholder="Digite uma descrição (opcional)..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-brand-gray mb-2">
+                  Prioridade
+                </label>
+                <select
+                  value={newSubtaskPriority}
+                  onChange={(e) => setNewSubtaskPriority(e.target.value as 'low' | 'medium' | 'high')}
+                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                >
+                  <option value="low">Baixa</option>
+                  <option value="medium">Normal</option>
+                  <option value="high">Alta</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-brand-light-gray">
+                <button
+                onClick={() => setShowCreateSubtaskModal(false)}
+                className="px-4 py-2 text-brand-gray/60 hover:text-brand-gray transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateSubtask}
+                className="flex items-center space-x-2 px-4 py-2 bg-brand-green text-white rounded-lg hover:bg-brand-green/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Criar Subtarefa</span>
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

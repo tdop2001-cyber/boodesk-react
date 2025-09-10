@@ -23,6 +23,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { db } from '../services/database';
 import { useAuth } from '../contexts/AuthContext';
+// Temporariamente comentar para debug
+// import { useSync } from '../contexts/SyncContext';
 
 
 // Interface compatível com o banco de dados
@@ -71,6 +73,7 @@ interface SubtaskManagerProps {
   onToggleExpanded?: () => void;
   cardId?: number; // ID do card para salvar no banco
   showSubtasks?: boolean; // Controla se deve mostrar as subtarefas ou apenas detalhes
+  onSubtaskUpdate?: (cardId: number) => void; // Nova prop para notificar atualizações
 }
 
 const SubtaskManager: React.FC<SubtaskManagerProps> = ({
@@ -79,11 +82,19 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
   isExpanded = false,
   onToggleExpanded,
   cardId,
-  showSubtasks = true
+  showSubtasks = true,
+  onSubtaskUpdate
 }) => {
+  console.log('=== SUBTASK MANAGER INICIALIZADO ===');
+  console.log('cardId recebido:', cardId);
+  console.log('onSubtaskUpdate recebido:', typeof onSubtaskUpdate);
+  console.log('subtasks recebidas:', subtasks.length);
+  
   const { addToast } = useToast();
   const { getPriorityColor, getPriorityTextColor } = useSettings();
   const { user } = useAuth();
+  // Temporariamente comentar para debug
+  // const { triggerSubtaskStatusChange, triggerSubtaskUpdate, triggerCardUpdate } = useSync();
 
   const getPriorityLabel = (priority: string): string => {
     switch (priority.toLowerCase()) {
@@ -427,43 +438,87 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
 
   const toggleSubtask = async (id: string) => {
     try {
-      const updatedSubtasks = subtasks.map(subtask => {
-        if (subtask.id.toString() === id) {
-          const updatedSubtask: Subtask = {
-            ...subtask,
-            completed: !subtask.completed,
-            completedAt: !subtask.completed ? new Date() : undefined
+      console.log('=== TOGGLE SUBTASK CHAMADO ===');
+      console.log('ID recebido:', id);
+      console.log('cardId:', cardId);
+      console.log('onSubtaskUpdate exists:', !!onSubtaskUpdate);
+      
+      const subtask = subtasks.find(s => s.id.toString() === id);
+      if (!subtask) {
+        console.error('Subtarefa não encontrada:', id);
+        return;
+      }
+      
+      console.log('Subtarefa encontrada:', subtask);
+
+      const updatedSubtask: Subtask = {
+        ...subtask,
+        completed: !subtask.completed,
+        completedAt: !subtask.completed ? new Date() : undefined
+      };
+
+      // Salvar no banco de dados primeiro
+      if (cardId && typeof subtask.id === 'number') {
+        console.log(`Attempting to update subtask ${subtask.id} status to ${updatedSubtask.completed ? 'completed' : 'todo'}`);
+        try {
+          const updateData = {
+            status: updatedSubtask.completed ? 'completed' : 'todo'
           };
-
-          // Salvar no banco de dados
-          if (cardId && typeof subtask.id === 'number') {
-            db.updateSubtask(subtask.id, {
-              status: updatedSubtask.completed ? 'completed' : 'todo'
-            }).catch(error => {
-              console.error('Erro ao salvar subtarefa:', error);
-              addToast({
-                type: 'error',
-                title: 'Erro ao salvar',
-                message: 'Não foi possível salvar a alteração da subtarefa.'
-              });
-            });
-          }
-
-          return updatedSubtask;
+          
+          await db.updateSubtask(subtask.id, updateData);
+          console.log(`Subtask ${subtask.id} status updated successfully in DB.`);
+        } catch (error) {
+          console.error('Erro ao salvar subtarefa:', error);
+          addToast({
+            type: 'error',
+            title: 'Erro ao salvar',
+            message: 'Não foi possível salvar a alteração da subtarefa.'
+          });
+          return; // Para a execução se falhou ao salvar
         }
-        return subtask;
-      });
+      } else {
+        console.warn(`Subtask ${subtask.id} not saved to DB: cardId is ${cardId} or subtask.id is not a number (${typeof subtask.id}).`);
+      }
+
+      // Atualizar o estado local apenas se salvou no banco
+      const updatedSubtasks = subtasks.map(s => 
+        s.id.toString() === id ? updatedSubtask : s
+      );
 
       onSubtasksChange(updatedSubtasks);
       
-      const subtask = subtasks.find(s => s.id.toString() === id);
-      if (subtask) {
-        addToast({
-          type: 'success',
-          title: !subtask.completed ? 'Subtarefa concluída' : 'Subtarefa reaberta',
-          message: !subtask.completed ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
-        });
+      // Notificar o componente pai para atualizar a timeline
+      if (onSubtaskUpdate && cardId) {
+        console.log('=== CHAMANDO onSubtaskUpdate ===');
+        console.log('cardId:', cardId);
+        console.log('onSubtaskUpdate function:', typeof onSubtaskUpdate);
+        console.log('Chamando onSubtaskUpdate para atualizar timeline...');
+        onSubtaskUpdate(cardId);
+        console.log('onSubtaskUpdate chamado com sucesso');
+      } else {
+        console.log('=== onSubtaskUpdate NÃO CHAMADO ===');
+        console.log('onSubtaskUpdate exists:', !!onSubtaskUpdate);
+        console.log('cardId:', cardId);
+        console.log('Tipo do cardId:', typeof cardId);
       }
+      
+      // Temporariamente comentar para debug
+      /*
+      // Disparar eventos de sincronização
+      if (cardId && typeof subtask.id === 'number') {
+        triggerSubtaskStatusChange(cardId, subtask.id, updatedSubtask.completed ? 'completed' : 'pending', 'subtask_manager');
+        triggerSubtaskUpdate(cardId, subtask.id, 'subtask_manager');
+        triggerCardUpdate(cardId, 'subtask_manager');
+        
+        console.log('🔄 Sync: Subtask status change triggered from SubtaskManager');
+      }
+      */
+      
+      addToast({
+        type: 'success',
+        title: !subtask.completed ? 'Subtarefa concluída' : 'Subtarefa reaberta',
+        message: !subtask.completed ? 'Parabéns! Subtarefa marcada como concluída.' : 'Subtarefa reaberta para edição.'
+      });
     } catch (error) {
       console.error('Erro ao alternar subtarefa:', error);
       addToast({
@@ -613,6 +668,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
     setSelectedSubtaskForKanban(null);
   };
 
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -726,8 +782,17 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
                 >
                   {/* Checkbox */}
                   <button
-                    onClick={() => toggleSubtask(subtask.id.toString())}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('=== CHECKBOX CLICADO ===');
+                      console.log('subtask.id:', subtask.id);
+                      console.log('subtask.id.toString():', subtask.id.toString());
+                      console.log('toggleSubtask function:', typeof toggleSubtask);
+                      toggleSubtask(subtask.id.toString());
+                    }}
                     className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors mt-0.5"
+                    style={{ zIndex: 9999 }}
                   >
                     {subtask.completed ? (
                       <CheckSquare className="w-5 h-5 text-green-600" />

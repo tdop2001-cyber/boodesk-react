@@ -32,8 +32,6 @@ export interface Subtask {
   importance: string;
   tags: string[];
   category?: string;
-  completed: boolean;
-  completed_at?: string | null;
   user_id?: number;
   created_at: string;
   updated_at: string;
@@ -901,25 +899,30 @@ export class DatabaseService {
         return await this.getSubtasksForCard(cardId);
       }
 
-      const { data, error } = await supabase
-        .from('subtasks')
-        .select('*')
-        .eq('card_id', cardId)
-        // Removido .contains para filtrar no lado do cliente
-        .order('created_at');
+      // Para usuários não-admin, verificar se são membros do card
+      const { data: cardData, error: cardError } = await supabase
+        .from('cards')
+        .select('members')
+        .eq('id', cardId)
+        .single();
 
-      if (error) {
-        console.error('Erro ao buscar subtarefas:', error);
-        throw error;
+      if (cardError || !cardData) {
+        console.error('Erro ao buscar card ou card não encontrado:', cardError);
+        return [];
       }
 
-      // Filtrar subtarefas onde o usuário é membro
-      const filteredSubtasks = (data || []).filter(subtask => {
-        if (!subtask.members || !Array.isArray(subtask.members)) return false;
-        return subtask.members.includes(userId) || subtask.members.includes(String(userId));
-      });
+      // Verificar se o usuário é membro do card
+      const cardMembers = cardData.members || [];
+      const isCardMember = Array.isArray(cardMembers) && 
+        (cardMembers.includes(userId) || cardMembers.includes(String(userId)));
 
-      return filteredSubtasks;
+      if (!isCardMember) {
+        console.log('Usuário não é membro do card, retornando subtarefas vazias');
+        return [];
+      }
+
+      // Se é membro do card, retornar todas as subtarefas do card
+      return await this.getSubtasksForCard(cardId);
     } catch (error) {
       console.error('Erro ao buscar subtarefas por usuário:', error);
       return [];
@@ -1582,16 +1585,37 @@ export class DatabaseService {
     status?: string;
     members?: string[];
     position?: number;
+    completed?: boolean;
+    completed_at?: string | null;
   }): Promise<any> {
     try {
       console.log('Database: Atualizando subtarefa ID:', subtaskId, 'Updates:', updates);
 
+      // Mapear updates para as colunas corretas da tabela
+      const mappedUpdates: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Mapear campos que existem na tabela
+      if (updates.title !== undefined) mappedUpdates.title = updates.title;
+      if (updates.description !== undefined) mappedUpdates.description = updates.description;
+      if (updates.priority !== undefined) mappedUpdates.priority = updates.priority;
+      if (updates.due_date !== undefined) mappedUpdates.due_date = updates.due_date;
+      if (updates.status !== undefined) mappedUpdates.status = updates.status;
+      if (updates.position !== undefined) mappedUpdates.position = updates.position;
+      
+      // Se completed é fornecido, mapear para status
+      if (updates.completed !== undefined) {
+        if (updates.completed) {
+          mappedUpdates.status = 'completed';
+        } else if (updates.status === undefined) {
+          mappedUpdates.status = 'todo';
+        }
+      }
+
       const { data, error } = await supabase
         .from('subtasks')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(mappedUpdates)
         .eq('id', subtaskId)
         .select(`
           *,
@@ -1802,7 +1826,7 @@ export class DatabaseService {
       console.log('Database: Atualizando status do card baseado nas subtarefas:', cardId);
       
       // Busca todas as subtarefas do card
-      const subtasks = await this.getSubtasksForCardByUser(parseInt(cardId), 0, '');
+      const subtasks = await this.getSubtasksForCard(parseInt(cardId));
       
       if (!subtasks || subtasks.length === 0) {
         console.log('Database: Nenhuma subtarefa encontrada, mantendo status atual');
@@ -1813,8 +1837,8 @@ export class DatabaseService {
       let newStatus = 'pending'; // padrão
       
       const totalSubtasks = subtasks.length;
-      const completedSubtasks = subtasks.filter(sub => sub.completed || sub.status === 'completed').length;
-      const inProgressSubtasks = subtasks.filter(sub => sub.status === 'in_progress' && !sub.completed).length;
+      const completedSubtasks = subtasks.filter(sub => sub.status === 'completed').length;
+      const inProgressSubtasks = subtasks.filter(sub => sub.status === 'in_progress').length;
       const pendingSubtasks = subtasks.filter(sub => sub.status === 'pending' || sub.status === 'todo').length;
 
       console.log('Database: Status das subtarefas:', {

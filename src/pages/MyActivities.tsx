@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
+// Temporariamente comentar para debug
+// import { useSync } from '../contexts/SyncContext';
 
 import { Card, Column, User as UserType } from '../types';
 import { db } from '../services/database';
@@ -74,6 +76,19 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   const { hasPermission } = usePermissions();
   const { addToast } = useToast();
   const { getPriorityColor, getPriorityTextColor } = useSettings();
+  // Temporariamente comentar para debug
+  /*
+  const { 
+    triggerCardStatusChange, 
+    triggerSubtaskStatusChange, 
+    triggerCardUpdate, 
+    triggerSubtaskUpdate,
+    onCardStatusChange,
+    onSubtaskStatusChange,
+    onCardUpdate,
+    onSubtaskUpdate
+  } = useSync();
+  */
   
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
@@ -270,7 +285,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
       return {
         status: 'no_subtasks',
         statusLabel: 'Sem Subtarefas',
-        statusColor: 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 shadow-gray-200/25',
+        statusColor: 'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25',
       };
     }
 
@@ -283,7 +298,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
       return {
         status: 'in_progress',
         statusLabel: 'Em Progresso',
-        statusColor: 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25',
+        statusColor: 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-800 shadow-blue-200/25',
       };
     }
 
@@ -291,7 +306,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
       return {
         status: 'completed',
         statusLabel: 'Concluído',
-        statusColor: 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25',
+        statusColor: 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25',
       };
     }
 
@@ -299,7 +314,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
       return {
         status: 'pending',
         statusLabel: 'A Fazer',
-        statusColor: 'bg-gradient-to-r from-red-200 to-red-300 text-red-800 shadow-red-200/25',
+        statusColor: 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 shadow-gray-200/25',
       };
     }
 
@@ -307,7 +322,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     return {
       status: 'in_progress',
       statusLabel: 'Em Progresso',
-      statusColor: 'bg-gradient-to-r from-green-200 to-green-300 text-green-800 shadow-green-200/25',
+      statusColor: 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-800 shadow-blue-200/25',
     };
   };
 
@@ -397,7 +412,26 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
     try {
       if (item.type === 'card') {
-        await db.updateCard(String(numericId), { status: newStatus as 'todo' | 'progress' | 'done' });
+        // Mapear status do Kanban para status do banco de dados
+        let dbStatus: 'todo' | 'progress' | 'done' = 'todo';
+        if (newStatus === 'pending') {
+          dbStatus = 'todo';
+        } else if (newStatus === 'in_progress') {
+          dbStatus = 'progress';
+        } else if (newStatus === 'completed') {
+          dbStatus = 'done';
+        }
+        
+        await db.updateCard(String(numericId), { status: dbStatus });
+        
+        // Temporariamente comentar para debug
+        /*
+        // Disparar evento de sincronização para mudança de status do card
+        triggerCardStatusChange(numericId, newStatus, 'my_activities');
+        triggerCardUpdate(numericId, 'my_activities');
+        
+        console.log('🔄 Sync: Card status change triggered from MyActivities', { cardId: numericId, newStatus, dbStatus });
+        */
       } else {
         // Mapear status do Kanban para status do banco de dados
         let dbStatus = newStatus;
@@ -421,6 +455,19 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
         
         await db.updateSubtask(subtaskId, { status: dbStatus });
         console.log('Subtarefa atualizada no banco com sucesso!');
+        
+        // Temporariamente comentar para debug
+        /*
+        // Disparar eventos de sincronização para mudança de status da subtarefa
+        if (item.parentCardId) {
+          const parentCardId = parseInt(item.parentCardId);
+          triggerSubtaskStatusChange(parentCardId, subtaskId, newStatus, 'my_activities');
+          triggerSubtaskUpdate(parentCardId, subtaskId, 'my_activities');
+          triggerCardUpdate(parentCardId, 'my_activities'); // Atualizar o card pai também
+          
+          console.log('🔄 Sync: Subtask status change triggered from MyActivities');
+        }
+        */
       }
 
       const newActivities = activities.map(act => {
@@ -604,7 +651,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
               status: mappedStatus,
               priority: sub.priority || 'medium',
               dueDate: sub.due_date,
-              completed: sub.status === 'completed' || sub.completed === true,
+              completed: sub.status === 'completed',
               parentCardId: card.card_id
             };
           })
@@ -644,7 +691,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   useEffect(() => {
     if (user?.id) {
       loadUserPreferences().then(() => {
-        loadActivities();
+      loadActivities();
       });
     }
   }, [user?.id]);
@@ -725,6 +772,161 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     };
   }, [saveTimeout]);
 
+  // ===== LISTENERS DE SINCRONIZAÇÃO =====
+  
+  // Temporariamente comentar para debug
+  /*
+  // Escutar mudanças de status de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardStatusChange((cardId, newStatus, source) => {
+      if (source !== 'my_activities') { // Evitar loops
+        console.log('🔄 Sync: Card status change received in MyActivities from', source, { cardId, newStatus });
+        
+        // Atualizar o card específico no estado local em vez de recarregar tudo
+        setActivities(prevActivities => {
+          return prevActivities.map(activity => {
+            if (activity.id === cardId.toString()) {
+              return { ...activity, status: newStatus as any, completed: newStatus === 'completed' };
+            }
+            return activity;
+          });
+        });
+        
+        addToast({
+          type: 'info',
+          title: 'Card atualizado',
+          message: `Status do card foi atualizado para "${newStatus}"`
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardStatusChange, addToast]);
+
+  // Escutar mudanças de status de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskStatusChange((cardId, subtaskId, newStatus, source) => {
+      if (source !== 'my_activities') { // Evitar loops
+        console.log('🔄 Sync: Subtask status change received in MyActivities from', source, { cardId, subtaskId, newStatus });
+        
+        // Atualizar a subtarefa específica no estado local
+        setActivities(prevActivities => {
+          return prevActivities.map(activity => {
+        if (activity.subtasks) {
+          return {
+            ...activity,
+                subtasks: activity.subtasks.map(subtask => {
+                  if (subtask.id === subtaskId.toString()) {
+                    return { ...subtask, status: newStatus as any, completed: newStatus === 'completed' };
+                  }
+                  return subtask;
+                })
+          };
+        }
+        return activity;
+          });
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskStatusChange]);
+
+  // Escutar atualizações de cards vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onCardUpdate((cardId, source) => {
+      if (source !== 'my_activities') { // Evitar loops
+        console.log('🔄 Sync: Card update received in MyActivities from', source, { cardId });
+        
+        // Recarregar apenas o card específico em vez de todas as atividades
+        // Isso evita o mapeamento múltiplo
+        const reloadSpecificCard = async () => {
+          try {
+            const boards = await db.getBoards(user?.id || 1);
+            let allCards: any[] = [];
+            
+            for (const board of boards) {
+              const cards = await db.getCardsForBoardByUser(
+                String(board.board_id || board.id), 
+                user?.id || 1, 
+                user?.role || 'member'
+              );
+              allCards = [...allCards, ...cards];
+            }
+            
+            // Encontrar e atualizar apenas o card específico
+            const updatedCard = allCards.find(card => card.id === cardId);
+            if (updatedCard) {
+              setActivities(prevActivities => {
+                return prevActivities.map(activity => {
+                  if (activity.id === cardId.toString()) {
+        return {
+          ...activity,
+                      status: updatedCard.status,
+                      completed: updatedCard.status === 'completed'
+        };
+      }
+      return activity;
+                });
+              });
+            }
+          } catch (error) {
+            console.error('Erro ao recarregar card específico:', error);
+          }
+        };
+        
+        reloadSpecificCard();
+      }
+    });
+
+    return unsubscribe;
+  }, [onCardUpdate, user?.id, user?.role]);
+
+  // Escutar atualizações de subtarefas vindas de outros componentes
+  useEffect(() => {
+    const unsubscribe = onSubtaskUpdate((cardId, subtaskId, source) => {
+      if (source !== 'my_activities') { // Evitar loops
+        console.log('🔄 Sync: Subtask update received in MyActivities from', source, { cardId, subtaskId });
+        
+        // Recarregar apenas as subtarefas do card específico
+        const reloadCardSubtasks = async () => {
+          try {
+            const subtasks = await db.getSubtasksForCardByUser(cardId, user?.id || 1, user?.role || 'member');
+            
+            setActivities(prevActivities => {
+              return prevActivities.map(activity => {
+                if (activity.id === cardId.toString()) {
+                  const mappedSubtasks = subtasks.map(subtask => ({
+                    id: subtask.id.toString(),
+                    type: 'subtask' as const,
+                    title: subtask.title,
+                    description: subtask.description,
+                    status: (subtask.status === 'completed' ? 'completed' : 
+                            subtask.status === 'in_progress' ? 'in_progress' : 'pending') as any,
+                    priority: (subtask.priority || 'medium') as any,
+                    completed: subtask.completed,
+                    parentCardId: cardId.toString(),
+                    boardId: activity.boardId
+                  }));
+                  
+                  return { ...activity, subtasks: mappedSubtasks };
+                }
+                return activity;
+              });
+            });
+          } catch (error) {
+            console.error('Erro ao recarregar subtarefas do card:', error);
+          }
+        };
+        
+        reloadCardSubtasks();
+      }
+    });
+
+    return unsubscribe;
+  }, [onSubtaskUpdate, user?.id, user?.role]);
+  */
+
   const filteredActivities = activities.filter(activity => {
     const matchesSearch = activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          activity.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -779,7 +981,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           aValue = new Date(a.id).getTime(); // Usando ID como proxy para data de criação
           bValue = new Date(b.id).getTime();
           break;
-        default:
+      default:
           return 0;
       }
 
@@ -1110,7 +1312,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200/60 rounded-lg focus:ring-1 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm bg-white/70 backdrop-blur-sm shadow-sm hover:bg-white/80"
               />
             </div>
-          </div>
+            </div>
 
           {/* Sistema de Filtros com Botões */}
           <div className="space-y-4">
@@ -1216,37 +1418,37 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             {showFilters && (
               <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-5 shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-2 duration-300">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="relative">
-                    <select
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value as any)}
+            <div className="relative">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
                       className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
-                    >
+              >
                       <option value="all">Todos os tipos</option>
-                      <option value="cards">Apenas tarefas</option>
-                      <option value="subtasks">Apenas subtarefas</option>
-                    </select>
+                 <option value="cards">Apenas tarefas</option>
+                 <option value="subtasks">Apenas subtarefas</option>
+              </select>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                  </div>
+            </div>
 
-                  <div className="relative">
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value as any)}
+            <div className="relative">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
                       className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
                     >
                       <option value="all">Todos os status</option>
                       <option value="pending">Pendente</option>
                       <option value="in_progress">Em progresso</option>
                       <option value="completed">Concluído</option>
-                    </select>
+              </select>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                  </div>
+            </div>
 
-                  <div className="relative">
-                    <select
-                      value={filterPriority}
-                      onChange={(e) => setFilterPriority(e.target.value as any)}
+            <div className="relative">
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value as any)}
                       className="px-4 py-2.5 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm font-medium appearance-none bg-white/80 backdrop-blur-sm pr-8 shadow-sm hover:bg-white hover:shadow-md"
                     >
                       <option value="all">Todas as prioridades</option>
@@ -1254,9 +1456,9 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                       <option value="high">Alta</option>
                       <option value="medium">Normal</option>
                       <option value="low">Baixa</option>
-                    </select>
+              </select>
                     <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                  </div>
+            </div>
 
                   <div className="relative">
                     <select
@@ -1287,7 +1489,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     <ArrowUpDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
                   </div>
 
-                  <button
+              <button
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                     className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
                       sortOrder === 'asc' 
@@ -1298,7 +1500,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   >
                     {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                     {sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
-                  </button>
+              </button>
                 </div>
               </div>
             )}
@@ -1320,7 +1522,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     </label>
                   </div>
 
-                  <button
+              <button
                     onClick={() => setGroupByBoard(!groupByBoard)}
                     className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
                       groupByBoard 
@@ -1331,9 +1533,9 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   >
                     <Layers className="w-4 h-4" />
                     {groupByBoard ? 'Agrupado por Quadro' : 'Agrupar por Quadro'}
-                  </button>
-                </div>
-              </div>
+              </button>
+            </div>
+          </div>
             )}
           </div>
 
@@ -1369,7 +1571,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 }) || []}
                 onItemMove={handleItemMove}
               />
-            </div>
+                    </div>
           ) : (
             <div className="space-y-8">
               {groupByBoard ? (
@@ -1383,9 +1585,9 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                         <p className="text-sm text-slate-600">
                           {availableBoards.filter(board => sortedAndFilteredActivities.some(card => card.boardId === board.id)).length} quadro(s) com cards • {sortedAndFilteredActivities.length} card(s) total
                         </p>
-                      </div>
-                    </div>
                   </div>
+                </div>
+              </div>
                   
                   {/* Lista de quadros */}
                   {availableBoards.map(board => {
@@ -1398,18 +1600,18 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     
                     return (
                       <div key={board.id} className="space-y-4">
-                        <div className="flex items-center space-x-3">
+                                  <div className="flex items-center space-x-3">
                           <div className="w-1 h-8 bg-gradient-to-b from-slate-300 to-slate-400 rounded-full"></div>
                           <h2 className="text-xl font-bold text-slate-500">{board.name}</h2>
                           <span className="text-sm text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
                             0 cards
                           </span>
-                        </div>
+                                    </div>
                         <div className="flex items-center justify-center h-32 text-slate-400 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                           <div className="text-center">
                             <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p className="text-sm">Nenhum card neste quadro</p>
-                          </div>
+                                  </div>
                         </div>
                       </div>
                     );
@@ -1422,8 +1624,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                         <h2 className="text-xl font-bold text-slate-800">{board.name}</h2>
                         <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                           {boardCards.length} {boardCards.length === 1 ? 'card' : 'cards'}
-                        </span>
-                      </div>
+                                    </span>
+                                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {boardCards.map(card => (
                           <div key={card.id} onClick={() => {
@@ -1448,7 +1650,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <p className="text-sm text-slate-600 mb-4 line-clamp-2 group-hover:text-slate-700 transition-colors duration-300">{card.description}</p>
                               
                               {/* Avatares dos membros */}
@@ -1479,7 +1681,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                                card.priority === 'low' ? 'Baixa' :
                                'Normal'}
                             </span>
-                                </div>
+                                            </div>
                                 
                                 {/* Status tag melhorado */}
                                 <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${getCardStatus(card).statusColor}`}>
@@ -1490,10 +1692,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                             
                             {/* Borda inferior decorativa */}
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-slate-300 transition-colors duration-300"></div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
                   );
                 })}
                 </>
@@ -1520,10 +1722,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                             <div className="flex items-center space-x-1 bg-slate-100 group-hover:bg-slate-200 rounded-full px-2 py-1 transition-colors duration-300">
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               <span className="text-xs font-semibold text-slate-600">{card.subtasks?.length || 0}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
+                                            </div>
+                                      </div>
+                                    </div>
+
                         <p className="text-sm text-slate-600 mb-4 line-clamp-2 group-hover:text-slate-700 transition-colors duration-300">{card.description}</p>
                         
                         {/* Avatares dos membros */}
@@ -1551,22 +1753,22 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                                card.priority === 'low' ? 'Baixa' :
                                'Normal'}
                             </span>
-                          </div>
+                                            </div>
                           
                           {/* Status tag melhorado */}
                           <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${getCardStatus(card).statusColor}`}>
                             {getCardStatus(card).statusLabel}
                           </span>
-                        </div>
-                      </div>
+                                          </div>
+                                      </div>
                       
                       {/* Borda inferior decorativa */}
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-slate-300 transition-colors duration-300"></div>
-                    </div>
+                                    </div>
                   ))}
-                </div>
-              )}
-            </div>
+                                </div>
+                              )}
+                            </div>
           )
         ) : (
           <div className={`grid grid-cols-1 gap-8 lg:grid-cols-3`}>
@@ -1577,15 +1779,15 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
                       <div className="p-2 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-lg mr-3 shadow-sm">
                       <Target className="w-5 h-5 text-white" />
-                    </div>
+                      </div>
                     Lista de Atividades
                   </h2>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-slate-600 bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 rounded-full border border-slate-300 shadow-sm">
                       {sortedAndFilteredActivities.length} resultado{sortedAndFilteredActivities.length !== 1 ? 's' : ''}
                     </span>
+                    </div>
                   </div>
-                </div>
               </div>
               <div className="max-h-[calc(100vh-350px)] overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
                 <div>

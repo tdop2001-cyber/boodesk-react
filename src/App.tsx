@@ -5,6 +5,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SyncProvider } from './contexts/SyncContext';
 import LoginForm from './components/LoginForm';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -334,9 +335,11 @@ const App: React.FC = () => {
         <ToastProvider>
           <PermissionProvider>
             <SettingsProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
+              <SyncProvider>
+                <Router>
+                  <AppRoutes />
+                </Router>
+              </SyncProvider>
             </SettingsProvider>
           </PermissionProvider>
         </ToastProvider>
