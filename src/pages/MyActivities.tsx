@@ -10,6 +10,8 @@ import { Card, Column, User as UserType } from '../types';
 import { db } from '../services/database';
 import UnifiedKanban, { KanbanItem as UnifiedKanbanItem, KanbanColumnDef } from '../components/UnifiedKanban';
 import AvatarGroup from '../components/AvatarGroup';
+import SubtaskModal from '../components/SubtaskModal';
+import SubtaskList from '../components/SubtaskList';
 import {
   Calendar,
   Clock,
@@ -44,7 +46,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 
 interface ActivityItem {
@@ -55,6 +58,7 @@ interface ActivityItem {
   status: 'pending' | 'completed' | 'in_progress';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: string;
+  assignedTo?: string;
   members?: string[];
   dependencies?: string[];
   subtasks?: ActivityItem[];
@@ -89,10 +93,16 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     onSubtaskUpdate
   } = useSync();
   */
-  
+
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
+  const [selectedSubtask, setSelectedSubtask] = useState<ActivityItem | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Debug: Monitorar mudanças no estado selectedSubtask
+  useEffect(() => {
+    console.log('Estado selectedSubtask mudou:', selectedSubtask);
+  }, [selectedSubtask]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'cards' | 'subtasks'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed' | 'in_progress'>('all');
@@ -102,6 +112,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   const [selectedCardForKanban, setSelectedCardForKanban] = useState<ActivityItem | null>(null);
   const [filterBoard, setFilterBoard] = useState<string>('all');
   const [groupByBoard, setGroupByBoard] = useState<boolean>(false);
+  
+  // Estados para modal de subtarefas
+  const [showSubtaskModal, setShowSubtaskModal] = useState(false);
+  const [selectedSubtaskForModal, setSelectedSubtaskForModal] = useState<any>(null);
   const [availableBoards, setAvailableBoards] = useState<{id: string, name: string}[]>([]);
   const [hideEmptyCards, setHideEmptyCards] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
@@ -503,12 +517,22 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
       console.log('Atualizando estado local:');
       console.log('- newActivities:', newActivities);
-      
+
       setActivities(newActivities);
+      
+      // Atualizar selectedCardForKanban se estiver selecionado
       if (selectedCardForKanban) {
         const updatedCard = newActivities.find(a => a.id === selectedCardForKanban.id);
         if (updatedCard) {
           setSelectedCardForKanban(updatedCard);
+        }
+      }
+      
+      // Atualizar selectedActivity se estiver selecionado
+      if (selectedActivity) {
+        const updatedActivity = newActivities.find(a => a.id === selectedActivity.id);
+        if (updatedActivity) {
+          setSelectedActivity(updatedActivity);
         }
       }
       addToast({ type: 'success', title: 'Status atualizado', message: `Item movido para ${newStatus}` });
@@ -519,11 +543,141 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     }
   };
 
+  // Funções para modal de subtarefas
+  const handleSubtaskClick = async (subtask: any) => {
+    console.log('Clique na subtarefa:', subtask);
+    
+    try {
+      // Carregar dados completos da subtarefa se necessário
+      const fullSubtask = {
+        ...subtask,
+        id: subtask.id
+      };
+      
+      setSelectedSubtaskForModal(fullSubtask);
+      setShowSubtaskModal(true);
+    } catch (error) {
+      console.error('Erro ao abrir modal de subtarefa:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível abrir os detalhes da subtarefa.'
+      });
+    }
+  };
+
+  const handleCloseSubtaskModal = () => {
+    setShowSubtaskModal(false);
+    setSelectedSubtaskForModal(null);
+  };
+
+  const handleUpdateSubtask = async (updatedSubtask: any) => {
+    try {
+      console.log('Atualizando subtarefa:', updatedSubtask);
+      
+      // Atualizar a subtarefa nas atividades
+      setActivities(prevActivities => {
+        return prevActivities.map(activity => ({
+          ...activity,
+          subtasks: activity.subtasks?.map(subtask => 
+            subtask.id === selectedSubtaskForModal?.id 
+              ? { ...subtask, ...updatedSubtask }
+              : subtask
+          ) || []
+        }));
+      });
+
+      // Atualizar o card selecionado para kanban se necessário
+      if (selectedCardForKanban) {
+        setSelectedCardForKanban(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.map(subtask => 
+            subtask.id === selectedSubtaskForModal?.id 
+              ? { ...subtask, ...updatedSubtask }
+              : subtask
+          ) || []
+        }));
+      }
+
+      // Atualizar a atividade selecionada se necessário
+      if (selectedActivity) {
+        setSelectedActivity(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.map(subtask => 
+            subtask.id === selectedSubtaskForModal?.id 
+              ? { ...subtask, ...updatedSubtask }
+              : subtask
+          ) || []
+        }));
+      }
+
+      // Atualizar a subtarefa selecionada para detalhes
+      if (selectedSubtask && selectedSubtask.id === selectedSubtaskForModal?.id) {
+        setSelectedSubtask(prev => ({ ...prev!, ...updatedSubtask }));
+      }
+
+      // Atualizar a subtarefa selecionada no modal
+      setSelectedSubtaskForModal((prev: any) => ({ ...prev, ...updatedSubtask }));
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa atualizada',
+        message: 'A subtarefa foi atualizada com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar subtarefa:', error);
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    try {
+      console.log('Excluindo subtarefa:', subtaskId);
+      
+      // Remover a subtarefa das atividades
+      setActivities(prevActivities => {
+        return prevActivities.map(activity => ({
+          ...activity,
+          subtasks: activity.subtasks?.filter(subtask => subtask.id !== subtaskId) || []
+        }));
+      });
+
+      // Atualizar o card selecionado para kanban se necessário
+      if (selectedCardForKanban) {
+        setSelectedCardForKanban(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.filter(subtask => subtask.id !== subtaskId) || []
+        }));
+      }
+
+      // Atualizar a atividade selecionada se necessário
+      if (selectedActivity) {
+        setSelectedActivity(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.filter(subtask => subtask.id !== subtaskId) || []
+        }));
+      }
+
+      // Limpar a subtarefa selecionada para detalhes se for a mesma
+      if (selectedSubtask && selectedSubtask.id === subtaskId) {
+        setSelectedSubtask(null);
+      }
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa excluída',
+        message: 'A subtarefa foi excluída com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao excluir subtarefa:', error);
+    }
+  };
+
   const loadActivities = async () => {
     setLoading(true);
     try {
       if (!user?.id) return;
 
+      console.log('🔄 Carregando atividades...');
       const boards = await db.getBoards(user.id);
       let allCards: any[] = [];
       
@@ -620,7 +774,31 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           dueDate: card.due_date,
           completed: cardStatus === 'completed',
           boardId: card.boardId,
-          subtasks: card.subtasks?.map((sub: any) => {
+          subtasks: card.subtasks?.filter((sub: any) => {
+            // Filtrar subtarefas baseado nos membros
+            const currentUserId = user?.id?.toString();
+            const subtaskMembers = sub.members || [];
+            
+            // Se não há membros definidos, mostrar para todos (compatibilidade)
+            if (!subtaskMembers || subtaskMembers.length === 0) {
+              return true;
+            }
+            
+            // Verificar se o usuário atual está nos membros da subtarefa
+            const isMember = subtaskMembers.includes(currentUserId) || 
+                           subtaskMembers.some((member: any) => 
+                             (typeof member === 'object' ? member.id : member) === currentUserId
+                           );
+            
+            console.log('Verificando membros da subtarefa:', {
+              subtaskTitle: sub.title,
+              subtaskMembers: subtaskMembers,
+              currentUserId: currentUserId,
+              isMember: isMember
+            });
+            
+            return isMember;
+          }).map((sub: any) => {
             // Mapear status do banco para status do Kanban
             let mappedStatus = 'pending';
             if (sub.status === 'todo') {
@@ -645,20 +823,21 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             
             return {
               id: subtaskId,
-              type: 'subtask',
-              title: sub.title,
-              description: sub.description,
+            type: 'subtask',
+            title: sub.title,
+            description: sub.description,
               status: mappedStatus,
-              priority: sub.priority || 'medium',
-              dueDate: sub.due_date,
+            priority: sub.priority || 'medium',
+            dueDate: sub.due_date,
               completed: sub.status === 'completed',
-              parentCardId: card.card_id
+            parentCardId: card.card_id
             };
           })
         };
       });
 
       setActivities(convertedActivities);
+      console.log(`✅ Atividades carregadas: ${convertedActivities.length} atividades`);
       console.log('Converted Activities:', JSON.stringify(convertedActivities, null, 2));
       
       // Carregar informações dos membros de todos os cards
@@ -935,10 +1114,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
     if (viewMode === 'kanban') {
         matchesType = activity.type === 'card';
     } else if (filterType !== 'all') {
-    if (filterType === 'cards') {
-      matchesType = activity.type === 'card';
-    } else if (filterType === 'subtasks') {
-      matchesType = activity.type === 'subtask' || activity.type === 'individual_subtask';
+      if (filterType === 'cards') {
+        matchesType = activity.type === 'card';
+      } else if (filterType === 'subtasks') {
+        matchesType = activity.type === 'subtask' || activity.type === 'individual_subtask';
       }
     }
     
@@ -1031,7 +1210,15 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             ${activity.status === 'completed' ? 'opacity-75' : ''}
           `}
           style={!isSubtask ? { borderLeftColor: getPriorityColor(activity.priority) } : {}}
-          onClick={() => setSelectedActivity(activity)}
+          onClick={() => {
+            console.log('Atividade clicada:', activity);
+            setSelectedActivity(activity);
+            // Se a subtarefa selecionada não pertence a esta atividade, limpar a seleção
+            if (selectedSubtask && selectedSubtask.parentCardId !== activity.id) {
+              console.log('Limpando subtarefa selecionada pois pertence a outra atividade');
+              setSelectedSubtask(null);
+            }
+          }}
         >
           <div className="relative flex items-center p-5">
             {hasSubtasks && (
@@ -1116,8 +1303,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   </div>
                 </div>
               )}
-                  </div>
-                </div>
+            </div>
+          </div>
 
           {hasSubtasks && isExpanded && (
             <div className="bg-gradient-to-br from-red-50 via-slate-50 to-[#16704E]/10 border-t border-red-200/50">
@@ -1138,6 +1325,9 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   };
 
   const renderActivityDetails = () => {
+    console.log('renderActivityDetails chamado - selectedActivity:', selectedActivity);
+    console.log('renderActivityDetails chamado - selectedSubtask:', selectedSubtask);
+    
     if (!selectedActivity) {
       return (
         <div className="flex items-center justify-center h-full text-gray-500">
@@ -1147,6 +1337,158 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Nenhuma atividade selecionada</h3>
             <p className="text-gray-600">Clique em uma atividade na lista para ver os detalhes</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Se uma subtarefa estiver selecionada, mostrar seus detalhes
+    if (selectedSubtask) {
+      console.log('Mostrando detalhes da subtarefa:', selectedSubtask);
+      return (
+        <div className="p-6 space-y-6">
+          {/* Botão para voltar */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSelectedSubtask(null)}
+              className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar para {selectedActivity.title}</span>
+            </button>
+          </div>
+
+          {/* Detalhes da Subtarefa */}
+          <div className="border-b pb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-full bg-red-100">
+                  {selectedSubtask.status === 'completed' ? <CheckCircle className="w-4 h-4 text-green-600" /> : selectedSubtask.status === 'in_progress' ? <Clock3 className="w-4 h-4 text-orange-500" /> : <Circle className="w-4 h-4 text-red-400" />}
+                </div>
+                <span 
+                  className="px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm"
+                  style={{ 
+                    backgroundColor: getPriorityColor(selectedSubtask.priority),
+                    color: getPriorityTextColor(selectedSubtask.priority)
+                  }}
+                >
+                  {selectedSubtask.priority === 'urgent' ? 'Urgente' :
+                   selectedSubtask.priority === 'high' ? 'Alta' :
+                   selectedSubtask.priority === 'medium' ? 'Normal' :
+                   selectedSubtask.priority === 'low' ? 'Baixa' :
+                   'Normal'}
+                </span>
+                <span className="px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm bg-red-100 text-red-800 border-red-300">
+                  Subtarefa
+                </span>
+              </div>
+              <div className="flex space-x-2">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <Edit3 className="w-5 h-5 text-gray-600" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ExternalLink className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">{selectedSubtask.title}</h2>
+          </div>
+
+          {/* Descrição da Subtarefa */}
+          {selectedSubtask.description && (
+            <div className="bg-gradient-to-r from-slate-50 via-red-50 to-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+              <h3 className="font-semibold mb-3 flex items-center text-slate-800">
+                <div className="p-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-lg mr-2">
+                  <FileText className="w-4 h-4 text-white" />
+                </div>
+                Descrição
+              </h3>
+              <p className="text-slate-700 leading-relaxed">
+                {selectedSubtask.description}
+              </p>
+            </div>
+          )}
+
+          {/* Informações Adicionais da Subtarefa */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {selectedSubtask.dueDate && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                <h4 className="font-semibold mb-2 flex items-center text-blue-800">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Data de Vencimento
+                </h4>
+                <p className="text-blue-700">{new Date(selectedSubtask.dueDate).toLocaleDateString('pt-BR')}</p>
+              </div>
+            )}
+
+            {selectedSubtask.assignedTo && (
+              <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                <h4 className="font-semibold mb-2 flex items-center text-green-800">
+                  <User className="w-4 h-4 mr-2" />
+                  Responsável
+                </h4>
+                <p className="text-green-700">{selectedSubtask.assignedTo}</p>
+              </div>
+            )}
+
+            {selectedSubtask.estimatedTime && (
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
+                <h4 className="font-semibold mb-2 flex items-center text-orange-800">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Tempo Estimado
+                </h4>
+                <p className="text-orange-700">{selectedSubtask.estimatedTime} minutos</p>
+              </div>
+            )}
+
+            {selectedSubtask.tags && selectedSubtask.tags.length > 0 && (
+              <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                <h4 className="font-semibold mb-2 flex items-center text-purple-800">
+                  <Tag className="w-4 h-4 mr-2" />
+                  Tags
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSubtask.tags.map((tag, index) => (
+                    <span key={index} className="px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                const newStatus = selectedSubtask.status === 'completed' ? 'pending' : 'completed';
+                handleItemMove(String(selectedSubtask.id), newStatus);
+                setSelectedSubtask({...selectedSubtask, status: newStatus as any});
+              }}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedSubtask.status === 'completed' 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                  : 'bg-green-500 hover:bg-green-600 text-white'
+              }`}
+            >
+              {selectedSubtask.status === 'completed' ? 'Marcar como Pendente' : 'Marcar como Concluída'}
+            </button>
+
+            <button
+              onClick={() => {
+                const newStatus = selectedSubtask.status === 'in_progress' ? 'pending' : 'in_progress';
+                handleItemMove(String(selectedSubtask.id), newStatus);
+                setSelectedSubtask({...selectedSubtask, status: newStatus as any});
+              }}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedSubtask.status === 'in_progress' 
+                  ? 'bg-gray-500 hover:bg-gray-600 text-white' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
+            >
+              {selectedSubtask.status === 'in_progress' ? 'Marcar como Pendente' : 'Marcar como Em Progresso'}
+            </button>
           </div>
         </div>
       );
@@ -1169,7 +1511,11 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   color: getPriorityTextColor(selectedActivity.priority)
                 }}
               >
-                {selectedActivity.priority}
+                {selectedActivity.priority === 'urgent' ? 'Urgente' :
+                 selectedActivity.priority === 'high' ? 'Alta' :
+                 selectedActivity.priority === 'medium' ? 'Normal' :
+                 selectedActivity.priority === 'low' ? 'Baixa' :
+                 'Normal'}
               </span>
                              <span className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${selectedActivity.type === 'card' ? 'bg-[#16704E]/20 text-[#16704E] border-[#16704E]/30' : 'bg-red-100 text-red-800 border-red-300'}`}>
                  {selectedActivity.type === 'card' ? 'Tarefa' : 'Subtarefa'}
@@ -1205,28 +1551,84 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
           <div className="border-t pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Subtarefas ({selectedActivity.subtasks.length})</h3>
-              </div>
-            <UnifiedKanban
-              columns={kanbanColumns}
-              items={selectedActivity.subtasks.map(s => {
-                const mappedItem = { 
-                  ...s, 
-                  id: String(s.id),
-                  completed: s.status === 'completed', 
-                  importance: s.importance as any,
-                  estimatedTime: s.estimatedTime ? (typeof s.estimatedTime === 'string' ? parseInt(s.estimatedTime) : s.estimatedTime) : undefined,
-                  actualTime: s.actualTime ? (typeof s.actualTime === 'string' ? parseInt(s.actualTime) : s.actualTime) : undefined
-                };
-                console.log('Mapeando subtarefa para UnifiedKanban:', {
-                  original: s,
-                  mapped: mappedItem,
-                  originalId: s.id,
-                  mappedId: mappedItem.id
-                });
-                return mappedItem;
-              })}
-              onItemMove={handleItemMove}
-            />
+            </div>
+            
+            {/* Lista de Subtarefas */}
+            <div className="space-y-3">
+              {selectedActivity.subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer hover:shadow-md ${
+                    (() => {
+                      const isSelected = selectedSubtask && (selectedSubtask as ActivityItem).id && String((selectedSubtask as ActivityItem).id) === String(subtask.id);
+                      if (isSelected) return 'bg-purple-100 border-purple-400 shadow-lg';
+                      if (subtask.status === 'completed') return 'bg-green-50 border-green-200 hover:bg-green-100';
+                      if (subtask.status === 'in_progress') return 'bg-orange-50 border-orange-200 hover:bg-orange-100';
+                      return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+                    })()
+                  }`}
+                  onClick={() => {
+                    console.log('Subtarefa clicada:', subtask);
+                    console.log('ID da subtarefa:', subtask.id);
+                    console.log('Título da subtarefa:', subtask.title);
+                    console.log('Status da subtarefa:', subtask.status);
+                    
+                    // Definir a subtarefa selecionada para exibir detalhes
+                    setSelectedSubtask(subtask);
+                    console.log('selectedSubtask definido:', subtask);
+                    
+                    // Abrir modal de subtarefas
+                    handleSubtaskClick(subtask);
+                  }}
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <div className="flex items-center space-x-3">
+                    {/* Checkbox simples */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newStatus = subtask.status === 'completed' ? 'pending' : 'completed';
+                        handleItemMove(String(subtask.id), newStatus);
+                      }}
+                      className={`flex-shrink-0 p-1 rounded transition-colors ${
+                        subtask.status === 'completed' 
+                          ? 'text-green-600' 
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      {subtask.status === 'completed' ? (
+                        <CheckSquare className="w-4 h-4" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                    
+                    {/* Título da subtarefa */}
+                    <h4 className={`font-medium flex-1 ${
+                      subtask.status === 'completed' 
+                        ? 'text-green-800 line-through' 
+                        : 'text-gray-900'
+                    }`}>
+                      {subtask.title}
+                    </h4>
+                    
+                    {/* Status simples */}
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      subtask.status === 'completed' 
+                        ? 'bg-green-100 text-green-800' 
+                        : subtask.status === 'in_progress'
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {subtask.status === 'completed' ? 'Concluída' : 
+                       subtask.status === 'in_progress' ? 'Em Progresso' : 'A Fazer'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1282,7 +1684,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
       <div className="bg-gradient-to-br from-[#16704E] via-[#0F5A3A] to-[#0A4A2E] text-white shadow-xl">
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+         <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6">
            <div className="flex items-center justify-between h-20">
              <div className="flex items-center space-x-6">
                <div className="flex items-center space-x-3">
@@ -1299,18 +1701,31 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
        </div>
 
       <div className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-100 border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4">
           {/* Barra de Busca Discreta */}
           <div className="mb-4">
-            <div className="relative max-w-xl">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <div className="flex items-center space-x-3">
+              <div className="relative max-w-xl flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Buscar atividades..."
+                  placeholder="Buscar atividades..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200/60 rounded-lg focus:ring-1 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm bg-white/70 backdrop-blur-sm shadow-sm hover:bg-white/80"
-              />
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200/60 rounded-lg focus:ring-1 focus:ring-[#16704E]/30 focus:border-[#16704E]/50 transition-all duration-200 text-sm bg-white/70 backdrop-blur-sm shadow-sm hover:bg-white/80"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  console.log('🔄 Forçando recarregamento das atividades...');
+                  loadActivities();
+                }}
+                className="px-3 py-2.5 bg-[#16704E] text-white rounded-lg hover:bg-[#0F5A3A] transition-colors duration-200 flex items-center space-x-2 shadow-sm hover:shadow-md"
+                title="Recarregar atividades"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm font-medium">Atualizar</span>
+              </button>
             </div>
             </div>
 
@@ -1542,7 +1957,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4">
         {viewMode === 'kanban' ? (
           selectedCardForKanban ? (
             <div>
@@ -1571,7 +1986,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 }) || []}
                 onItemMove={handleItemMove}
               />
-                    </div>
+            </div>
           ) : (
             <div className="space-y-8">
               {groupByBoard ? (
@@ -1626,7 +2041,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                           {boardCards.length} {boardCards.length === 1 ? 'card' : 'cards'}
                                     </span>
                                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {boardCards.map(card => (
                           <div key={card.id} onClick={() => {
                             console.log('Card clicked:', card);
@@ -1680,8 +2095,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                                card.priority === 'medium' ? 'Normal' :
                                card.priority === 'low' ? 'Baixa' :
                                'Normal'}
-                            </span>
-                                            </div>
+                    </span>
+                  </div>
                                 
                                 {/* Status tag melhorado */}
                                 <span className={`text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 ${getCardStatus(card).statusColor}`}>
@@ -1692,8 +2107,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                             
                             {/* Borda inferior decorativa */}
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-slate-300 transition-colors duration-300"></div>
-                                          </div>
-                                        ))}
+                </div>
+              ))}
                                       </div>
                                     </div>
                   );
@@ -1768,51 +2183,51 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   ))}
                                 </div>
                               )}
-                            </div>
+            </div>
           )
         ) : (
-          <div className={`grid grid-cols-1 gap-8 lg:grid-cols-3`}>
-            <div className="lg:col-span-2">
-            <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+          <div className={`grid grid-cols-1 gap-6 lg:grid-cols-5`}>
+            <div className="lg:col-span-3">
+              <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-100 via-[#16704E]/10 to-slate-100 p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
                       <div className="p-2 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-lg mr-3 shadow-sm">
-                      <Target className="w-5 h-5 text-white" />
+                        <Target className="w-5 h-5 text-white" />
                       </div>
-                    Lista de Atividades
-                  </h2>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-slate-600 bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 rounded-full border border-slate-300 shadow-sm">
+                      Lista de Atividades
+                    </h2>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-slate-600 bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 rounded-full border border-slate-300 shadow-sm">
                       {sortedAndFilteredActivities.length} resultado{sortedAndFilteredActivities.length !== 1 ? 's' : ''}
-                    </span>
+                      </span>
                     </div>
                   </div>
-              </div>
-              <div className="max-h-[calc(100vh-350px)] overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
-                <div>
+                </div>
+                <div className="max-h-[calc(100vh-350px)] overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
+                  <div>
                     {sortedAndFilteredActivities.length === 0 ? (
-                      <div className="flex items-center justify-center h-64 text-slate-500">
-                        <div className="text-center">
-                          <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                            <Target className="w-8 h-8 text-slate-400" />
+                        <div className="flex items-center justify-center h-64 text-slate-500">
+                          <div className="text-center">
+                            <div className="p-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                              <Target className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">Nenhuma atividade encontrada</h3>
+                            <p className="text-slate-600">Tente ajustar os filtros ou criar novas atividades</p>
                           </div>
-                          <h3 className="text-lg font-semibold mb-2">Nenhuma atividade encontrada</h3>
-                          <p className="text-slate-600">Tente ajustar os filtros ou criar novas atividades</p>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
+                      ) : (
+                        <div className="space-y-3">
                         {sortedAndFilteredActivities.map(activity => renderActivityItem(activity))}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-            <div className="lg:col-span-1">
-              <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 h-[calc(100vh-350px)] overflow-hidden">
+            <div className="lg:col-span-2">
+              <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-xl shadow-xl border border-slate-200 h-[calc(100vh-200px)] overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-100 via-red-50 to-slate-100 p-6 border-b border-slate-200">
                   <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent flex items-center">
                     <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg mr-3 shadow-sm">
@@ -1824,11 +2239,20 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 <div className="overflow-y-auto h-full bg-gradient-to-br from-slate-50/50 to-white">
                   {renderActivityDetails()}
                 </div>
-                </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
       </div>
+      
+      {/* Modal de Subtarefas */}
+      <SubtaskModal
+        isOpen={showSubtaskModal}
+        onClose={handleCloseSubtaskModal}
+        subtask={selectedSubtaskForModal}
+        onUpdate={handleUpdateSubtask}
+        onDelete={handleDeleteSubtask}
+      />
     </div>
   );
 };

@@ -18,6 +18,7 @@ import MyActivities from './pages/MyActivities';
 import FileManager from './pages/FileManager';
 import Calendar from './pages/Calendar';
 import AllCards from './pages/AllCards';
+import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import DatabaseSetup from './components/DatabaseSetup';
 import { Menu } from 'lucide-react';
 
@@ -123,6 +124,18 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <MainLayout>
               <Dashboard />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rota para Dashboard Executivo */}
+      <Route
+        path="/executive-dashboard"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ExecutiveDashboard />
             </MainLayout>
           </ProtectedRoute>
         }

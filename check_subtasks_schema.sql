@@ -30,3 +30,4 @@ SELECT
         ELSE 'Coluna completed_at NÃO EXISTE' 
     END as status_completed_at;
 
+

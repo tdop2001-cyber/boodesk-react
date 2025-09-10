@@ -11,6 +11,8 @@ import { Board, Card, Column, CardDependency, User as UserType } from '../types'
 import AvatarGroup from '../components/AvatarGroup';
 import CardDetailModal from '../components/CardDetailModal';
 import SubtaskTimeline from '../components/SubtaskTimeline';
+import SubtaskModal from '../components/SubtaskModal';
+import SubtaskList from '../components/SubtaskList';
 import {
   Plus,
   Trash2,
@@ -117,6 +119,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const [manualColumns, setManualColumns] = useState<string[]>(['A Fazer', 'Em Progresso', 'Concluído']);
   const [showManualColumns, setShowManualColumns] = useState(false);
   
+  // Estado para modal de subtarefas
+  const [selectedSubtask, setSelectedSubtask] = useState<any>(null);
+  const [showSubtaskModal, setShowSubtaskModal] = useState(false);
 
   const [newCardData, setNewCardData] = useState({
     title: '',
@@ -540,6 +545,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       
       // Carregar listas/colunas para o board
       const listsData = await db.getListsForBoard(board.board_id);
+      
+      // Se não há colunas, criar colunas padrão (apenas para boards antigos)
+      if (listsData.length === 0) {
+        console.log('Board sem colunas, criando colunas padrão...');
+        await db.createDefaultListsIfNeeded(board.board_id);
+        // Recarregar as colunas após criar
+        const updatedListsData = await db.getListsForBoard(board.board_id);
+        listsData.push(...updatedListsData);
+      }
+      
       // console.log('=== CARREGANDO COLUNAS ===');
       // console.log('listsData do banco:', listsData);
       // console.log('Quantidade de listas encontradas:', listsData.length);
@@ -777,14 +792,125 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
   const saveBoardsOrder = async (orderedBoards: Board[]) => {
     try {
-      // Atualizar a posição de cada quadro no banco de dados
-      for (let i = 0; i < orderedBoards.length; i++) {
-        const board = orderedBoards[i];
-        await db.updateBoard(board.id, { position: i + 1 } as any);
+      if (!user?.id) {
+        console.error('Usuário não encontrado para salvar ordem dos quadros');
+        return;
+      }
+
+      // Extrair os IDs dos quadros na nova ordem
+      const boardOrder = orderedBoards.map(board => board.id);
+      
+      // Salvar a ordem personalizada do usuário
+      const success = await db.saveUserBoardOrder(user.id, boardOrder);
+      
+      if (success) {
+        console.log('Ordem dos quadros salva com sucesso para o usuário:', user.id);
+      } else {
+        console.error('Falha ao salvar ordem dos quadros');
+        throw new Error('Falha ao salvar ordem dos quadros');
       }
     } catch (error) {
       console.error('Erro ao salvar ordem dos quadros:', error);
       throw error;
+    }
+  };
+
+  // Funções para modal de subtarefas
+  const handleSubtaskClick = async (subtask: any) => {
+    console.log('Clique na subtarefa:', subtask);
+    
+    try {
+      // Carregar dados completos da subtarefa se necessário
+      const fullSubtask = {
+        ...subtask,
+        id: subtask.id
+      };
+      
+      setSelectedSubtask(fullSubtask);
+      setShowSubtaskModal(true);
+    } catch (error) {
+      console.error('Erro ao abrir modal de subtarefa:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível abrir os detalhes da subtarefa.'
+      });
+    }
+  };
+
+  const handleCloseSubtaskModal = () => {
+    setShowSubtaskModal(false);
+    setSelectedSubtask(null);
+  };
+
+  const handleUpdateSubtask = async (updatedSubtask: any) => {
+    try {
+      console.log('Atualizando subtarefa:', updatedSubtask);
+      
+      // Atualizar a subtarefa nos cards
+      setCards(prevCards => {
+        return prevCards.map(card => ({
+          ...card,
+          subtasks: card.subtasks?.map(subtask => 
+            subtask.id === selectedSubtask?.id 
+              ? { ...subtask, ...updatedSubtask }
+              : subtask
+          ) || []
+        }));
+      });
+
+      // Atualizar o card selecionado se necessário
+      if (selectedCard) {
+        setSelectedCard(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.map(subtask => 
+            subtask.id === selectedSubtask?.id 
+              ? { ...subtask, ...updatedSubtask }
+              : subtask
+          ) || []
+        }));
+      }
+
+      // Atualizar a subtarefa selecionada
+      setSelectedSubtask((prev: any) => ({ ...prev, ...updatedSubtask }));
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa atualizada',
+        message: 'A subtarefa foi atualizada com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar subtarefa:', error);
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    try {
+      console.log('Excluindo subtarefa:', subtaskId);
+      
+      // Remover a subtarefa dos cards
+      setCards(prevCards => {
+        return prevCards.map(card => ({
+          ...card,
+          subtasks: card.subtasks?.filter(subtask => subtask.id !== subtaskId) || []
+        }));
+      });
+
+      // Atualizar o card selecionado se necessário
+      if (selectedCard) {
+        setSelectedCard(prev => ({
+          ...prev!,
+          subtasks: prev!.subtasks?.filter(subtask => subtask.id !== subtaskId) || []
+        }));
+      }
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa excluída',
+        message: 'A subtarefa foi excluída com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao excluir subtarefa:', error);
     }
   };
 
@@ -2019,72 +2145,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           </p>
         )}
 
-        {/* Subtasks Timeline - Nova versão conforme design */}
+        {/* Subtasks Timeline - Versão melhorada */}
         {cardSubtasks && cardSubtasks.length > 0 && (
           <div className="mb-3 pl-1">
-            <div className="relative w-full">
-              {/* Timeline Track */}
-              <div className="relative w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                {/* Progress Bar */}
-                {(() => {
-                  const totalSubtasks = cardSubtasks.length;
-                  const completedSubtasks = cardSubtasks.filter(s => s.completed).length;
-                  const progressPercentage = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
-                  const starPosition = Math.min(Math.max(progressPercentage, 15), 85);
-                  
-                  return (
-                    <>
-                      {/* Progress Bar */}
-                      <div 
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-gray-300 to-gray-400 rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                      
-                      {/* Timeline Indicators */}
-                      <div className="absolute inset-0 flex items-center justify-between px-1">
-                        {/* Início - Círculo cinza pequeno */}
-                        <div className="w-2.5 h-2.5 bg-gray-400 dark:bg-gray-600 rounded-full border border-white dark:border-gray-800" />
-                        
-                        {/* Estrela de progresso */}
-                        <div 
-                          className="absolute top-1/2 transform -translate-y-1/2 transition-all duration-300 z-10"
-                          style={{ left: `${starPosition}%`, transform: 'translate(-50%, -50%)' }}
-                        >
-                          <svg
-                            width="28"
-                            height="28"
-                            viewBox="0 0 500 500"
-                            className="drop-shadow-sm"
-                          >
-                            <defs>
-                              <linearGradient id={`starGradient-${card.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="#06B6D4" />
-                                <stop offset="50%" stopColor="#0EA5E9" />
-                                <stop offset="100%" stopColor="#FBBF24" />
-                              </linearGradient>
-                            </defs>
-                            <path 
-                              fill={`url(#starGradient-${card.id})`} 
-                              stroke="none" 
-                              d="M 250.5 108 Q 255.3 140.3 267 165.5 Q 278.3 188.7 296.5 205 L 313.5 218 L 338.5 231 L 360.5 239 L 394 247.5 Q 362.7 254.2 335.5 265 L 303 284 Q 304.1 286.7 301.5 286 L 282 306.5 L 267 333.5 L 261 348.5 L 255 369.5 L 251 386.5 L 251 393 Q 247.5 394.1 249 386.5 L 239 348.5 L 232 331.5 L 216 304.5 L 204.5 292 Q 186.6 275.9 163.5 265 Q 136.8 253.8 105 247.5 L 143.5 238 L 170.5 227 L 195.5 212 L 215 193.5 Q 228.4 177.4 237 156.5 L 245 131.5 L 249 114.5 L 249 109.5 L 250.5 108 Z" 
-                            />
-                          </svg>
-            </div>
-                        
-                        {/* Fim - Círculo verde maior */}
-                        <div className="w-4 h-4 bg-green-500 rounded-full border border-white dark:border-gray-800" />
-                </div>
-                    </>
-                  );
-                })()}
-                </div>
-              
-              {/* Labels da Timeline */}
-              <div className="flex justify-between items-center mt-1 text-xs text-gray-600 dark:text-gray-400">
-                <span className="font-medium">A Fazer</span>
-                <span className="font-medium">Concluído</span>
-              </div>
-            </div>
+            <SubtaskTimeline subtasks={cardSubtasks} compact={true} />
           </div>
         )}
 
@@ -2759,17 +2823,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                       <div className="mt-1">
                         <div className="flex items-center justify-between text-sm text-brand-gray dark:text-gray-100 mb-2">
                           <span>{selectedCard.subtasks.filter(s => s.completed).length} de {selectedCard.subtasks.length} concluídas</span>
-                    </div>
-                        <div className="w-full h-2 bg-brand-light-gray dark:bg-gray-700 rounded-full overflow-hidden">
+                        </div>
+                        <div className="w-full h-2 bg-brand-light-gray dark:bg-gray-700 rounded-full overflow-hidden mb-3">
                           <div 
                             className="h-full bg-gradient-to-r from-brand-green to-brand-blue transition-all duration-300"
                             style={{ 
                               width: `${(selectedCard.subtasks.filter(s => s.completed).length / selectedCard.subtasks.length) * 100}%` 
                             }}
                           />
-                  </div>
-                </div>
-            </div>
+                        </div>
+                        {/* Lista de Subtarefas Clicáveis */}
+                        <SubtaskList 
+                          subtasks={selectedCard.subtasks}
+                          onSubtaskClick={handleSubtaskClick}
+                          compact={true}
+                          className="max-h-48 overflow-y-auto"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -4119,6 +4190,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         </div>
       )}
 
+      {/* Modal de Subtarefas */}
+      <SubtaskModal
+        isOpen={showSubtaskModal}
+        onClose={handleCloseSubtaskModal}
+        subtask={selectedSubtask}
+        onUpdate={handleUpdateSubtask}
+        onDelete={handleDeleteSubtask}
+      />
 
     </div>
   );

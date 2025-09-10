@@ -43,6 +43,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       badge: undefined
     },
     {
+      id: 'executive-dashboard',
+      label: 'Dashboard Executivo',
+      icon: BarChart3,
+      path: '/executive-dashboard',
+      badge: undefined
+    },
+    {
       id: 'boards',
       label: 'Quadros Kanban',
       icon: Trello,

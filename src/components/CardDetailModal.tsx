@@ -103,12 +103,15 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'history' | 'dependencies'>('details');
   const [subtaskViewMode, setSubtaskViewMode] = useState<'list' | 'kanban'>('list');
   const [showCreateSubtaskModal, setShowCreateSubtaskModal] = useState(false);
+  const [showEditSubtaskModal, setShowEditSubtaskModal] = useState(false);
+  const [selectedSubtaskForEdit, setSelectedSubtaskForEdit] = useState<any>(null);
   
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newSubtaskDescription, setNewSubtaskDescription] = useState('');
   const [newSubtaskPriority, setNewSubtaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newSubtaskMembers, setNewSubtaskMembers] = useState<string[]>([]);
 
   const kanbanColumns: KanbanColumnDef[] = [
     {
@@ -228,13 +231,63 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
     const subtask = subtasks.find(s => s.id === subtaskId);
     if (!subtask) return;
 
-    // Por enquanto, vamos apenas mostrar um toast
-    // Em uma implementação completa, abriria um modal de edição
-    addToast({ 
-      type: 'info', 
-      title: 'Editar Subtarefa',
-      message: `Funcionalidade de edição será implementada para: ${subtask.title}`
-    });
+    // Abrir modal de edição de subtarefa
+    setSelectedSubtaskForEdit(subtask);
+    setShowEditSubtaskModal(true);
+  };
+
+  // Funções para modal de edição de subtarefas
+  const handleCloseEditSubtaskModal = () => {
+    setShowEditSubtaskModal(false);
+    setSelectedSubtaskForEdit(null);
+  };
+
+  const handleUpdateSubtask = async (updatedSubtask: any) => {
+    try {
+      console.log('Atualizando subtarefa:', updatedSubtask);
+      
+      // Atualizar a subtarefa na lista local
+      setSubtasks(prevSubtasks => 
+        prevSubtasks.map(subtask => 
+          subtask.id === selectedSubtaskForEdit?.id 
+            ? { ...subtask, ...updatedSubtask }
+            : subtask
+        )
+      );
+
+      // Notificar o componente pai sobre a atualização
+      onSubtaskUpdate?.(card.id);
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa atualizada',
+        message: 'A subtarefa foi atualizada com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar subtarefa:', error);
+    }
+  };
+
+  const handleDeleteSubtaskFromModal = async (subtaskId: string) => {
+    try {
+      console.log('Excluindo subtarefa do modal:', subtaskId);
+      
+      // Remover a subtarefa da lista local
+      setSubtasks(prevSubtasks => 
+        prevSubtasks.filter(subtask => subtask.id !== subtaskId)
+      );
+
+      // Notificar o componente pai sobre a atualização
+      onSubtaskUpdate?.(card.id);
+      
+      addToast({
+        type: 'success',
+        title: 'Subtarefa excluída',
+        message: 'A subtarefa foi excluída com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao excluir subtarefa:', error);
+    }
   };
 
   // Função para deletar uma subtarefa
@@ -293,6 +346,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         title: newSubtaskTitle.trim(),
         description: newSubtaskDescription.trim(),
         priority: newSubtaskPriority,
+        members: newSubtaskMembers.length > 0 ? newSubtaskMembers : [user?.id?.toString() || '1'],
         created_by: user?.id || 1
       };
 
@@ -317,6 +371,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         setNewSubtaskTitle('');
         setNewSubtaskDescription('');
         setNewSubtaskPriority('medium');
+        setNewSubtaskMembers([]);
         setShowCreateSubtaskModal(false);
         
         addToast({ 
@@ -992,6 +1047,39 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                   <option value="high">Alta</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-brand-gray mb-2">
+                  Membros da Subtarefa
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-brand-light-gray rounded-lg p-3">
+                  {availableUsers.map((user) => (
+                    <label key={user.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={newSubtaskMembers.includes(user.id.toString())}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewSubtaskMembers([...newSubtaskMembers, user.id.toString()]);
+                          } else {
+                            setNewSubtaskMembers(newSubtaskMembers.filter(id => id !== user.id.toString()));
+                          }
+                        }}
+                        className="rounded border-brand-light-gray text-brand-blue focus:ring-brand-blue"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-medium">
+                          {(user.nome_completo || user.username)?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                        <span className="text-sm text-brand-gray">{user.nome_completo || user.username || user.email}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-brand-gray/60 mt-1">
+                  Selecione os membros que terão acesso a esta subtarefa. Se nenhum for selecionado, apenas você terá acesso.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-brand-light-gray">
@@ -1012,6 +1100,15 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal de Edição de Subtarefas */}
+      <SubtaskModal
+        isOpen={showEditSubtaskModal}
+        onClose={handleCloseEditSubtaskModal}
+        subtask={selectedSubtaskForEdit}
+        onUpdate={handleUpdateSubtask}
+        onDelete={handleDeleteSubtaskFromModal}
+      />
     </div>
   );
 };

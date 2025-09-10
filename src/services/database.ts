@@ -215,6 +215,8 @@ export class DatabaseService {
 
   async getBoards(userId?: number, userRole?: string): Promise<Board[]> {
     try {
+      let boards: Board[] = [];
+
       // Se for admin, retorna todos os boards
       if (userRole === 'admin' || !userRole) {
         const { data, error } = await supabase
@@ -222,11 +224,9 @@ export class DatabaseService {
           .select('*')
           .order('name');
         if (error) throw error;
-        return data || [];
-      }
-
-      // Para usuários não-admin, buscar boards onde são membros de algum card
-      if (userId) {
+        boards = data || [];
+      } else if (userId) {
+        // Para usuários não-admin, buscar boards onde são membros de algum card
         // 1. Buscar os 'board_id's dos cards onde o usuário é membro.
         const { data: cards, error: cardsError } = await supabase
           .from('cards')
@@ -240,18 +240,47 @@ export class DatabaseService {
           const boardIds = Array.from(new Set(cards.map(card => card.board_id)));
 
           // 3. Buscar os boards correspondentes a esses 'board_id's.
-          const { data: boards, error: boardsError } = await supabase
+          const { data: boardsData, error: boardsError } = await supabase
             .from('boards')
             .select('*')
             .in('id', boardIds)
             .order('name');
 
           if (boardsError) throw boardsError;
-          return boards || [];
+          boards = boardsData || [];
         }
       }
 
-      return [];
+      // Aplicar ordem personalizada do usuário se disponível
+      if (userId && boards.length > 0) {
+        const userBoardOrder = await this.getUserBoardOrder(userId);
+        
+        if (userBoardOrder.length > 0) {
+          console.log('Database: Aplicando ordem personalizada dos quadros:', userBoardOrder);
+          
+          // Criar um mapa para ordenação eficiente
+          const boardMap = new Map(boards.map(board => [board.id, board]));
+          const orderedBoards: Board[] = [];
+          
+          // Adicionar quadros na ordem personalizada
+          for (const boardId of userBoardOrder) {
+            const board = boardMap.get(boardId);
+            if (board) {
+              orderedBoards.push(board);
+              boardMap.delete(boardId);
+            }
+          }
+          
+          // Adicionar quadros restantes (novos quadros não na ordem personalizada)
+          boardMap.forEach(board => {
+            orderedBoards.push(board);
+          });
+          
+          boards = orderedBoards;
+        }
+      }
+
+      return boards;
     } catch (error) {
       console.error('Erro ao buscar quadros:', error);
       return [];
@@ -284,10 +313,9 @@ export class DatabaseService {
 
       if (error) throw error;
       
-      // Criar listas padrão para o board
-      if (data) {
-        await this.createDefaultLists(data.board_id);
-      }
+      // NÃO criar listas padrão automaticamente aqui
+      // As listas serão criadas pelo frontend baseadas no template selecionado
+      console.log('Board criado sem listas padrão automáticas:', data.board_id);
       
       return data;
     } catch (error) {
@@ -335,6 +363,25 @@ export class DatabaseService {
     }
   }
 
+  // Método para criar listas padrão manualmente (para boards antigos)
+  async createDefaultListsIfNeeded(boardId: string): Promise<void> {
+    try {
+      const { data: existingLists, error: checkError } = await supabase
+        .from('lists')
+        .select('id')
+        .eq('board_id', boardId);
+
+      if (checkError) throw checkError;
+
+      if (!existingLists || existingLists.length === 0) {
+        console.log('Criando listas padrão para board antigo:', boardId);
+        await this.createDefaultLists(boardId);
+      }
+    } catch (error) {
+      console.error('Erro ao criar listas padrão se necessário:', error);
+    }
+  }
+
   async updateBoard(id: number, updates: Partial<Board>): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -351,44 +398,101 @@ export class DatabaseService {
   }
 
   async deleteBoard(id: number): Promise<boolean> {
+    // Usar o método de exclusão em cascata por padrão
+    return await this.deleteBoardCascade(id);
+  }
+
+  // Método auxiliar para limpar dependências órfãs
+  async cleanupOrphanedData(boardId: string): Promise<void> {
     try {
-      // Primeiro, buscar o board para obter o board_id
+      console.log(`Limpando dados órfãos para board ${boardId}`);
+      
+      // Limpar subtarefas órfãs
+      const { error: orphanedSubtasksError } = await supabase
+        .from('subtasks')
+        .delete()
+        .eq('board_id', boardId);
+
+      if (orphanedSubtasksError) {
+        console.error('Erro ao limpar subtarefas órfãs:', orphanedSubtasksError);
+      }
+
+      // Limpar atividades órfãs
+      const { error: orphanedActivitiesError } = await supabase
+        .from('activities')
+        .delete()
+        .eq('board_id', boardId);
+
+      if (orphanedActivitiesError) {
+        console.error('Erro ao limpar atividades órfãs:', orphanedActivitiesError);
+      }
+
+      // Limpar chats órfãos
+      const { error: orphanedChatsError } = await supabase
+        .from('chats')
+        .delete()
+        .eq('board_id', boardId);
+
+      if (orphanedChatsError) {
+        console.error('Erro ao limpar chats órfãos:', orphanedChatsError);
+      }
+
+      console.log('Limpeza de dados órfãos concluída');
+    } catch (error) {
+      console.error('Erro na limpeza de dados órfãos:', error);
+    }
+  }
+
+  // Método de exclusão em cascata (garantia total)
+  async deleteBoardCascade(id: number): Promise<boolean> {
+    try {
+      console.log(`Iniciando exclusão em cascata do board ID: ${id}`);
+      
+      // Buscar o board
       const { data: board, error: boardError } = await supabase
         .from('boards')
         .select('board_id')
         .eq('id', id)
         .single();
 
-      if (boardError) throw boardError;
-      if (!board) throw new Error('Board não encontrado');
+      if (boardError || !board) {
+        console.error('Board não encontrado:', boardError);
+        return false;
+      }
 
       const boardId = board.board_id;
+      console.log(`Board encontrado com board_id: ${boardId}`);
 
-      // 1. Primeiro, buscar todos os cards do board para obter seus card_ids
-      const { data: cards, error: cardsFetchError } = await supabase
-        .from('cards')
-        .select('card_id')
+      // 1. Deletar todas as subtarefas do board
+      console.log(`Deletando subtarefas do board ${boardId}`);
+      const { error: subtasksError } = await supabase
+        .from('subtasks')
+        .delete()
         .eq('board_id', boardId);
 
-      if (cardsFetchError) {
-        console.error('Erro ao buscar cards do board:', cardsFetchError);
-      } else if (cards && cards.length > 0) {
-        // 2. Deletar todas as subtarefas dos cards deste board
-        const cardIds = cards.map(card => card.card_id);
-        for (const cardId of cardIds) {
-          const { error: subtasksError } = await supabase
-            .from('subtasks')
-            .delete()
-            .eq('card_id', cardId);
+      if (subtasksError) {
+        console.error('Erro ao deletar subtarefas:', subtasksError);
+        // Continuar mesmo com erro
+      } else {
+        console.log('Subtarefas deletadas com sucesso');
+      }
 
-          if (subtasksError) {
-            console.error(`Erro ao deletar subtarefas do card ${cardId}:`, subtasksError);
-          }
-        }
-        console.log(`Deletadas subtarefas de ${cardIds.length} cards`);
+      // 2. Deletar todas as atividades do board
+      console.log(`Deletando atividades do board ${boardId}`);
+      const { error: activitiesError } = await supabase
+        .from('activities')
+        .delete()
+        .eq('board_id', boardId);
+
+      if (activitiesError) {
+        console.error('Erro ao deletar atividades:', activitiesError);
+        // Continuar mesmo com erro
+      } else {
+        console.log('Atividades deletadas com sucesso');
       }
 
       // 3. Deletar todos os cards do board
+      console.log(`Deletando cards do board ${boardId}`);
       const { error: cardsError } = await supabase
         .from('cards')
         .delete()
@@ -396,12 +500,13 @@ export class DatabaseService {
 
       if (cardsError) {
         console.error('Erro ao deletar cards:', cardsError);
-        // Continuar mesmo se houver erro nos cards
+        return false;
       } else {
-        console.log(`Deletados todos os cards do board ${boardId}`);
+        console.log('Cards deletados com sucesso');
       }
 
       // 4. Deletar todas as listas do board
+      console.log(`Deletando listas do board ${boardId}`);
       const { error: listsError } = await supabase
         .from('lists')
         .delete()
@@ -409,52 +514,108 @@ export class DatabaseService {
 
       if (listsError) {
         console.error('Erro ao deletar listas:', listsError);
-        // Continuar mesmo se houver erro nas listas
+        // Continuar mesmo com erro
       } else {
-        console.log(`Deletadas todas as listas do board ${boardId}`);
+        console.log('Listas deletadas com sucesso');
       }
 
-      // 5. Deletar atividades relacionadas aos cards do board
-      if (cards && cards.length > 0) {
-        const cardIds = cards.map(card => card.card_id);
-        for (const cardId of cardIds) {
-          const { error: activitiesError } = await supabase
-            .from('activities')
-            .delete()
-            .eq('card_id', cardId);
-
-          if (activitiesError) {
-            console.error(`Erro ao deletar atividades do card ${cardId}:`, activitiesError);
-          }
-        }
-        console.log(`Deletadas atividades de ${cardIds.length} cards`);
-      }
-
-      // 6. Deletar chats relacionados ao board
+      // 5. Deletar todos os chats do board
+      console.log(`Deletando chats do board ${boardId}`);
       const { error: chatsError } = await supabase
         .from('chats')
         .delete()
         .eq('board_id', boardId);
 
       if (chatsError) {
-        console.error('Erro ao deletar chats do board:', chatsError);
-        // Continuar mesmo se houver erro nos chats
+        console.error('Erro ao deletar chats:', chatsError);
+        // Continuar mesmo com erro
       } else {
-        console.log(`Deletados chats do board ${boardId}`);
+        console.log('Chats deletados com sucesso');
       }
 
-      // 7. Finalmente, deletar o board
+      // 6. Finalmente, deletar o board
+      console.log(`Deletando board ${id}`);
       const { error: boardDeleteError } = await supabase
         .from('boards')
         .delete()
         .eq('id', id);
 
-      if (boardDeleteError) throw boardDeleteError;
+      if (boardDeleteError) {
+        console.error('Erro ao deletar board:', boardDeleteError);
+        return false;
+      }
       
       console.log(`Board ${boardId} e todos os seus dados foram excluídos com sucesso`);
       return true;
     } catch (error) {
-      console.error('Erro ao deletar quadro:', error);
+      console.error('Erro ao deletar quadro em cascata:', error);
+      return false;
+    }
+  }
+
+  // Método alternativo para exclusão em lote (mais eficiente)
+  async deleteBoardBatch(id: number): Promise<boolean> {
+    try {
+      console.log(`Iniciando exclusão em lote do board ID: ${id}`);
+      
+      // Buscar o board
+      const { data: board, error: boardError } = await supabase
+        .from('boards')
+        .select('board_id')
+        .eq('id', id)
+        .single();
+
+      if (boardError || !board) {
+        console.error('Board não encontrado:', boardError);
+        return false;
+      }
+
+      const boardId = board.board_id;
+      console.log(`Board encontrado com board_id: ${boardId}`);
+
+      // Executar exclusões em paralelo para melhor performance
+      const deletePromises = [
+        // Deletar subtarefas
+        supabase.from('subtasks').delete().eq('board_id', boardId),
+        // Deletar atividades
+        supabase.from('activities').delete().eq('board_id', boardId),
+        // Deletar chats
+        supabase.from('chats').delete().eq('board_id', boardId),
+        // Deletar cards
+        supabase.from('cards').delete().eq('board_id', boardId),
+        // Deletar listas
+        supabase.from('lists').delete().eq('board_id', boardId)
+      ];
+
+      const results = await Promise.allSettled(deletePromises);
+      
+      // Verificar resultados
+      results.forEach((result, index) => {
+        const operations = ['subtarefas', 'atividades', 'chats', 'cards', 'listas'];
+        if (result.status === 'rejected') {
+          console.error(`Erro ao deletar ${operations[index]}:`, result.reason);
+        } else if (result.value.error) {
+          console.error(`Erro ao deletar ${operations[index]}:`, result.value.error);
+        } else {
+          console.log(`${operations[index]} deletados com sucesso`);
+        }
+      });
+
+      // Finalmente, deletar o board
+      const { error: boardDeleteError } = await supabase
+        .from('boards')
+        .delete()
+        .eq('id', id);
+
+      if (boardDeleteError) {
+        console.error('Erro ao deletar board:', boardDeleteError);
+        return false;
+      }
+      
+      console.log(`Board ${boardId} e todos os seus dados foram excluídos com sucesso`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar quadro em lote:', error);
       return false;
     }
   }
@@ -468,9 +629,7 @@ export class DatabaseService {
     console.log('boardId:', boardId);
     
     try {
-      // Primeiro, garantir que o board tenha listas padrão
-      await this.ensureDefaultListsForBoard(boardId);
-      
+      // Buscar listas existentes sem criar automaticamente
       const { data, error } = await supabase
         .from('lists')
         .select('*')
@@ -929,6 +1088,42 @@ export class DatabaseService {
     }
   }
 
+  // Método para obter todas as subtarefas (para dashboard)
+  async getAllSubtasks(userRole: string, userId?: number): Promise<any[]> {
+    try {
+      if (userRole === 'admin') {
+        // Admin vê todas as subtarefas
+        const { data, error } = await supabase
+          .from('subtasks')
+          .select('*');
+        
+        if (error) {
+          console.error('Erro ao buscar todas as subtarefas:', error);
+          return [];
+        }
+        
+        return data || [];
+      } else if (userId) {
+        // Usuário comum vê apenas subtarefas onde é membro
+        const { data, error } = await supabase
+          .from('subtasks')
+          .select('*')
+          .contains('members', [userId]);
+        
+        if (error) {
+          console.error('Erro ao buscar subtarefas do usuário:', error);
+          return [];
+        }
+        
+        return data || [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Erro ao buscar subtarefas:', error);
+      return [];
+    }
+  }
 
   // ============================================================================
   // MÉTODOS DE ATIVIDADES
@@ -1716,6 +1911,64 @@ export class DatabaseService {
 
   // ===== PREFERÊNCIAS DO USUÁRIO =====
   
+  /**
+   * Salva a ordem dos quadros para um usuário específico
+   */
+  async saveUserBoardOrder(userId: number, boardOrder: number[]): Promise<boolean> {
+    try {
+      console.log('Database: Salvando ordem dos quadros para usuário:', { userId, boardOrder });
+      
+      // Buscar preferências existentes
+      const existingPrefs = await this.getUserPreferences(userId.toString());
+      
+      // Atualizar apenas a ordem dos quadros
+      const updatedPrefs = {
+        ...existingPrefs,
+        boardOrder: boardOrder
+      };
+      
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: userId.toString(),
+          preferences: updatedPrefs,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Database: Erro ao salvar ordem dos quadros:', error);
+        throw error;
+      }
+
+      console.log('Database: Ordem dos quadros salva com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao salvar ordem dos quadros:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Carrega a ordem dos quadros para um usuário específico
+   */
+  async getUserBoardOrder(userId: number): Promise<number[]> {
+    try {
+      console.log('Database: Carregando ordem dos quadros para usuário:', userId);
+      
+      // Buscar preferências do usuário
+      const preferences = await this.getUserPreferences(userId.toString());
+      
+      const boardOrder = preferences?.boardOrder || [];
+      console.log('Database: Ordem dos quadros carregada:', boardOrder);
+      return boardOrder;
+    } catch (error) {
+      console.error('Database: Erro ao carregar ordem dos quadros:', error);
+      return [];
+    }
+  }
+
   /**
    * Salva as preferências do usuário (filtros, modo de visualização, etc.)
    */
