@@ -1,16 +1,12 @@
-/* Estilos para o cabeçalho com padrão de estrelas */
+/* Estilos para o cabeçalho moderno */
 .header-with-stars {
-  background-color: #003d2b;
-  background-image: url('/estrelavermelha.svg');
-  background-repeat: repeat;
-  background-size: 16px 16px;
-  background-position: 0 0;
+  background: linear-gradient(135deg, #0f5132 0%, #198754 50%, #20c997 100%);
   position: relative;
   min-height: 80px;
+  overflow: hidden;
 }
 
-
-/* Garantir que o padrão seja visível */
+/* Efeito de gradiente animado */
 .header-with-stars::before {
   content: '';
   position: absolute;
@@ -18,19 +14,51 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('/estrelavermelha.svg');
-  background-repeat: repeat;
-  background-size: 16px 16px;
-  background-position: 0 0;
-  opacity: 0.9;
+  background: linear-gradient(45deg, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    transparent 25%, 
+    transparent 75%, 
+    rgba(255, 255, 255, 0.1) 100%);
+  background-size: 20px 20px;
+  animation: shimmer 3s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Efeito de partículas flutuantes */
+.header-with-stars::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px, 80px 80px, 60px 60px;
+  animation: float 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
 /* Garantir que o conteúdo fique acima do padrão */
 .header-content {
   position: relative;
   z-index: 2;
+  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* Responsividade para o logo */
@@ -38,7 +66,18 @@
   height: 2.5rem;
   width: 2.5rem;
   object-fit: contain;
-  filter: brightness(0) invert(1); /* Garantir que a logo seja branca */
+  filter: brightness(0) invert(1);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.header-logo:hover {
+  transform: scale(1.1);
+  filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+  background: rgba(255, 255, 255, 0.2);
 }
 
 @media (min-width: 640px) {
@@ -61,6 +100,25 @@
   font-weight: 700;
   color: white;
   line-height: 1.2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  background: linear-gradient(45deg, #ffffff, #f0f9ff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.header-title:hover {
+  transform: translateY(-2px);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 @media (min-width: 640px) {
@@ -73,4 +131,36 @@
   .header-title {
     font-size: 1.875rem;
   }
+}
+
+/* Efeito de glassmorphism para o cabeçalho */
+.header-with-stars {
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Animação de entrada suave */
+.header-content {
+  animation: slideInFromTop 0.8s ease-out;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Efeito de hover no cabeçalho inteiro */
+.header-with-stars:hover::before {
+  animation-duration: 1.5s;
+}
+
+.header-with-stars:hover::after {
+  animation-duration: 3s;
 }

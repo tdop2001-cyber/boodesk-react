@@ -58,6 +58,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       badge: undefined
     },
     {
+      id: 'activities',
+      label: 'Minhas Atividades',
+      icon: Activity,
+      path: '/activities',
+      badge: undefined
+    },
+    {
       id: 'meetings',
       label: 'Reuniões',
       icon: Calendar,
@@ -76,13 +83,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       label: 'Pomodoro',
       icon: Coffee,
       path: '/pomodoro',
-      badge: undefined
-    },
-    {
-      id: 'activities',
-      label: 'Minhas Atividades',
-      icon: Activity,
-      path: '/activities',
       badge: undefined
     },
     {

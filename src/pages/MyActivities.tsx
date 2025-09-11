@@ -1688,6 +1688,17 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
       <div className="header-with-stars text-white shadow-xl">
         <div className="header-content max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-start h-20">
+            {/* Ícone de atividades */}
+            <div className="mr-4">
+              <img 
+                src="/atividades.png" 
+                alt="Atividades" 
+                className="header-logo"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
             {/* Título "Minhas Atividades" */}
             <h1 className="header-title">
               Minhas Atividades
