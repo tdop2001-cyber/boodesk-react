@@ -21,7 +21,8 @@ import {
   HelpCircle,
   Zap,
   Database,
-  Folder
+  Folder,
+  Archive
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -82,6 +83,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       label: 'Minhas Atividades',
       icon: Activity,
       path: '/activities',
+      badge: undefined
+    },
+    {
+      id: 'archive',
+      label: 'Arquivo de Cards',
+      icon: Archive,
+      path: '/archive',
       badge: undefined
     },
     {

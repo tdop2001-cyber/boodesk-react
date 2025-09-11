@@ -19,6 +19,7 @@ import FileManager from './pages/FileManager';
 import Calendar from './pages/Calendar';
 import AllCards from './pages/AllCards';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
+import ArchivePage from './pages/ArchivePage';
 import DatabaseSetup from './components/DatabaseSetup';
 import { Menu } from 'lucide-react';
 
@@ -189,6 +190,18 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <MainLayout>
               <MyActivities />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rota para arquivo de cards */}
+      <Route
+        path="/archive"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ArchivePage />
             </MainLayout>
           </ProtectedRoute>
         }

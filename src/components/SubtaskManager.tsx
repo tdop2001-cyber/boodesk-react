@@ -51,7 +51,7 @@ export interface Subtask {
   members?: number[]; // IDs dos usuários membros da subtarefa
   // Campos do banco
   card_id?: string;
-  due_date?: string;
+  due_date?: string | null;
   estimated_time?: string;
   actual_time?: string;
   user_id?: number;
@@ -390,7 +390,7 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
       const updateData = {
         title: updatedSubtask.title,
         description: updatedSubtask.description,
-        due_date: updatedSubtask.dueDate,
+        due_date: updatedSubtask.dueDate || undefined,
         priority: updatedSubtask.priority,
         importance: updatedSubtask.importance,
         category: updatedSubtask.category,
@@ -1089,12 +1089,16 @@ const SubtaskManager: React.FC<SubtaskManagerProps> = ({
                 {/* Due Date and Priority */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-brand-gray mb-2">Prazo</label>
+                    <label className="block text-sm font-medium text-brand-gray mb-2">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      Data de Vencimento
+                    </label>
                     <input
                       type="date"
                       value={detailForm.dueDate}
                       onChange={(e) => setDetailForm({...detailForm, dueDate: e.target.value})}
                       className="w-full p-3 border border-brand-light-gray rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      placeholder="Selecione uma data"
                     />
                   </div>
                   <div>

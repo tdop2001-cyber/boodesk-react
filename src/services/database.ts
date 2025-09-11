@@ -21,7 +21,7 @@ export interface List {
 
 export interface Subtask {
   id: number;
-  card_id: string;
+  card_id: number;
   title: string;
   description: string;
   status: string;
@@ -1052,6 +1052,28 @@ export class DatabaseService {
     }
   }
 
+  async getSubtaskById(subtaskId: number): Promise<Subtask | null> {
+    try {
+      console.log('Buscando subtarefa por ID:', subtaskId);
+      const { data, error } = await supabase
+        .from('subtasks')
+        .select('*')
+        .eq('id', subtaskId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar subtarefa:', error);
+        throw error;
+      }
+      
+      console.log('Subtarefa encontrada:', data);
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar subtarefa:', error);
+      return null;
+    }
+  }
+
   async getSubtasksForCardByUser(cardId: number, userId: number, userRole: string): Promise<Subtask[]> {
     try {
       if (userRole === 'admin') {
@@ -1710,7 +1732,7 @@ export class DatabaseService {
     title: string;
     description?: string;
     priority?: string;
-    due_date?: string;
+    due_date?: string | null;
     members?: string[];
     created_by: number;
   }): Promise<any> {
@@ -1776,12 +1798,16 @@ export class DatabaseService {
     title?: string;
     description?: string;
     priority?: string;
-    due_date?: string;
+    due_date?: string | null;
     status?: string;
     members?: string[];
     position?: number;
     completed?: boolean;
     completed_at?: string | null;
+    importance?: string;
+    category?: string;
+    estimated_time?: string;
+    tags?: string[];
   }): Promise<any> {
     try {
       console.log('Database: Atualizando subtarefa ID:', subtaskId, 'Updates:', updates);
@@ -1798,6 +1824,10 @@ export class DatabaseService {
       if (updates.due_date !== undefined) mappedUpdates.due_date = updates.due_date;
       if (updates.status !== undefined) mappedUpdates.status = updates.status;
       if (updates.position !== undefined) mappedUpdates.position = updates.position;
+      if (updates.importance !== undefined) mappedUpdates.importance = updates.importance;
+      if (updates.category !== undefined) mappedUpdates.category = updates.category;
+      if (updates.estimated_time !== undefined) mappedUpdates.estimated_time = updates.estimated_time;
+      if (updates.tags !== undefined) mappedUpdates.tags = updates.tags;
       
       // Se completed é fornecido, mapear para status
       if (updates.completed !== undefined) {
@@ -2068,6 +2098,409 @@ export class DatabaseService {
     } catch (error) {
       console.error('Database: Erro ao remover preferência específica:', error);
       throw error;
+    }
+  }
+
+  // ===== SISTEMA DE ARQUIVAMENTO =====
+
+  /**
+   * Arquivar um card individualmente
+   */
+  async archiveCard(cardId: number, folderId: number, userId: number, reason: string = 'Arquivamento manual'): Promise<boolean> {
+    try {
+      console.log('Database: Arquivando card:', cardId, 'para pasta:', folderId);
+      
+      const { error } = await supabase
+        .from('cards')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: userId,
+          archive_folder_id: folderId
+        })
+        .eq('id', cardId);
+
+      if (error) {
+        console.error('Database: Erro ao arquivar card:', error);
+        throw error;
+      }
+
+      // Inserir no histórico de arquivo
+      await supabase
+        .from('archived_cards')
+        .insert({
+          original_card_id: cardId,
+          archive_folder_id: folderId,
+          archived_by: userId,
+          archive_reason: reason,
+          auto_archived: false
+        });
+
+      // Inserir no histórico
+      await supabase
+        .from('archive_history')
+        .insert({
+          card_id: cardId,
+          action: 'archived',
+          performed_by: userId,
+          archive_folder_id: folderId,
+          details: {
+            reason: reason,
+            manual_archive: true
+          }
+        });
+
+      console.log('Database: Card arquivado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao arquivar card:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Arquivar múltiplos cards em lote
+   */
+  async archiveCardsBulk(cardIds: number[], folderId: number, userId: number, reason: string = 'Arquivamento em lote'): Promise<boolean> {
+    try {
+      console.log('Database: Arquivando cards em lote:', cardIds);
+      
+      const { error } = await supabase
+        .from('cards')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: userId,
+          archive_folder_id: folderId
+        })
+        .in('id', cardIds);
+
+      if (error) {
+        console.error('Database: Erro ao arquivar cards em lote:', error);
+        throw error;
+      }
+
+      // Inserir no histórico de arquivo para cada card
+      const archivedCardsData = cardIds.map(cardId => ({
+        original_card_id: cardId,
+        archive_folder_id: folderId,
+        archived_by: userId,
+        archive_reason: reason,
+        auto_archived: false
+      }));
+
+      await supabase
+        .from('archived_cards')
+        .insert(archivedCardsData);
+
+      // Inserir no histórico para cada card
+      const historyData = cardIds.map(cardId => ({
+        card_id: cardId,
+        action: 'archived',
+        performed_by: userId,
+        archive_folder_id: folderId,
+        details: {
+          reason: reason,
+          bulk_archive: true,
+          total_cards: cardIds.length
+        }
+      }));
+
+      await supabase
+        .from('archive_history')
+        .insert(historyData);
+
+      console.log('Database: Cards arquivados em lote com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao arquivar cards em lote:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Restaurar um card do arquivo
+   */
+  async restoreArchivedCard(cardId: number, userId: number): Promise<boolean> {
+    try {
+      console.log('Database: Restaurando card do arquivo:', cardId);
+      
+      const { error } = await supabase
+        .from('cards')
+        .update({
+          is_archived: false,
+          archived_at: null,
+          archived_by: null,
+          archive_folder_id: null
+        })
+        .eq('id', cardId)
+        .eq('is_archived', true);
+
+      if (error) {
+        console.error('Database: Erro ao restaurar card:', error);
+        throw error;
+      }
+
+      // Inserir no histórico
+      await supabase
+        .from('archive_history')
+        .insert({
+          card_id: cardId,
+          action: 'restored',
+          performed_by: userId,
+          details: {
+            restored_at: new Date().toISOString()
+          }
+        });
+
+      console.log('Database: Card restaurado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao restaurar card:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar cards arquivados
+   */
+  async getArchivedCards(folderId?: number, limit: number = 50, offset: number = 0): Promise<any[]> {
+    try {
+      console.log('Database: Buscando cards arquivados');
+      
+      // Buscar diretamente da tabela cards com JOINs
+      let query = supabase
+        .from('cards')
+        .select(`
+          id,
+          title,
+          description,
+          status,
+          importance,
+          created_at,
+          completed_at,
+          archived_at,
+          is_archived,
+          list_name,
+          board_id,
+          archive_folder_id,
+          archived_by
+        `)
+        .eq('is_archived', true)
+        .order('archived_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (folderId) {
+        query = query.eq('archive_folder_id', folderId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Database: Erro ao buscar cards arquivados:', error);
+        throw error;
+      }
+
+      // Buscar informações das pastas e usuários separadamente
+      const enrichedData = await Promise.all(
+        (data || []).map(async (card) => {
+          let folderInfo = null;
+          let userInfo = null;
+          let boardInfo = null;
+
+          // Buscar informações da pasta
+          if (card.archive_folder_id) {
+            const { data: folder } = await supabase
+              .from('archive_folders')
+              .select('name, color, icon')
+              .eq('id', card.archive_folder_id)
+              .single();
+            folderInfo = folder;
+          }
+
+          // Buscar informações do usuário
+          if (card.archived_by) {
+            const { data: user } = await supabase
+              .from('users')
+              .select('username, nome_completo')
+              .eq('id', card.archived_by)
+              .single();
+            userInfo = user;
+          }
+
+          // Buscar informações do board
+          if (card.board_id) {
+            const { data: board } = await supabase
+              .from('boards')
+              .select('name')
+              .eq('board_id', card.board_id)
+              .single();
+            boardInfo = board;
+          }
+
+          return {
+            ...card,
+            priority: card.importance || 'medium',
+            column_name: card.list_name || 'Sem Coluna',
+            archive_folder_name: folderInfo?.name || 'Sem Pasta',
+            archive_folder_color: folderInfo?.color || '#6B7280',
+            archive_folder_icon: folderInfo?.icon || 'folder',
+            archived_by_username: userInfo?.username || 'Sistema',
+            archived_by_name: userInfo?.nome_completo || userInfo?.username || 'Sistema',
+            board_name: boardInfo?.name || 'Board não encontrado'
+          };
+        })
+      );
+
+      console.log('Database: Cards arquivados encontrados:', enrichedData.length);
+      return enrichedData;
+    } catch (error) {
+      console.error('Database: Erro ao buscar cards arquivados:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Buscar pastas de arquivo
+   */
+  async getArchiveFolders(): Promise<any[]> {
+    try {
+      console.log('Database: Buscando pastas de arquivo');
+      
+      const { data, error } = await supabase
+        .from('archive_folders')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error('Database: Erro ao buscar pastas de arquivo:', error);
+        throw error;
+      }
+
+      console.log('Database: Pastas de arquivo encontradas:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar pastas de arquivo:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Criar nova pasta de arquivo
+   */
+  async createArchiveFolder(name: string, description: string, color: string, icon: string, userId: number): Promise<any> {
+    try {
+      console.log('Database: Criando pasta de arquivo:', name);
+      
+      const { data, error } = await supabase
+        .from('archive_folders')
+        .insert({
+          name,
+          description,
+          color,
+          icon,
+          created_by: userId
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao criar pasta de arquivo:', error);
+        throw error;
+      }
+
+      console.log('Database: Pasta de arquivo criada com sucesso');
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao criar pasta de arquivo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Executar arquivamento automático
+   */
+  async executeAutoArchive(): Promise<number> {
+    try {
+      console.log('Database: Executando arquivamento automático');
+      
+      const { data, error } = await supabase
+        .rpc('auto_archive_completed_cards');
+
+      if (error) {
+        console.error('Database: Erro ao executar arquivamento automático:', error);
+        throw error;
+      }
+
+      console.log('Database: Arquivamento automático executado, cards arquivados:', data);
+      return data || 0;
+    } catch (error) {
+      console.error('Database: Erro ao executar arquivamento automático:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Configurar arquivamento automático
+   */
+  async setAutoArchiveSettings(boardId: number | null, enabled: boolean, archiveAfterDays: number, defaultFolderId: number, userId: number): Promise<boolean> {
+    try {
+      console.log('Database: Configurando arquivamento automático');
+      
+      const { error } = await supabase
+        .from('archive_settings')
+        .upsert({
+          board_id: boardId,
+          auto_archive_enabled: enabled,
+          archive_after_days: archiveAfterDays,
+          default_folder_id: defaultFolderId,
+          created_by: userId,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Database: Erro ao configurar arquivamento automático:', error);
+        throw error;
+      }
+
+      console.log('Database: Configuração de arquivamento automático salva');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao configurar arquivamento automático:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar configurações de arquivamento automático
+   */
+  async getAutoArchiveSettings(boardId?: number): Promise<any> {
+    try {
+      console.log('Database: Buscando configurações de arquivamento automático');
+      
+      let query = supabase
+        .from('archive_settings')
+        .select('*');
+
+      if (boardId) {
+        query = query.eq('board_id', boardId);
+      } else {
+        query = query.is('board_id', null); // Configuração global
+      }
+
+      const { data, error } = await query.single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Database: Erro ao buscar configurações de arquivamento:', error);
+        throw error;
+      }
+
+      console.log('Database: Configurações de arquivamento encontradas:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao buscar configurações de arquivamento:', error);
+      return null;
     }
   }
 

@@ -1,0 +1,76 @@
+/* Estilos para o cabeçalho com padrão de estrelas */
+.header-with-stars {
+  background-color: #003d2b;
+  background-image: url('/estrelavermelha.svg');
+  background-repeat: repeat;
+  background-size: 16px 16px;
+  background-position: 0 0;
+  position: relative;
+  min-height: 80px;
+}
+
+
+/* Garantir que o padrão seja visível */
+.header-with-stars::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/estrelavermelha.svg');
+  background-repeat: repeat;
+  background-size: 16px 16px;
+  background-position: 0 0;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Garantir que o conteúdo fique acima do padrão */
+.header-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Responsividade para o logo */
+.header-logo {
+  height: 2.5rem;
+  width: 2.5rem;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Garantir que a logo seja branca */
+}
+
+@media (min-width: 640px) {
+  .header-logo {
+    height: 3rem;
+    width: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header-logo {
+    height: 3.5rem;
+    width: 3.5rem;
+  }
+}
+
+/* Responsividade para o título */
+.header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .header-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header-title {
+    font-size: 1.875rem;
+  }
+}

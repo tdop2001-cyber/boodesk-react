@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
+import '../styles/header.css';
 // Temporariamente comentar para debug
 // import { useSync } from '../contexts/SyncContext';
 
@@ -1683,22 +1684,17 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      <div className="bg-gradient-to-br from-[#16704E] via-[#0F5A3A] to-[#0A4A2E] text-white shadow-xl">
-         <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6">
-           <div className="flex items-center justify-between h-20">
-             <div className="flex items-center space-x-6">
-               <div className="flex items-center space-x-3">
-                 <div className="p-3 bg-gradient-to-br from-[#16704E] to-[#0F5A3A] rounded-xl shadow-lg">
-                   <Target className="w-6 h-6 text-white" />
-                 </div>
-                 <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-                   Minhas Atividades
-                 </h1>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
+      {/* Cabeçalho com fundo verde escuro e padrão de estrelas */}
+      <div className="header-with-stars text-white shadow-xl">
+        <div className="header-content max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-start h-20">
+            {/* Título "Minhas Atividades" */}
+            <h1 className="header-title">
+              Minhas Atividades
+            </h1>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-100 border-b border-slate-200 shadow-sm">
         <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4">

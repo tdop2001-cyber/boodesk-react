@@ -38,6 +38,7 @@ import SubtaskManager, { Subtask } from './SubtaskManager';
 import AvatarGroup from './AvatarGroup';
 import UnifiedKanban, { KanbanItem as UnifiedKanbanItem, KanbanColumnDef } from './UnifiedKanban';
 import SubtaskModal from './SubtaskModal';
+import ArchiveManager from './ArchiveManager';
 import { db } from '../services/database';
 
 interface CardDetailModalProps {
@@ -105,12 +106,16 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   const [showCreateSubtaskModal, setShowCreateSubtaskModal] = useState(false);
   const [showEditSubtaskModal, setShowEditSubtaskModal] = useState(false);
   const [selectedSubtaskForEdit, setSelectedSubtaskForEdit] = useState<any>(null);
+  const [showArchiveManager, setShowArchiveManager] = useState(false);
+  const [showArchiveOptions, setShowArchiveOptions] = useState(false);
+  const [archiveFolders, setArchiveFolders] = useState<any[]>([]);
   
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newSubtaskDescription, setNewSubtaskDescription] = useState('');
   const [newSubtaskPriority, setNewSubtaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
   const [newSubtaskMembers, setNewSubtaskMembers] = useState<string[]>([]);
 
   const kanbanColumns: KanbanColumnDef[] = [
@@ -346,6 +351,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         title: newSubtaskTitle.trim(),
         description: newSubtaskDescription.trim(),
         priority: newSubtaskPriority,
+        due_date: newSubtaskDueDate || undefined,
         members: newSubtaskMembers.length > 0 ? newSubtaskMembers : [user?.id?.toString() || '1'],
         created_by: user?.id || 1
       };
@@ -371,6 +377,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         setNewSubtaskTitle('');
         setNewSubtaskDescription('');
         setNewSubtaskPriority('medium');
+        setNewSubtaskDueDate('');
         setNewSubtaskMembers([]);
         setShowCreateSubtaskModal(false);
         
@@ -389,6 +396,66 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
       addToast({ type: 'error', title: 'Erro ao criar', message: 'Não foi possível criar a subtarefa.' });
     }
   };
+
+  // ===== FUNÇÕES DE ARQUIVAMENTO =====
+
+  const handleArchiveCard = async (folderId: number) => {
+    try {
+      const cardId = card.card_id || card.id;
+      if (!cardId) {
+        addToast({
+          type: 'error',
+          title: 'Erro',
+          message: 'ID do card não encontrado.'
+        });
+        return;
+      }
+
+      await db.archiveCard(Number(cardId), folderId, user?.id || 1, 'Arquivamento manual');
+      
+      addToast({
+        type: 'success',
+        title: 'Card arquivado',
+        message: 'Card foi arquivado com sucesso!'
+      });
+
+      // Fechar o modal após arquivamento
+      onClose();
+    } catch (error) {
+      console.error('Erro ao arquivar card:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro ao arquivar',
+        message: 'Não foi possível arquivar o card.'
+      });
+    }
+  };
+
+  const handleOpenArchiveManager = () => {
+    setShowArchiveManager(true);
+  };
+
+  const handleCardRestored = (cardId: number) => {
+    // Recarregar dados do card se necessário
+    console.log('Card restaurado:', cardId);
+  };
+
+  // Fechar dropdown de arquivamento quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showArchiveOptions) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.archive-dropdown')) {
+          setShowArchiveOptions(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showArchiveOptions]);
 
   useEffect(() => {
     const loadCardData = async () => {
@@ -414,14 +481,20 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
           description: subtask.description || '',
               completed: subtask.status === 'completed',
           priority: (subtask.priority || 'medium') as 'low' | 'medium' | 'high',
-          dueDate: subtask.due_date || '',
+          dueDate: subtask.due_date || undefined,
               estimatedTime: 0,
               actualTime: 0,
-              importance: 'normal' as 'low' | 'high' | 'normal' | 'critical',
-              category: 'Geral',
+              importance: (subtask.importance || 'normal') as 'low' | 'high' | 'normal' | 'critical',
+              category: subtask.category || 'Geral',
               tags: [],
               status: mappedStatus as 'pending' | 'in_progress' | 'completed',
-          createdAt: new Date()
+          createdAt: subtask.created_at ? new Date(subtask.created_at) : new Date(),
+          // Adicionar campos do banco para o modal
+          due_date: subtask.due_date || undefined,
+          created_at: subtask.created_at,
+          updated_at: subtask.updated_at,
+          estimated_time: subtask.estimated_time,
+          actual_time: subtask.actual_time
             };
           });
         
@@ -440,6 +513,20 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
       loadCardData();
     }
   }, [card.id, card.card_id]);
+
+  // Carregar pastas de arquivo
+  useEffect(() => {
+    const loadArchiveFolders = async () => {
+      try {
+        const folders = await db.getArchiveFolders();
+        setArchiveFolders(folders);
+      } catch (error) {
+        console.error('Erro ao carregar pastas de arquivo:', error);
+      }
+    };
+
+    loadArchiveFolders();
+  }, []);
 
   // ===== LISTENERS DE SINCRONIZAÇÃO =====
   
@@ -660,6 +747,60 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
               <Edit className="w-4 h-4" />
               <span>{isEditing ? 'Cancelar' : 'Editar'}</span>
             </button>
+            
+            {/* Botão de Arquivamento - só aparece se o card estiver concluído */}
+            {card.status === 'done' && (
+              <div className="relative archive-dropdown">
+                <button
+                  onClick={() => setShowArchiveOptions(!showArchiveOptions)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Archive className="w-4 h-4" />
+                  <span>Arquivar</span>
+                </button>
+                
+                {/* Dropdown de opções de arquivamento */}
+                {showArchiveOptions && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <div className="p-3 border-b border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900">Escolher pasta de arquivo</h4>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {archiveFolders.map((folder) => (
+                        <button
+                          key={folder.id}
+                          onClick={() => {
+                            handleArchiveCard(folder.id);
+                            setShowArchiveOptions(false);
+                          }}
+                          className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 transition-colors"
+                        >
+                          <div 
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{folder.name}</div>
+                            {folder.description && (
+                              <div className="text-xs text-gray-500">{folder.description}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-3 border-t border-gray-200">
+                      <button
+                        onClick={handleOpenArchiveManager}
+                        className="w-full text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        Gerenciar arquivos
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <button
               onClick={handleDelete}
               className="flex items-center space-x-2 px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-red/90 transition-colors"
@@ -1050,6 +1191,20 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-brand-gray mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Data de Vencimento
+                </label>
+                <input
+                  type="date"
+                  value={newSubtaskDueDate}
+                  onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                  placeholder="Selecione uma data"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-brand-gray mb-2">
                   Membros da Subtarefa
                 </label>
                 <div className="space-y-2 max-h-32 overflow-y-auto border border-brand-light-gray rounded-lg p-3">
@@ -1108,6 +1263,12 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         subtask={selectedSubtaskForEdit}
         onUpdate={handleUpdateSubtask}
         onDelete={handleDeleteSubtaskFromModal}
+      />
+
+      <ArchiveManager
+        isOpen={showArchiveManager}
+        onClose={() => setShowArchiveManager(false)}
+        onCardRestored={handleCardRestored}
       />
     </div>
   );

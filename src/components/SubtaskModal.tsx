@@ -17,7 +17,14 @@ import {
   FileText,
   Target,
   Flag,
-  Timer
+  Timer,
+  Star,
+  Zap,
+  Shield,
+  TrendingUp,
+  MoreHorizontal,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface SubtaskModalProps {
@@ -52,6 +59,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
   const [members, setMembers] = useState<any[]>([]);
   const [newSubtaskMembers, setNewSubtaskMembers] = useState<string[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Determinar se é modo de criação ou edição
   const isCreateMode = !subtask && onSubmit;
@@ -60,19 +68,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (subtask) {
-        // Modo de edição
-        setEditedSubtask({
-          title: subtask.title || '',
-          description: subtask.description || '',
-          priority: subtask.priority || 'medium',
-          status: subtask.status || 'pending',
-          due_date: subtask.due_date || '',
-          estimated_time: subtask.estimated_time || '',
-          actual_time: subtask.actual_time || '',
-          tags: subtask.tags || [],
-          category: subtask.category || '',
-          importance: subtask.importance || 'normal'
-        });
+        // Modo de edição - carregar dados completos do banco
+        loadSubtaskDetails();
         setIsEditing(false);
       } else if (isCreateMode) {
         // Modo de criação
@@ -93,6 +90,43 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
       }
     }
   }, [isOpen, subtask, isCreateMode, cardMembers]);
+
+  // Carregar detalhes completos da subtarefa do banco
+  const loadSubtaskDetails = async () => {
+    if (!subtask?.id) return;
+    
+    try {
+      setLoading(true);
+      // Buscar dados atualizados da subtarefa
+      const subtaskData = await db.getSubtaskById(subtask.id);
+      
+      if (subtaskData) {
+        setEditedSubtask({
+          title: subtaskData.title || '',
+          description: subtaskData.description || '',
+          priority: subtaskData.priority || 'medium',
+          status: subtaskData.status || 'pending',
+          due_date: subtaskData.due_date || '',
+          estimated_time: subtaskData.estimated_time || '',
+          actual_time: subtaskData.actual_time || '',
+          tags: subtaskData.tags || [],
+          category: subtaskData.category || '',
+          importance: subtaskData.importance || 'normal',
+          created_at: subtaskData.created_at,
+          updated_at: subtaskData.updated_at
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar detalhes da subtarefa:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro ao carregar',
+        message: 'Não foi possível carregar os detalhes da subtarefa.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Carregar membros da subtarefa
   useEffect(() => {
@@ -210,376 +244,446 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  // Funções de formatação
+  const formatDate = (dateString: string | undefined | null): string => {
+    if (!dateString) return 'Data não disponível';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      return date.toLocaleString('pt-BR');
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data inválida';
+    }
+  };
+
+  const formatDateOnly = (dateString: string | undefined | null): string => {
+    if (!dateString) return 'Sem data definida';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data inválida';
+    }
+  };
+
+  // Funções de estilo
+  const getPriorityConfig = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'high': return { 
+        color: 'text-red-600 bg-red-50 border-red-200', 
+        icon: AlertCircle, 
+        label: 'Alta' 
+      };
+      case 'medium': return { 
+        color: 'text-yellow-600 bg-yellow-50 border-yellow-200', 
+        icon: Flag, 
+        label: 'Média' 
+      };
+      case 'low': return { 
+        color: 'text-green-600 bg-green-50 border-green-200', 
+        icon: CheckCircle, 
+        label: 'Baixa' 
+      };
+      default: return { 
+        color: 'text-gray-600 bg-gray-50 border-gray-200', 
+        icon: Flag, 
+        label: 'Normal' 
+      };
     }
   };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'Alta';
-      case 'medium': return 'Média';
-      case 'low': return 'Baixa';
-      default: return 'Normal';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'pending': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'completed': return { 
+        color: 'text-green-600 bg-green-50 border-green-200', 
+        icon: CheckCircle, 
+        label: 'Concluída' 
+      };
+      case 'in_progress': return { 
+        color: 'text-blue-600 bg-blue-50 border-blue-200', 
+        icon: Timer, 
+        label: 'Em Progresso' 
+      };
+      case 'pending': return { 
+        color: 'text-gray-600 bg-gray-50 border-gray-200', 
+        icon: Clock, 
+        label: 'Pendente' 
+      };
+      default: return { 
+        color: 'text-gray-600 bg-gray-50 border-gray-200', 
+        icon: Clock, 
+        label: 'Pendente' 
+      };
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Concluída';
-      case 'in_progress': return 'Em Progresso';
-      case 'pending': return 'Pendente';
-      default: return 'Pendente';
-    }
-  };
-
-  const getImportanceColor = (importance: string) => {
+  const getImportanceConfig = (importance: string) => {
     switch (importance) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high': return 'text-orange-600 bg-orange-100';
-      case 'normal': return 'text-blue-600 bg-blue-100';
-      case 'low': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'critical': return { 
+        color: 'text-red-600 bg-red-50 border-red-200', 
+        icon: AlertCircle, 
+        label: 'Crítica' 
+      };
+      case 'high': return { 
+        color: 'text-orange-600 bg-orange-50 border-orange-200', 
+        icon: TrendingUp, 
+        label: 'Alta' 
+      };
+      case 'normal': return { 
+        color: 'text-blue-600 bg-blue-50 border-blue-200', 
+        icon: Star, 
+        label: 'Normal' 
+      };
+      case 'low': return { 
+        color: 'text-gray-600 bg-gray-50 border-gray-200', 
+        icon: Shield, 
+        label: 'Baixa' 
+      };
+      default: return { 
+        color: 'text-gray-600 bg-gray-50 border-gray-200', 
+        icon: Star, 
+        label: 'Normal' 
+      };
     }
   };
 
-  const getImportanceText = (importance: string) => {
-    switch (importance) {
-      case 'critical': return 'Crítica';
-      case 'high': return 'Alta';
-      case 'normal': return 'Normal';
-      case 'low': return 'Baixa';
-      default: return 'Normal';
-    }
-  };
+  if (!isOpen) return null;
 
-  if (!isOpen || !subtask) return null;
+  const priorityConfig = getPriorityConfig(editedSubtask.priority || 'medium');
+  const statusConfig = getStatusConfig(editedSubtask.status || 'pending');
+  const importanceConfig = getImportanceConfig(editedSubtask.importance || 'normal');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <Target className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              {isCreateMode ? 'Criar Nova Subtarefa' : isEditing ? 'Editar Subtarefa' : 'Detalhes da Subtarefa'}
-            </h2>
-          </div>
-          <div className="flex items-center space-x-2">
-            {!isEditing && !isCreateMode && (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
+        {/* Header Moderno */}
+        <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Target className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {isCreateMode ? 'Criar Nova Subtarefa' : isEditing ? 'Editar Subtarefa' : 'Detalhes da Subtarefa'}
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  {isCreateMode ? 'Adicione uma nova subtarefa ao projeto' : 'Gerencie os detalhes da subtarefa'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              {!isEditing && !isCreateMode && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
+                  title="Editar subtarefa"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+              )}
               <button
-                onClick={() => setIsEditing(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Editar subtarefa"
+                onClick={onClose}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
               >
-                <Edit3 className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="space-y-6">
-            {/* Título */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Título
-              </label>
-              {(isEditing || isCreateMode) ? (
-                <input
-                  type="text"
-                  value={editedSubtask.title}
-                  onChange={(e) => setEditedSubtask({...editedSubtask, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Título da subtarefa"
-                />
-              ) : (
-                <p className="text-lg font-medium text-gray-900">{subtask.title}</p>
-              )}
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Carregando...</span>
             </div>
-
-            {/* Descrição */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descrição
-              </label>
-              {(isEditing || isCreateMode) ? (
-                <textarea
-                  value={editedSubtask.description}
-                  onChange={(e) => setEditedSubtask({...editedSubtask, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Descrição da subtarefa"
-                />
-              ) : (
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {subtask.description || 'Sem descrição'}
-                </p>
-              )}
-            </div>
-
-            {/* Status e Prioridade */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                {(isEditing || isCreateMode) ? (
-                  <select
-                    value={editedSubtask.status}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, status: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="pending">Pendente</option>
-                    <option value="in_progress">Em Progresso</option>
-                    <option value="completed">Concluída</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
-                    {getStatusText(subtask.status)}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Prioridade
-                </label>
-                {(isEditing || isCreateMode) ? (
-                  <select
-                    value={editedSubtask.priority}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, priority: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(subtask.priority)}`}>
-                    {getPriorityText(subtask.priority)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Importância e Categoria */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Importância
-                </label>
-                {(isEditing || isCreateMode) ? (
-                  <select
-                    value={editedSubtask.importance}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, importance: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="low">Baixa</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">Alta</option>
-                    <option value="critical">Crítica</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getImportanceColor(subtask.importance)}`}>
-                    {getImportanceText(subtask.importance)}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoria
+          ) : (
+            <div className="space-y-6">
+              {/* Título */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Título da Subtarefa
                 </label>
                 {(isEditing || isCreateMode) ? (
                   <input
                     type="text"
-                    value={editedSubtask.category}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Categoria"
+                    value={editedSubtask.title}
+                    onChange={(e) => setEditedSubtask({...editedSubtask, title: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                    placeholder="Digite o título da subtarefa..."
                   />
                 ) : (
-                  <p className="text-gray-700">{subtask.category || 'Sem categoria'}</p>
+                  <h3 className="text-xl font-bold text-gray-900">{editedSubtask.title || 'Sem título'}</h3>
                 )}
               </div>
-            </div>
 
-            {/* Datas e Tempos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Data de Vencimento
+              {/* Descrição */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Descrição
                 </label>
                 {(isEditing || isCreateMode) ? (
-                  <input
-                    type="date"
-                    value={editedSubtask.due_date}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, due_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <textarea
+                    value={editedSubtask.description}
+                    onChange={(e) => setEditedSubtask({...editedSubtask, description: e.target.value})}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Descreva os detalhes da subtarefa..."
                   />
                 ) : (
-                  <p className="text-gray-700">
-                    {subtask.due_date ? new Date(subtask.due_date).toLocaleDateString('pt-BR') : 'Sem data definida'}
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {editedSubtask.description || 'Sem descrição'}
                   </p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Timer className="w-4 h-4 inline mr-1" />
-                  Tempo Estimado
-                </label>
-                {(isEditing || isCreateMode) ? (
-                  <input
-                    type="text"
-                    value={editedSubtask.estimated_time}
-                    onChange={(e) => setEditedSubtask({...editedSubtask, estimated_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: 2h, 30min"
-                  />
-                ) : (
-                  <p className="text-gray-700">{subtask.estimated_time || 'Não definido'}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Tempo Real */}
-            {subtask.actual_time && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  Tempo Real
-                </label>
-                <p className="text-gray-700">{subtask.actual_time}</p>
-              </div>
-            )}
-
-            {/* Membros */}
-            {members.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  Membros
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {members.map((member) => (
-                    <div key={member.id} className="flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1">
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                        {(member.nome_completo || member.username || member.email || 'U').charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm text-gray-700">
-                        {member.nome_completo || member.username || member.email}
-                      </span>
+              {/* Status e Prioridade - Layout em Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <statusConfig.icon className="w-4 h-4 inline mr-2" />
+                    Status
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <select
+                      value={editedSubtask.status}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, status: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="pending">Pendente</option>
+                      <option value="in_progress">Em Progresso</option>
+                      <option value="completed">Concluída</option>
+                    </select>
+                  ) : (
+                    <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${statusConfig.color}`}>
+                      <statusConfig.icon className="w-4 h-4 mr-2" />
+                      {statusConfig.label}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
 
-            {/* Seleção de Membros - Modo de Criação */}
-            {isCreateMode && allUsers.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  Membros da Subtarefa
-                </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {allUsers.map((user) => (
-                    <label key={user.id} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newSubtaskMembers.includes(user.id.toString())}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewSubtaskMembers([...newSubtaskMembers, user.id.toString()]);
-                          } else {
-                            setNewSubtaskMembers(newSubtaskMembers.filter(id => id !== user.id.toString()));
-                          }
-                        }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                          {(user.nome_completo || user.username || user.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-sm text-gray-700">
-                          {user.nome_completo || user.username || user.email}
-                        </span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {subtask.tags && subtask.tags.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Tag className="w-4 h-4 inline mr-1" />
-                  Tags
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {subtask.tags.map((tag: string, index: number) => (
-                    <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Informações de Criação */}
-            {!isCreateMode && subtask && (
-              <div className="border-t border-gray-200 pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
-                  <div>
-                    <span className="font-medium">Criado em:</span>
-                    <p>{new Date(subtask.created_at).toLocaleString('pt-BR')}</p>
-                  </div>
-                  {subtask.updated_at && (
-                    <div>
-                      <span className="font-medium">Atualizado em:</span>
-                      <p>{new Date(subtask.updated_at).toLocaleString('pt-BR')}</p>
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <priorityConfig.icon className="w-4 h-4 inline mr-2" />
+                    Prioridade
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <select
+                      value={editedSubtask.priority}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, priority: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="low">Baixa</option>
+                      <option value="medium">Média</option>
+                      <option value="high">Alta</option>
+                    </select>
+                  ) : (
+                    <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${priorityConfig.color}`}>
+                      <priorityConfig.icon className="w-4 h-4 mr-2" />
+                      {priorityConfig.label}
                     </div>
                   )}
                 </div>
               </div>
-            )}
-          </div>
+
+              {/* Importância e Categoria */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <importanceConfig.icon className="w-4 h-4 inline mr-2" />
+                    Importância
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <select
+                      value={editedSubtask.importance}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, importance: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="low">Baixa</option>
+                      <option value="normal">Normal</option>
+                      <option value="high">Alta</option>
+                      <option value="critical">Crítica</option>
+                    </select>
+                  ) : (
+                    <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${importanceConfig.color}`}>
+                      <importanceConfig.icon className="w-4 h-4 mr-2" />
+                      {importanceConfig.label}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Tag className="w-4 h-4 inline mr-2" />
+                    Categoria
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <input
+                      type="text"
+                      value={editedSubtask.category}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, category: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex: Frontend, Backend, Design..."
+                    />
+                  ) : (
+                    <p className="text-gray-700 font-medium">{editedSubtask.category || 'Sem categoria'}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Datas e Tempos */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    Data de Vencimento
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <input
+                      type="date"
+                      value={editedSubtask.due_date}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, due_date: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="text-gray-700 font-medium">
+                      {formatDateOnly(editedSubtask.due_date)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Timer className="w-4 h-4 inline mr-2" />
+                    Tempo Estimado
+                  </label>
+                  {(isEditing || isCreateMode) ? (
+                    <input
+                      type="text"
+                      value={editedSubtask.estimated_time}
+                      onChange={(e) => setEditedSubtask({...editedSubtask, estimated_time: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex: 2h, 30min, 120min"
+                    />
+                  ) : (
+                    <p className="text-gray-700 font-medium">{editedSubtask.estimated_time || 'Não definido'}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Tempo Real */}
+              {editedSubtask.actual_time && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Clock className="w-4 h-4 inline mr-2" />
+                    Tempo Real
+                  </label>
+                  <p className="text-gray-700 font-medium">{editedSubtask.actual_time}</p>
+                </div>
+              )}
+
+              {/* Membros */}
+              {members.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Membros da Subtarefa
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {members.map((member) => (
+                      <div key={member.id} className="flex items-center space-x-2 bg-blue-50 rounded-full px-4 py-2 border border-blue-200">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                          {(member.nome_completo || member.username || member.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {member.nome_completo || member.username || member.email}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Seleção de Membros - Modo de Criação */}
+              {isCreateMode && allUsers.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Membros da Subtarefa
+                  </label>
+                  <div className="space-y-3 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                    {allUsers.map((user) => (
+                      <label key={user.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={newSubtaskMembers.includes(user.id.toString())}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewSubtaskMembers([...newSubtaskMembers, user.id.toString()]);
+                            } else {
+                              setNewSubtaskMembers(newSubtaskMembers.filter(id => id !== user.id.toString()));
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                            {(user.nome_completo || user.username || user.email || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.nome_completo || user.username || user.email}
+                            </div>
+                            <div className="text-xs text-gray-500">{user.cargo || 'Sem cargo'}</div>
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Selecione os membros que terão acesso a esta subtarefa. Se nenhum for selecionado, apenas você terá acesso.
+                  </p>
+                </div>
+              )}
+
+              {/* Informações de Criação */}
+              {!isCreateMode && editedSubtask && (
+                <div className="bg-gray-50 rounded-xl p-4 border-t border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-semibold text-gray-700">Criado em:</span>
+                      <p className="text-gray-600 mt-1">{formatDate(editedSubtask.created_at)}</p>
+                    </div>
+                    {editedSubtask.updated_at && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Atualizado em:</span>
+                        <p className="text-gray-600 mt-1">{formatDate(editedSubtask.updated_at)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
+        {/* Footer Moderno */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {!isEditing && !isCreateMode && (
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Excluir</span>
@@ -598,24 +702,24 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
                       setIsEditing(false);
                     }
                   }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                  className="px-6 py-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={loading}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 rounded-lg transition-all duration-200 disabled:opacity-50 font-medium"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{loading ? (isCreateMode ? 'Criando...' : 'Salvando...') : (isCreateMode ? 'Criar' : 'Salvar')}</span>
+                  <span>{loading ? (isCreateMode ? 'Criando...' : 'Salvando...') : (isCreateMode ? 'Criar Subtarefa' : 'Salvar Alterações')}</span>
                 </button>
               </>
             )}
             {!isEditing && !isCreateMode && (
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-md transition-colors"
+                className="px-6 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-all duration-200 font-medium"
               >
                 Fechar
               </button>

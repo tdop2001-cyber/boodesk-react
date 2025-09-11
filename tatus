@@ -369,4 +369,53 @@
 [32m+[m[32m    card_id IN (SELECT card_id FROM card_members WHERE user_id = auth.uid())[m
 [32m+[m[32m```[m
 [32m+[m
-[32m+[m[32m### 📝 **ANOTA
+[32m+[m[32m### 📝 **ANOTA[33mcommit 071431186a458c6288d7d7aa6258df4a594bf670[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m
+Author: tdop2001-cyber <td.op.2001@gmail.com>
+Date:   Wed Sep 10 19:16:18 2025 -0300
+
+    feat: Implementar modal de subtarefas com funcionalidades completas
+    
+    - Criar componente SubtaskModal para exibir/editar/criar subtarefas
+    - Criar componente SubtaskList para renderizar lista clicável de subtarefas
+    - Integrar modal de subtarefas no KanbanBoard e MyActivities
+    - Adicionar funcionalidade de clique em subtarefas para abrir modal
+    - Implementar edição de subtarefas no CardDetailModal
+    - Suportar criação e edição de subtarefas com seleção de membros
+    - Adicionar persistência de ordem dos quadros por usuário
+    - Melhorar sistema de logs de atividades
+    - Corrigir problemas de duplicação de colunas
+    - Implementar limpeza de cards órfãos
+
+ GOOGLE_CALENDAR_SETUP.md           |   1 [32m+[m
+ GOOGLE_MEET_API_SETUP.md           |   1 [32m+[m
+ README_CLEANUP.md                  | 196 [32m++++++++++[m
+ add_board_order_column.sql         |  49 [32m+++[m
+ backup_before_cleanup.js           | 231 [32m++++++++++++[m
+ check_ghost_cards.js               | 279 [32m++++++++++++++[m
+ check_subtasks_schema.sql          |   1 [32m+[m
+ cleanup_all_cards_subtasks.js      | 237 [32m++++++++++++[m
+ cleanup_orphaned_cards.js          | 149 [32m++++++++[m
+ cleanup_simple.js                  |  47 [32m+++[m
+ create_activity_logs_table.sql     |  57 [32m+++[m
+ ensure_subtasks_schema.sql         |   1 [32m+[m
+ fix_duplicate_columns.js           | 212 [32m+++++++++++[m
+ fix_subtasks_completed_column.sql  |   1 [32m+[m
+ package-lock.json                  |   2 [32m+[m[31m-[m
+ package.json                       |   2 [32m+[m[31m-[m
+ setup_activity_logs.js             | 270 [32m+++++++++++++[m
+ setup_activity_logs_simple.js      | 185 [32m+++++++++[m
+ setup_board_order_column.js        | 209 [32m++++++++++[m
+ src/App.tsx                        |  13 [32m+[m
+ src/components/CardDetailModal.tsx | 111 [32m+++++[m[31m-[m
+ src/components/Sidebar.tsx         |   7 [32m+[m
+ src/components/StarIcon.tsx        |  66 [32m+++[m[31m-[m
+ src/components/SubtaskList.tsx     | 160 [32m++++++++[m
+ src/components/SubtaskModal.tsx    | 754 [32m+++++++++++++++++++++++++++[m[31m----------[m
+ src/components/SubtaskTimeline.tsx | 145 [32m++++[m[31m---[m
+ src/contexts/SyncContext.tsx       |   1 [32m+[m
+ src/pages/ExecutiveDashboard.tsx   | 727 [32m+++++++++++++++++++++++++++++++++++[m
+ src/pages/KanbanBoard.tsx          | 225 [32m+++++++[m[31m----[m
+ src/pages/MyActivities.tsx         | 594 [32m++++++++++++++++++++++++[m[31m-----[m
+ src/services/database.ts           | 383 [32m+++++++++++++++[m[31m----[m
+ test_board_ordering.js             | 221 [32m+++++++++++[m
+ 32 files changed, 5047 insertions(+), 490 deletions(-)
