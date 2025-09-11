@@ -1742,7 +1742,7 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
             <div className="flex flex-wrap items-center gap-3">
               {/* Indicador de Filtros Ativos */}
               {(filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all' || hideEmptyCards || groupByBoard) && (
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-[#16704E] to-[#0F5A3A] rounded-xl text-white shadow-lg shadow-[#16704E]/25">
+                <div className="flex items-center space-x-2 px-3 py-2 rounded-xl text-white shadow-lg" style={{ background: 'linear-gradient(to right, #B70404, #105E3D)' }}>
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                   <span className="text-sm font-medium">Filtros Ativos</span>
                   <button
@@ -1767,14 +1767,14 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 onClick={() => setShowFilters(!showFilters)}
                 className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
                   showFilters || filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all'
-                    ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
-                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                    ? 'bg-[#B70404] text-white shadow-lg' 
+                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#B70404]/30 hover:text-[#B70404]'
                 }`}
               >
                 <Filter className={`w-4 h-4 transition-colors duration-200 ${
                   showFilters || filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all'
                     ? 'text-white' 
-                    : 'text-slate-500 group-hover:text-[#16704E]'
+                    : 'text-slate-500 group-hover:text-[#B70404]'
                 }`} />
                 <span>Filtros</span>
                 {(filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || filterBoard !== 'all') && (
@@ -1787,14 +1787,14 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                 onClick={() => setShowOptions(!showOptions)}
                 className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 ${
                   showOptions || hideEmptyCards || groupByBoard
-                    ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
-                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                    ? 'bg-[#105E3D] text-white shadow-lg' 
+                    : 'bg-white/80 text-slate-600 border border-slate-200/60 hover:bg-white hover:border-[#105E3D]/30 hover:text-[#105E3D]'
                 }`}
               >
                 <Settings className={`w-4 h-4 transition-colors duration-200 ${
                   showOptions || hideEmptyCards || groupByBoard
                     ? 'text-white' 
-                    : 'text-slate-500 group-hover:text-[#16704E]'
+                    : 'text-slate-500 group-hover:text-[#105E3D]'
                 }`} />
                 <span>Opções</span>
                 {(hideEmptyCards || groupByBoard) && (
@@ -1805,9 +1805,12 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
               {/* Toggle de Visualização Melhorado */}
               <div className="relative flex bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
                 <div 
-                  className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-[#16704E] to-[#0F5A3A] rounded-lg shadow-lg shadow-[#16704E]/25 transition-all duration-500 ease-out ${
+                  className={`absolute top-1 bottom-1 w-1/2 rounded-lg shadow-lg transition-all duration-500 ease-out ${
                     viewMode === 'list' ? 'left-1 translate-x-0' : 'left-1 translate-x-full'
                   }`}
+                  style={{ 
+                    backgroundColor: viewMode === 'list' ? '#B70404' : '#105E3D'
+                  }}
                 />
                 
                 <button
@@ -1815,10 +1818,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   className={`relative z-10 flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-out ${
                     viewMode === 'list' 
                       ? 'text-white drop-shadow-sm' 
-                      : 'text-slate-600 hover:text-[#16704E] hover:scale-105'
+                      : 'text-slate-600 hover:text-[#B70404] hover:scale-105'
                   }`}
                 >
-                  <List className="w-4 h-4" />
+                  <List className={`w-4 h-4 ${viewMode === 'list' ? 'text-white' : 'text-[#B70404]'}`} />
                   <span className="font-medium">Lista</span>
                 </button>
                 
@@ -1827,10 +1830,10 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                   className={`relative z-10 flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-out ${
                     viewMode === 'kanban' 
                       ? 'text-white drop-shadow-sm' 
-                      : 'text-slate-600 hover:text-[#16704E] hover:scale-105'
+                      : 'text-slate-600 hover:text-[#105E3D] hover:scale-105'
                   }`}
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  <LayoutGrid className={`w-4 h-4 ${viewMode === 'kanban' ? 'text-white' : 'text-[#105E3D]'}`} />
                   <span className="font-medium">Kanban</span>
                 </button>
               </div>
@@ -1915,8 +1918,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                     className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
                       sortOrder === 'asc' 
-                        ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
-                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                        ? 'bg-[#B70404] text-white shadow-lg' 
+                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#B70404]/30 hover:text-[#B70404]'
                     }`}
                     title={`Ordenação ${sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}`}
                   >
@@ -1937,9 +1940,9 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                       id="hideEmptyCards"
                       checked={hideEmptyCards}
                       onChange={(e) => setHideEmptyCards(e.target.checked)}
-                      className="w-4 h-4 text-[#16704E] bg-gray-100 border-gray-300 rounded focus:ring-[#16704E] focus:ring-2 transition-all duration-200"
+                      className="w-4 h-4 text-[#B70404] bg-gray-100 border-gray-300 rounded focus:ring-[#B70404] focus:ring-2 transition-all duration-200"
                     />
-                    <label htmlFor="hideEmptyCards" className="text-sm font-medium text-slate-700 cursor-pointer hover:text-[#16704E] transition-colors duration-200">
+                    <label htmlFor="hideEmptyCards" className="text-sm font-medium text-slate-700 cursor-pointer hover:text-[#B70404] transition-colors duration-200">
                       Ocultar cards sem subtarefas
                     </label>
                   </div>
@@ -1948,8 +1951,8 @@ const MyActivities: React.FC<MyActivitiesProps> = () => {
                     onClick={() => setGroupByBoard(!groupByBoard)}
                     className={`px-4 py-2.5 border border-slate-200/60 rounded-xl transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md hover:scale-105 flex items-center gap-2 ${
                       groupByBoard 
-                        ? 'bg-gradient-to-r from-[#16704E] to-[#0F5A3A] text-white shadow-[#16704E]/25' 
-                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#16704E]/30 hover:text-[#16704E]'
+                        ? 'bg-[#105E3D] text-white shadow-lg' 
+                        : 'bg-white/80 text-slate-600 hover:bg-white hover:border-[#105E3D]/30 hover:text-[#105E3D]'
                     }`}
                     title={groupByBoard ? 'Desagrupar cards' : 'Agrupar cards por quadro'}
                   >

@@ -2572,6 +2572,283 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  // ===== FUNÇÕES DE TAGS =====
+
+  // Buscar tags disponíveis
+  async getAvailableTags(userId?: number) {
+    try {
+      console.log('Database: Buscando tags disponíveis...');
+      
+      const { data, error } = await supabase
+        .rpc('get_available_tags', { user_id_param: userId || null });
+
+      if (error) {
+        console.error('Database: Erro ao buscar tags disponíveis:', error);
+        throw error;
+      }
+
+      console.log('Database: Tags disponíveis encontradas:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar tags disponíveis:', error);
+      throw error;
+    }
+  }
+
+  // Buscar categorias disponíveis
+  async getAvailableCategories() {
+    try {
+      console.log('Database: Buscando categorias disponíveis...');
+      
+      const { data, error } = await supabase
+        .rpc('get_available_categories');
+
+      if (error) {
+        console.error('Database: Erro ao buscar categorias disponíveis:', error);
+        throw error;
+      }
+
+      console.log('Database: Categorias disponíveis encontradas:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar categorias disponíveis:', error);
+      throw error;
+    }
+  }
+
+  // Adicionar tag a um card
+  async addTagToCard(cardId: string, tagName: string) {
+    try {
+      console.log('Database: Adicionando tag ao card:', { cardId, tagName });
+      
+      const { data, error } = await supabase
+        .rpc('add_tag_to_card', { 
+          card_id_param: cardId, 
+          tag_name_param: tagName 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao adicionar tag ao card:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag adicionada ao card:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao adicionar tag ao card:', error);
+      throw error;
+    }
+  }
+
+  // Remover tag de um card
+  async removeTagFromCard(cardId: string, tagName: string) {
+    try {
+      console.log('Database: Removendo tag do card:', { cardId, tagName });
+      
+      const { data, error } = await supabase
+        .rpc('remove_tag_from_card', { 
+          card_id_param: cardId, 
+          tag_name_param: tagName 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao remover tag do card:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag removida do card:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao remover tag do card:', error);
+      throw error;
+    }
+  }
+
+  // Adicionar tag a uma subtask
+  async addTagToSubtask(subtaskId: number, tagName: string) {
+    try {
+      console.log('Database: Adicionando tag à subtask:', { subtaskId, tagName });
+      
+      const { data, error } = await supabase
+        .rpc('add_tag_to_subtask', { 
+          subtask_id_param: subtaskId, 
+          tag_name_param: tagName 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao adicionar tag à subtask:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag adicionada à subtask:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao adicionar tag à subtask:', error);
+      throw error;
+    }
+  }
+
+  // Remover tag de uma subtask
+  async removeTagFromSubtask(subtaskId: number, tagName: string) {
+    try {
+      console.log('Database: Removendo tag da subtask:', { subtaskId, tagName });
+      
+      const { data, error } = await supabase
+        .rpc('remove_tag_from_subtask', { 
+          subtask_id_param: subtaskId, 
+          tag_name_param: tagName 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao remover tag da subtask:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag removida da subtask:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao remover tag da subtask:', error);
+      throw error;
+    }
+  }
+
+  // Buscar cards por tag
+  async getCardsByTag(tagName: string, userId?: number) {
+    try {
+      console.log('Database: Buscando cards por tag:', { tagName, userId });
+      
+      const { data, error } = await supabase
+        .rpc('get_cards_by_tag', { 
+          tag_name_param: tagName, 
+          user_id_param: userId || null 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao buscar cards por tag:', error);
+        throw error;
+      }
+
+      console.log('Database: Cards encontrados por tag:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar cards por tag:', error);
+      throw error;
+    }
+  }
+
+  // Buscar subtasks por tag
+  async getSubtasksByTag(tagName: string, userId?: number) {
+    try {
+      console.log('Database: Buscando subtasks por tag:', { tagName, userId });
+      
+      const { data, error } = await supabase
+        .rpc('get_subtasks_by_tag', { 
+          tag_name_param: tagName, 
+          user_id_param: userId || null 
+        });
+
+      if (error) {
+        console.error('Database: Erro ao buscar subtasks por tag:', error);
+        throw error;
+      }
+
+      console.log('Database: Subtasks encontradas por tag:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar subtasks por tag:', error);
+      throw error;
+    }
+  }
+
+  // Criar nova tag personalizada
+  async createCustomTag(tagData: {
+    name: string;
+    color?: string;
+    type?: string;
+    description?: string;
+    createdBy: number;
+  }) {
+    try {
+      console.log('Database: Criando tag personalizada:', tagData);
+      
+      const { data, error } = await supabase
+        .from('custom_tags')
+        .insert([{
+          name: tagData.name,
+          color: tagData.color || '#6B7280',
+          type: tagData.type || 'category',
+          description: tagData.description,
+          created_by: tagData.createdBy
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao criar tag personalizada:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag personalizada criada:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao criar tag personalizada:', error);
+      throw error;
+    }
+  }
+
+  // Atualizar tag personalizada
+  async updateCustomTag(tagId: number, tagData: {
+    name?: string;
+    color?: string;
+    type?: string;
+    description?: string;
+  }) {
+    try {
+      console.log('Database: Atualizando tag personalizada:', { tagId, tagData });
+      
+      const { data, error } = await supabase
+        .from('custom_tags')
+        .update(tagData)
+        .eq('id', tagId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database: Erro ao atualizar tag personalizada:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag personalizada atualizada:', data);
+      return data;
+    } catch (error) {
+      console.error('Database: Erro ao atualizar tag personalizada:', error);
+      throw error;
+    }
+  }
+
+  // Deletar tag personalizada
+  async deleteCustomTag(tagId: number) {
+    try {
+      console.log('Database: Deletando tag personalizada:', tagId);
+      
+      const { error } = await supabase
+        .from('custom_tags')
+        .delete()
+        .eq('id', tagId);
+
+      if (error) {
+        console.error('Database: Erro ao deletar tag personalizada:', error);
+        throw error;
+      }
+
+      console.log('Database: Tag personalizada deletada');
+      return true;
+    } catch (error) {
+      console.error('Database: Erro ao deletar tag personalizada:', error);
+      throw error;
+    }
+  }
 }
 
 // Instância global

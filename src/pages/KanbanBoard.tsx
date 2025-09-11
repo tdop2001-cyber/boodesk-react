@@ -13,6 +13,7 @@ import CardDetailModal from '../components/CardDetailModal';
 import SubtaskTimeline from '../components/SubtaskTimeline';
 import SubtaskModal from '../components/SubtaskModal';
 import SubtaskList from '../components/SubtaskList';
+import TagManager from '../components/TagManager';
 import {
   Plus,
   Trash2,
@@ -33,7 +34,8 @@ import {
   Users,
   ChevronUp,
   ChevronDown,
-  FileText
+  FileText,
+  Tag
 } from 'lucide-react';
 
 // Interfaces para modelos
@@ -106,6 +108,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
   const [hideCardsWithoutSubtasks, setHideCardsWithoutSubtasks] = useState(false);
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [membersCache, setMembersCache] = useState<Map<number, UserType>>(new Map());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 segundos
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Estados para modais
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
@@ -131,6 +137,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     due_date: '',
     members: [user?.id || 1] // Incluir o criador como membro por padrão
   });
+  const [newCardTags, setNewCardTags] = useState<string[]>([]);
   const [selectedCardTemplate, setSelectedCardTemplate] = useState<CardTemplate | null>(null);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   
@@ -237,6 +244,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
       loadBoardData(currentBoard);
     }
   }, [currentBoard?.id, user?.id]); // Usar currentBoard?.id para evitar recarregamentos desnecessários
+
+  // Atualização automática
+  useEffect(() => {
+    if (!autoRefreshEnabled || !currentBoard) return;
+
+    const interval = setInterval(() => {
+      loadBoardData(currentBoard, true);
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled, refreshInterval, currentBoard?.id, user?.id]);
+
+  // Função para atualização manual
+  const handleManualRefresh = () => {
+    if (currentBoard) {
+      loadBoardData(currentBoard);
+    }
+  };
 
   // ===== LISTENERS DE SINCRONIZAÇÃO =====
   
@@ -531,8 +556,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
     }
   };
 
-  const loadBoardData = async (board: Board) => {
+  const loadBoardData = async (board: Board, isAutoRefresh = false) => {
     try {
+      if (isAutoRefresh) {
+        setIsRefreshing(true);
+      }
+      
       // Debug reduzido para performance
       // console.log('=== INICIANDO CARREGAMENTO DO BOARD ===');
       // console.log('Board:', board.name);
@@ -728,8 +757,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
       
 
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Erro ao carregar dados do board:', error);
+    } finally {
+      if (isAutoRefresh) {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -1234,6 +1268,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         subject: '-',
         goal: '-',
         members: newCardData.members, // Usar os membros selecionados
+        tags: newCardTags, // Incluir as tags selecionadas
         creation_date: new Date().toISOString(),
         is_archived: false,
         git_branch: '',
@@ -1269,7 +1304,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
           updated_at: createdCard.updated_at,
           due_date: createdCard.due_date,
           members: createdCard.members || newCardData.members, // Incluir os membros
-          tags: [],
+          tags: newCardTags, // Incluir as tags selecionadas
           attachments: [],
           comments: []
         };
@@ -1277,14 +1312,30 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         console.log('newCard a ser adicionado:', newCard);
         console.log('cards atuais:', cards);
         
-        // Adicionar o card à lista local sem recarregar tudo
-        setCards(prev => [...prev, newCard]);
+        // Fechar modal e mostrar sucesso
+        setShowCreateCardModal(false);
+        setNewCardData({
+          title: '',
+          description: '',
+          priority: 'medium',
+          due_date: '',
+          members: [],
+          column_id: 1
+        });
+        setNewCardTags([]);
         
         addToast({
           type: 'success',
           title: 'Card criado',
-          message: 'Card criado com sucesso!'
+          message: 'Card criado com sucesso! O Kanban será atualizado automaticamente.'
         });
+
+        // Disparar atualização imediata do board
+        if (currentBoard) {
+          setTimeout(() => {
+            loadBoardData(currentBoard, true);
+          }, 1000); // Aguardar 1 segundo para garantir que o card foi salvo no banco
+        }
       } else {
         console.log('ERRO: createdCard é null/undefined');
       }
@@ -1617,6 +1668,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
         };
       }
     });
+  };
+
+  // Função para gerenciar tags do novo card
+  const handleNewCardTagsChange = (newTags: string[]) => {
+    setNewCardTags(newTags);
   };
 
   // Funções para criar templates
@@ -2348,33 +2404,52 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                 <span className="text-xs text-brand-gray/60 dark:text-gray-400">Arraste as abas para reordenar</span>
               </div>
             </div>
-            {/* Botões de debug temporários */}
-            <div className="flex space-x-2">
+            {/* Controles de Atualização */}
+            <div className="flex items-center space-x-3">
+              {/* Indicador de Status */}
+              <div className="flex items-center space-x-2 text-sm">
+                <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></div>
+                <span className="text-brand-gray/70 dark:text-gray-300">
+                  {isRefreshing ? 'Atualizando...' : `Atualizado ${lastUpdated.toLocaleTimeString()}`}
+                </span>
+              </div>
+
+              {/* Botão de Atualização Manual */}
               <button
-                onClick={() => {
-                  console.log('=== DEBUG: FORÇANDO RECARREGAMENTO DO BOARD ===');
-                  console.log('currentBoard:', currentBoard);
-                  console.log('cards atuais:', cards);
-                  if (currentBoard) {
-                    loadBoardData(currentBoard);
-                  }
-                }}
-                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
-                title="Forçar recarregamento do board (debug)"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-brand-primary hover:bg-brand-primary/90 border border-brand-primary/20 rounded-lg transition-all duration-200 text-white text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🔄 Board
+                <svg className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Atualizar</span>
               </button>
+
+              {/* Toggle Auto Refresh */}
               <button
-                onClick={() => {
-                  console.log('=== DEBUG: FORÇANDO RECARREGAMENTO COMPLETO ===');
-                  console.log('Recarregando todos os dados...');
-                  loadKanbanData();
-                }}
-                className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                title="Forçar recarregamento completo (debug)"
+                onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                className={`flex items-center space-x-2 px-3 py-1.5 border rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md ${
+                  autoRefreshEnabled 
+                    ? 'bg-green-500/20 border-green-400/50 text-green-600 dark:text-green-400 hover:bg-green-500/30' 
+                    : 'bg-brand-light-gray/50 border-brand-light-gray text-brand-gray dark:text-gray-300 hover:bg-brand-light-gray/70'
+                }`}
               >
-                🔄 All
+                <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <span>Auto</span>
               </button>
+
+              {/* Configurações de Intervalo */}
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
+                className="px-2 py-1.5 bg-white dark:bg-gray-700 border border-brand-light-gray dark:border-gray-600 rounded-lg text-brand-gray dark:text-gray-300 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all duration-200 appearance-none cursor-pointer"
+              >
+                <option value={15000} className="bg-white dark:bg-gray-700 text-brand-gray dark:text-gray-300">15s</option>
+                <option value={30000} className="bg-white dark:bg-gray-700 text-brand-gray dark:text-gray-300">30s</option>
+                <option value={60000} className="bg-white dark:bg-gray-700 text-brand-gray dark:text-gray-300">1min</option>
+                <option value={300000} className="bg-white dark:bg-gray-700 text-brand-gray dark:text-gray-300">5min</option>
+              </select>
             </div>
           </div>
           <div className="flex items-center space-x-1 border-b border-brand-light-gray">
@@ -3110,19 +3185,21 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
 
       {/* Create Card Modal */}
       {showCreateCardModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 shadow-xl max-h-[90vh] overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-brand-gray">Criar Novo Cartão</h2>
-                <button
-                  onClick={() => setShowCreateCardModal(false)}
-                  className="p-2 text-brand-gray/50 hover:text-brand-gray"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
+            {/* Header fixo */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+              <h2 className="text-xl font-bold text-brand-gray">Criar Novo Cartão</h2>
+              <button
+                onClick={() => setShowCreateCardModal(false)}
+                className="p-2 text-brand-gray/50 hover:text-brand-gray"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Conteúdo com scroll */}
+            <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Formulário */}
                 <div className="space-y-4">
@@ -3212,6 +3289,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = () => {
                     </div>
                     <p className="text-xs text-brand-gray/60 mt-1">
                       Selecione os usuários que participarão deste card. O criador sempre será um membro.
+                    </p>
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="block text-sm font-medium text-brand-gray mb-2">
+                      <Tag className="inline w-4 h-4 mr-1" />
+                      Tags
+                    </label>
+                    <TagManager
+                      selectedTags={newCardTags}
+                      onTagsChange={handleNewCardTagsChange}
+                      maxTags={10}
+                      showCreateTag={true}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-brand-gray/60 mt-1">
+                      Adicione tags para organizar e categorizar o card.
                     </p>
                   </div>
 

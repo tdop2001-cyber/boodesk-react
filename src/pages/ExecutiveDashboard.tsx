@@ -101,6 +101,10 @@ const ExecutiveDashboard: React.FC = () => {
   const [boards, setBoards] = useState<Board[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | 'all'>('all');
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 segundos
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Função para filtrar dados por usuário
   const getFilteredData = () => {
@@ -129,9 +133,13 @@ const ExecutiveDashboard: React.FC = () => {
     };
   };
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (isAutoRefresh = false) => {
     try {
-      setLoading(true);
+      if (isAutoRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       
       if (!user) {
         console.error('Usuário não autenticado');
@@ -254,22 +262,45 @@ const ExecutiveDashboard: React.FC = () => {
       const realTimeSeriesData = generateTimeSeriesData();
 
       setTimeSeriesData(realTimeSeriesData);
+      setLastUpdated(new Date());
 
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
-      addToast({
-        type: 'error',
-        title: 'Erro',
-        message: 'Não foi possível carregar os dados do dashboard'
-      });
+      if (!isAutoRefresh) {
+        addToast({
+          type: 'error',
+          title: 'Erro',
+          message: 'Não foi possível carregar os dados do dashboard'
+        });
+      }
     } finally {
-      setLoading(false);
+      if (isAutoRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadDashboardData();
   }, [timeRange, selectedUserId]);
+
+  // Atualização automática
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+
+    const interval = setInterval(() => {
+      loadDashboardData(true);
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled, refreshInterval, timeRange, selectedUserId]);
+
+  // Função para atualização manual
+  const handleManualRefresh = () => {
+    loadDashboardData();
+  };
 
   const MetricCard: React.FC<{
     title: string;
@@ -374,13 +405,51 @@ const ExecutiveDashboard: React.FC = () => {
                 </div>
               </div>
               
-              <button
-                onClick={loadDashboardData}
-                className="flex items-center space-x-2 px-4 py-3 bg-white/15 hover:bg-white/25 border border-white/30 rounded-lg transition-all duration-200 text-white font-medium shadow-sm hover:shadow-md"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Atualizar</span>
-              </button>
+              {/* Controles de Atualização */}
+              <div className="flex items-center space-x-3">
+                {/* Indicador de Status */}
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></div>
+                  <span className="text-white/80">
+                    {isRefreshing ? 'Atualizando...' : `Atualizado ${lastUpdated.toLocaleTimeString()}`}
+                  </span>
+                </div>
+
+                {/* Botão de Atualização Manual */}
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="flex items-center space-x-2 px-4 py-3 bg-white/15 hover:bg-white/25 border border-white/30 rounded-lg transition-all duration-200 text-white font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>Atualizar</span>
+                </button>
+
+                {/* Toggle Auto Refresh */}
+                <button
+                  onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                  className={`flex items-center space-x-2 px-4 py-3 border rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md ${
+                    autoRefreshEnabled 
+                      ? 'bg-green-500/20 border-green-400/50 text-green-100 hover:bg-green-500/30' 
+                      : 'bg-white/15 border-white/30 text-white hover:bg-white/25'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <span>Auto</span>
+                </button>
+
+                {/* Configurações de Intervalo */}
+                <select
+                  value={refreshInterval}
+                  onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
+                  className="px-3 py-3 bg-white/15 border border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/20 transition-all duration-200 appearance-none cursor-pointer"
+                >
+                  <option value={15000} className="bg-slate-800 text-white">15s</option>
+                  <option value={30000} className="bg-slate-800 text-white">30s</option>
+                  <option value={60000} className="bg-slate-800 text-white">1min</option>
+                  <option value={300000} className="bg-slate-800 text-white">5min</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>

@@ -39,7 +39,8 @@ import AvatarGroup from './AvatarGroup';
 import UnifiedKanban, { KanbanItem as UnifiedKanbanItem, KanbanColumnDef } from './UnifiedKanban';
 import SubtaskModal from './SubtaskModal';
 import ArchiveManager from './ArchiveManager';
-import { db } from '../services/database';
+import TagManager from './TagManager';
+import { db, supabase } from '../services/database';
 
 interface CardDetailModalProps {
   card: Card;
@@ -107,6 +108,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   const [showEditSubtaskModal, setShowEditSubtaskModal] = useState(false);
   const [selectedSubtaskForEdit, setSelectedSubtaskForEdit] = useState<any>(null);
   const [showArchiveManager, setShowArchiveManager] = useState(false);
+  const [cardTags, setCardTags] = useState<string[]>(card.tags || []);
   const [showArchiveOptions, setShowArchiveOptions] = useState(false);
   const [archiveFolders, setArchiveFolders] = useState<any[]>([]);
   
@@ -438,6 +440,46 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   const handleCardRestored = (cardId: number) => {
     // Recarregar dados do card se necessário
     console.log('Card restaurado:', cardId);
+  };
+
+  // Função para gerenciar tags do card
+  const handleTagsChange = async (newTags: string[]) => {
+    try {
+      setCardTags(newTags);
+      
+      // Atualizar no banco de dados
+      if (card.card_id) {
+        try {
+          await db.updateCard(card.card_id, { tags: newTags });
+        } catch (error) {
+          console.error('Erro ao atualizar tags:', error);
+          addToast({
+            type: 'error',
+            title: 'Erro',
+            message: 'Não foi possível atualizar as tags'
+          });
+          return;
+        }
+
+        // Atualizar o card local
+        const updatedCard = { ...editedCard, tags: newTags };
+        setEditedCard(updatedCard);
+        onSave(updatedCard);
+
+        addToast({
+          type: 'success',
+          title: 'Tags atualizadas',
+          message: 'Tags do card foram atualizadas com sucesso!'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao gerenciar tags:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível gerenciar as tags'
+      });
+    }
   };
 
   // Fechar dropdown de arquivamento quando clicar fora
@@ -871,6 +913,17 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                     ) : (
                       <p className="text-brand-gray/70">{editedCard.description || 'Sem descrição'}</p>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-brand-gray mb-2">Tags</label>
+                    <TagManager
+                      selectedTags={cardTags}
+                      onTagsChange={handleTagsChange}
+                      maxTags={10}
+                      showCreateTag={true}
+                      className="w-full"
+                    />
                   </div>
                     </div>
               )}
