@@ -760,16 +760,16 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-brand-light-gray">
-          <div className="flex items-center space-x-3">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-1 sm:p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[98vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between p-3 sm:p-6 border-b border-brand-light-gray">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="p-2 bg-brand-red/10 rounded-lg">
-              <Target className="w-6 h-6 text-brand-red" />
+              <Target className="w-5 h-5 sm:w-6 sm:h-6 text-brand-red" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-brand-gray">Detalhes do Card</h2>
-              <p className="text-sm text-brand-gray/60">Gerencie todas as informações do card</p>
+              <h2 className="text-lg sm:text-xl font-bold text-brand-gray">Detalhes do Card</h2>
+              <p className="text-xs sm:text-sm text-brand-gray/60">Gerencie todas as informações do card</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -859,8 +859,8 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
           </div>
         </div>
 
-        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(90vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="flex space-x-1 bg-brand-light-gray/30 rounded-lg p-1">
                 <button

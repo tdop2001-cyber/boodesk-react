@@ -394,21 +394,21 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
   const importanceConfig = getImportanceConfig(editedSubtask.importance || 'normal');
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-1 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-2xl lg:max-w-4xl w-full max-h-[98vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header Moderno */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+        <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 sm:p-6 text-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Target className="w-6 h-6" />
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="p-2 sm:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">
-              {isCreateMode ? 'Criar Nova Subtarefa' : isEditing ? 'Editar Subtarefa' : 'Detalhes da Subtarefa'}
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">
+              {isCreateMode ? 'Nova Subtarefa' : isEditing ? 'Editar Subtarefa' : 'Detalhes da Subtarefa'}
             </h2>
-                <p className="text-blue-100 text-sm">
-                  {isCreateMode ? 'Adicione uma nova subtarefa ao projeto' : 'Gerencie os detalhes da subtarefa'}
+                <p className="text-blue-100 text-xs sm:text-sm">
+                  {isCreateMode ? 'Adicione uma nova subtarefa' : 'Gerencie os detalhes da subtarefa'}
                 </p>
               </div>
           </div>
@@ -433,7 +433,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-200px)]">
+        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(98vh-140px)] sm:max-h-[calc(90vh-200px)]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
