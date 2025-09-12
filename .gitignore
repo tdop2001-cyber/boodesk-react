@@ -25,6 +25,7 @@ credentials.json
 credentials.json.example
 public/credentials.json.example
 client_secret*.json
+google-credentials.json
 
 # Large files
 32x32/build/

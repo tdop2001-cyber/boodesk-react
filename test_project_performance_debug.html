@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Performance por Projeto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .debug-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug - Performance por Projeto</h1>
+        <p>Este teste ajuda a identificar por que o dashboard não está mostrando dados de performance por projeto.</p>
+        
+        <div class="test-section">
+            <h3>🔑 Configuração da API</h3>
+            <p>Insira sua chave da API do Supabase para executar os testes.</p>
+            <input type="text" id="api-key-input" placeholder="Cole sua chave da API do Supabase aqui..." style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="updateApiKey()">Atualizar Chave da API</button>
+            <div id="api-key-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Teste 1: Verificar Dados das Tabelas</h3>
+            <p>Verifica se há dados nas tabelas boards e cards.</p>
+            <button onclick="testTableData()">Verificar Dados das Tabelas</button>
+            <div id="table-data-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 Teste 2: Verificar Relacionamento Boards-Cards</h3>
+            <p>Verifica se o relacionamento entre boards e cards está funcionando.</p>
+            <button onclick="testBoardCardRelationship()">Verificar Relacionamento</button>
+            <div id="relationship-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Teste 3: Testar Função get_project_performance</h3>
+            <p>Testa diretamente a função RPC do Supabase.</p>
+            <button onclick="testProjectPerformanceFunction()">Testar Função RPC</button>
+            <div id="function-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Teste 4: Teste Completo de Diagnóstico</h3>
+            <p>Executa todos os testes em sequência para identificar o problema.</p>
+            <button onclick="runCompleteDiagnostic()">Executar Diagnóstico Completo</button>
+            <div id="diagnostic-result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        let supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.8QZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZq';
+        
+        let supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Função para atualizar a chave da API
+        window.updateApiKey = function() {
+            const newKey = document.getElementById('api-key-input').value.trim();
+            const statusDiv = document.getElementById('api-key-status');
+            
+            if (!newKey) {
+                statusDiv.innerHTML = '<div class="error">❌ Por favor, insira uma chave da API válida.</div>';
+                return;
+            }
+            
+            try {
+                supabaseKey = newKey;
+                supabase = createClient(supabaseUrl, supabaseKey);
+                statusDiv.innerHTML = '<div class="success">✅ Chave da API atualizada com sucesso!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Erro ao atualizar chave da API: ' + error.message + '</div>';
+            }
+        };
+
+        // Função para testar dados das tabelas
+        window.testTableData = async function() {
+            const resultDiv = document.getElementById('table-data-result');
+            resultDiv.innerHTML = '<div class="loading">Verificando dados das tabelas...</div>';
+            
+            try {
+                // Verificar boards
+                const { data: boardsData, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('id, name, board_id, created_at')
+                    .order('id');
+
+                // Verificar cards
+                const { data: cardsData, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('id, board_id, title, status, created_at')
+                    .order('id')
+                    .limit(10);
+
+                let report = '<div class="debug-info">';
+                report += '<h4>📋 Dados das Tabelas:</h4>';
+                
+                if (boardsError) {
+                    report += `<div class="error">❌ Erro ao buscar boards: ${boardsError.message}</div>`;
+                } else {
+                    report += `<div class="success">✅ Boards encontrados: ${boardsData?.length || 0}</div>`;
+                    if (boardsData && boardsData.length > 0) {
+                        report += '<h5>Boards:</h5><pre>' + JSON.stringify(boardsData, null, 2) + '</pre>';
+                    }
+                }
+
+                if (cardsError) {
+                    report += `<div class="error">❌ Erro ao buscar cards: ${cardsError.message}</div>`;
+                } else {
+                    report += `<div class="success">✅ Cards encontrados: ${cardsData?.length || 0}</div>`;
+                    if (cardsData && cardsData.length > 0) {
+                        report += '<h5>Cards (primeiros 10):</h5><pre>' + JSON.stringify(cardsData, null, 2) + '</pre>';
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${error.message}</div>`;
+            }
+        };
+
+        // Função para testar relacionamento boards-cards
+        window.testBoardCardRelationship = async function() {
+            const resultDiv = document.getElementById('relationship-result');
+            resultDiv.innerHTML = '<div class="loading">Verificando relacionamento boards-cards...</div>';
+            
+            try {
+                // Fazer join manual para verificar relacionamento
+                const { data: relationshipData, error: relationshipError } = await supabase
+                    .from('boards')
+                    .select(`
+                        id,
+                        name,
+                        board_id,
+                        cards:cards(id, title, status, created_at)
+                    `)
+                    .order('id');
+
+                let report = '<div class="debug-info">';
+                report += '<h4>🔗 Relacionamento Boards-Cards:</h4>';
+                
+                if (relationshipError) {
+                    report += `<div class="error">❌ Erro ao verificar relacionamento: ${relationshipError.message}</div>`;
+                } else {
+                    report += `<div class="success">✅ Relacionamento verificado para ${relationshipData?.length || 0} boards</div>`;
+                    
+                    if (relationshipData && relationshipData.length > 0) {
+                        relationshipData.forEach(board => {
+                            const cardsCount = board.cards ? board.cards.length : 0;
+                            const completedCards = board.cards ? board.cards.filter(c => c.status === 'done').length : 0;
+                            
+                            report += `<div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">`;
+                            report += `<strong>Board: ${board.name} (ID: ${board.id})</strong><br>`;
+                            report += `Total de Cards: ${cardsCount}<br>`;
+                            report += `Cards Concluídos: ${completedCards}<br>`;
+                            report += `Taxa de Conclusão: ${cardsCount > 0 ? Math.round((completedCards / cardsCount) * 100) : 0}%`;
+                            report += `</div>`;
+                        });
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${error.message}</div>`;
+            }
+        };
+
+        // Função para testar a função RPC
+        window.testProjectPerformanceFunction = async function() {
+            const resultDiv = document.getElementById('function-result');
+            resultDiv.innerHTML = '<div class="loading">Testando função get_project_performance...</div>';
+            
+            try {
+                const { data, error } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                let report = '<div class="debug-info">';
+                report += '<h4>⚙️ Resultado da Função get_project_performance:</h4>';
+                
+                if (error) {
+                    report += `<div class="error">❌ Erro na função RPC: ${error.message}</div>`;
+                    report += `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    report += `<div class="success">✅ Função executada com sucesso!</div>`;
+                    report += `<div class="info">📊 Dados retornados: ${data?.length || 0} registros</div>`;
+                    
+                    if (data && data.length > 0) {
+                        report += '<h5>Dados da Performance por Projeto:</h5>';
+                        report += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                        
+                        // Resumo dos dados
+                        const totalCards = data.reduce((sum, item) => sum + (item.total_cards || 0), 0);
+                        const totalCompleted = data.reduce((sum, item) => sum + (item.completed_cards || 0), 0);
+                        
+                        report += '<h5>📈 Resumo:</h5>';
+                        report += `<div>Total de Cards: ${totalCards}</div>`;
+                        report += `<div>Cards Concluídos: ${totalCompleted}</div>`;
+                        report += `<div>Taxa Geral: ${totalCards > 0 ? Math.round((totalCompleted / totalCards) * 100) : 0}%</div>`;
+                    } else {
+                        report += '<div class="error">⚠️ Nenhum dado retornado pela função!</div>';
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${error.message}</div>`;
+            }
+        };
+
+        // Função para diagnóstico completo
+        window.runCompleteDiagnostic = async function() {
+            const resultDiv = document.getElementById('diagnostic-result');
+            resultDiv.innerHTML = '<div class="loading">Executando diagnóstico completo...</div>';
+            
+            try {
+                let diagnosticReport = '<div class="debug-info">';
+                diagnosticReport += '<h4>🎯 Diagnóstico Completo:</h4>';
+                
+                // Teste 1: Dados das tabelas
+                diagnosticReport += '<h5>1. Verificando dados das tabelas...</h5>';
+                const { data: boardsData, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('id, name, board_id')
+                    .order('id');
+
+                const { data: cardsData, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('id, board_id, status')
+                    .order('id');
+
+                if (boardsError || cardsError) {
+                    diagnosticReport += `<div class="error">❌ Erro ao acessar tabelas</div>`;
+                } else {
+                    diagnosticReport += `<div class="success">✅ Boards: ${boardsData?.length || 0}, Cards: ${cardsData?.length || 0}</div>`;
+                }
+
+                // Teste 2: Função RPC
+                diagnosticReport += '<h5>2. Testando função RPC...</h5>';
+                const { data: rpcData, error: rpcError } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                if (rpcError) {
+                    diagnosticReport += `<div class="error">❌ Erro na função RPC: ${rpcError.message}</div>`;
+                } else {
+                    diagnosticReport += `<div class="success">✅ Função RPC executada: ${rpcData?.length || 0} registros</div>`;
+                }
+
+                // Teste 3: Análise do problema
+                diagnosticReport += '<h5>3. Análise do problema...</h5>';
+                
+                if (boardsData && cardsData && rpcData) {
+                    const boardsWithCards = boardsData.filter(board => 
+                        cardsData.some(card => card.board_id == board.id)
+                    );
+                    
+                    const boardsWithRpcData = rpcData.filter(rpc => rpc.total_cards > 0);
+                    
+                    diagnosticReport += `<div>Boards com cards: ${boardsWithCards.length}</div>`;
+                    diagnosticReport += `<div>Boards com dados na RPC: ${boardsWithRpcData.length}</div>`;
+                    
+                    if (boardsWithCards.length > 0 && boardsWithRpcData.length === 0) {
+                        diagnosticReport += '<div class="error">⚠️ PROBLEMA IDENTIFICADO: Há boards com cards, mas a função RPC não retorna dados!</div>';
+                        diagnosticReport += '<div class="info">💡 Solução: Execute o script fix_project_performance_dashboard.sql</div>';
+                    } else if (boardsWithCards.length === 0) {
+                        diagnosticReport += '<div class="error">⚠️ PROBLEMA: Não há relacionamento entre boards e cards</div>';
+                    } else {
+                        diagnosticReport += '<div class="success">✅ Sistema funcionando corretamente</div>';
+                    }
+                }
+
+                diagnosticReport += '</div>';
+                resultDiv.innerHTML = diagnosticReport;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro no diagnóstico: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

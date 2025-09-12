@@ -49,6 +49,59 @@ export interface Chat {
   is_active: boolean;
 }
 
+// Interfaces para métricas de performance
+export interface PerformanceMetrics {
+  avg_completion_days: number;
+  total_cards: number;
+  completed_cards: number;
+}
+
+export interface CompletionRate {
+  total_cards: number;
+  completed_cards: number;
+  completion_rate: number;
+}
+
+export interface UserProductivity {
+  user_id: number;
+  username: string;
+  nome_completo: string;
+  total_cards: number;
+  completed_cards: number;
+  completion_rate: number;
+  avg_completion_days: number;
+}
+
+export interface ProductivityTrend {
+  period_label: string;
+  total_cards: number;
+  completed_cards: number;
+  completion_rate: number;
+}
+
+export interface ProjectPerformance {
+  board_id: number | string;
+  board_name: string;
+  total_cards: number;
+  completed_cards: number;
+  completion_rate: number;
+  avg_completion_days: number;
+}
+
+export interface SubtaskMetrics {
+  total_subtasks: number;
+  completed_subtasks: number;
+  completion_rate: number;
+  avg_completion_days: number;
+}
+
+export interface MonthlyReport {
+  metric_name: string;
+  metric_description: string;
+  metric_value: number;
+  metric_unit: string;
+}
+
 export interface ChatMessage {
   id: number;
   chat_id: number;
@@ -2846,6 +2899,222 @@ export class DatabaseService {
       return true;
     } catch (error) {
       console.error('Database: Erro ao deletar tag personalizada:', error);
+      throw error;
+    }
+  }
+
+  // ===== MÉTRICAS DE PERFORMANCE =====
+
+  // Obter tempo médio de conclusão
+  async getAverageCompletionTime(startDate?: string, endDate?: string, boardId?: number): Promise<PerformanceMetrics> {
+    try {
+      console.log('Database: Buscando tempo médio de conclusão:', { startDate, endDate, boardId });
+      
+      const { data, error } = await supabase.rpc('get_average_completion_time', {
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
+        p_board_id: boardId || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar tempo médio de conclusão:', error);
+        throw error;
+      }
+
+      console.log('Database: Tempo médio de conclusão encontrado:', data);
+      return data[0] || { avg_completion_days: 0, total_cards: 0, completed_cards: 0 };
+    } catch (error) {
+      console.error('Database: Erro ao buscar tempo médio de conclusão:', error);
+      throw error;
+    }
+  }
+
+  // Obter taxa de conclusão
+  async getCompletionRate(startDate?: string, endDate?: string, boardId?: number): Promise<CompletionRate> {
+    try {
+      console.log('Database: Buscando taxa de conclusão:', { startDate, endDate, boardId });
+      
+      const { data, error } = await supabase.rpc('get_completion_rate', {
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
+        p_board_id: boardId || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar taxa de conclusão:', error);
+        throw error;
+      }
+
+      console.log('Database: Taxa de conclusão encontrada:', data);
+      return data[0] || { total_cards: 0, completed_cards: 0, completion_rate: 0 };
+    } catch (error) {
+      console.error('Database: Erro ao buscar taxa de conclusão:', error);
+      throw error;
+    }
+  }
+
+  // Obter produtividade por usuário
+  async getUserProductivity(startDate?: string, endDate?: string, boardId?: number): Promise<UserProductivity[]> {
+    try {
+      console.log('Database: Buscando produtividade por usuário:', { startDate, endDate, boardId });
+      
+      const { data, error } = await supabase.rpc('get_user_productivity', {
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
+        p_board_id: boardId || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar produtividade por usuário:', error);
+        throw error;
+      }
+
+      console.log('Database: Produtividade por usuário encontrada:', data);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar produtividade por usuário:', error);
+      throw error;
+    }
+  }
+
+  // Obter tendências de produtividade
+  async getProductivityTrends(periodType: 'day' | 'week' | 'month' = 'month', startDate?: string, endDate?: string, boardId?: number): Promise<ProductivityTrend[]> {
+    try {
+      console.log('Database: Buscando tendências de produtividade:', { periodType, startDate, endDate, boardId });
+      
+      const { data, error } = await supabase.rpc('get_productivity_trends', {
+        p_period_type: periodType,
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
+        p_board_id: boardId || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar tendências de produtividade:', error);
+        throw error;
+      }
+
+      console.log('Database: Tendências de produtividade encontradas:', data);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar tendências de produtividade:', error);
+      throw error;
+    }
+  }
+
+  // Obter performance por projeto
+  async getProjectPerformance(startDate?: string, endDate?: string, boardId?: number | string): Promise<ProjectPerformance[]> {
+    try {
+      console.log('Database: Buscando performance por projeto:', { startDate, endDate, boardId });
+      
+      // Se boardId contém prefixo "board-", não usar para filtrar
+      let filteredBoardId = boardId;
+      if (boardId && boardId.toString().includes('board-')) {
+        console.log('Database: BoardId contém prefixo "board-", ignorando filtro');
+        filteredBoardId = undefined;
+      }
+      
+      const { data, error } = await supabase.rpc('get_project_performance', {
+        p_start_date: startDate || null,
+        p_end_date: endDate || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar performance por projeto:', error);
+        throw error;
+      }
+
+      // Converter board_id para string se necessário para evitar overflow
+      const processedData = (data || []).map((item: any) => ({
+        ...item,
+        board_id: item.board_id ? item.board_id.toString() : null
+      }));
+
+      console.log('Database: Performance por projeto encontrada:', processedData);
+      return processedData;
+    } catch (error) {
+      console.error('Database: Erro ao buscar performance por projeto:', error);
+      throw error;
+    }
+  }
+
+  // Obter métricas de subtasks
+  async getSubtaskMetrics(startDate?: string, endDate?: string, boardId?: number): Promise<SubtaskMetrics> {
+    try {
+      console.log('Database: Buscando métricas de subtasks:', { startDate, endDate, boardId });
+      
+      const { data, error } = await supabase.rpc('get_subtask_metrics', {
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
+        p_board_id: boardId || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar métricas de subtasks:', error);
+        throw error;
+      }
+
+      console.log('Database: Métricas de subtasks encontradas:', data);
+      return data[0] || { total_subtasks: 0, completed_subtasks: 0, completion_rate: 0, avg_completion_days: 0 };
+    } catch (error) {
+      console.error('Database: Erro ao buscar métricas de subtasks:', error);
+      throw error;
+    }
+  }
+
+  // Obter relatório mensal
+  async getMonthlyReport(reportMonth?: string): Promise<MonthlyReport[]> {
+    try {
+      console.log('Database: Buscando relatório mensal:', { reportMonth });
+      
+      const { data, error } = await supabase.rpc('get_monthly_report', {
+        p_report_month: reportMonth || null
+      });
+
+      if (error) {
+        console.error('Database: Erro ao buscar relatório mensal:', error);
+        throw error;
+      }
+
+      console.log('Database: Relatório mensal encontrado:', data);
+      return data || [];
+    } catch (error) {
+      console.error('Database: Erro ao buscar relatório mensal:', error);
+      throw error;
+    }
+  }
+
+  // Exportar relatório para CSV
+  async exportReportToCSV(reportType: 'monthly' | 'project' | 'user', data: any[], filename: string): Promise<string> {
+    try {
+      console.log('Database: Exportando relatório para CSV:', { reportType, filename });
+      
+      // Converter dados para CSV
+      const headers = Object.keys(data[0] || {});
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+      ].join('\n');
+
+      // Criar blob e URL para download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      // Criar link para download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Limpar URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      console.log('Database: Relatório exportado com sucesso');
+      return 'Relatório exportado com sucesso!';
+    } catch (error) {
+      console.error('Database: Erro ao exportar relatório:', error);
       throw error;
     }
   }

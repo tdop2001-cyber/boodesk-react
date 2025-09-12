@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Formatação de PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .pdf-button {
+            background: #dc3545;
+        }
+        .pdf-button:hover {
+            background: #c82333;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Teste de Formatação de PDF Melhorada</h1>
+        <p>Este teste demonstra a nova formatação de PDF com tabelas estruturadas em vez de JSON bruto.</p>
+        
+        <div class="test-section">
+            <h3>🏢 Teste 1: Relatório de Projetos</h3>
+            <p>Testa a formatação de dados de projetos em tabela estruturada.</p>
+            <button class="pdf-button" onclick="testProjectReport()">Gerar Relatório de Projetos</button>
+            <div id="project-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>👥 Teste 2: Relatório de Usuários</h3>
+            <p>Testa a formatação de dados de usuários em tabela estruturada.</p>
+            <button class="pdf-button" onclick="testUserReport()">Gerar Relatório de Usuários</button>
+            <div id="user-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Teste 3: Relatório de Métricas</h3>
+            <p>Testa a formatação de métricas mensais em tabela estruturada.</p>
+            <button class="pdf-button" onclick="testMetricsReport()">Gerar Relatório de Métricas</button>
+            <div id="metrics-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Teste 4: Relatório Completo</h3>
+            <p>Testa a formatação de relatório completo com múltiplos tipos de dados.</p>
+            <button class="pdf-button" onclick="testCompleteReport()">Gerar Relatório Completo</button>
+            <div id="complete-result"></div>
+        </div>
+    </div>
+
+    <!-- Bibliotecas para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script>
+        // Dados de exemplo para os testes
+        const sampleProjectData = [
+            { board_id: 23, board_name: 'App Motorista', total_cards: 15, completed_cards: 12, completion_rate: 80, avg_completion_days: 3.5 },
+            { board_id: 8, board_name: 'Desenvolvimento de Software', total_cards: 25, completed_cards: 20, completion_rate: 80, avg_completion_days: 4.2 },
+            { board_id: 22, board_name: 'Teste de Quadro', total_cards: 10, completed_cards: 8, completion_rate: 80, avg_completion_days: 2.8 }
+        ];
+
+        const sampleUserData = [
+            { user_id: 1, username: 'joao.silva', nome_completo: 'João Silva', total_cards: 20, completed_cards: 18, completion_rate: 90, avg_completion_days: 2.5 },
+            { user_id: 2, username: 'maria.santos', nome_completo: 'Maria Santos', total_cards: 25, completed_cards: 22, completion_rate: 88, avg_completion_days: 3.1 },
+            { user_id: 3, username: 'pedro.oliveira', nome_completo: 'Pedro Oliveira', total_cards: 15, completed_cards: 12, completion_rate: 80, avg_completion_days: 3.8 }
+        ];
+
+        const sampleMetricsData = [
+            { metric_name: 'Total de Cards', metric_value: 150, metric_unit: 'unidades' },
+            { metric_name: 'Cards Concluídos', metric_value: 120, metric_unit: 'unidades' },
+            { metric_name: 'Taxa de Conclusão', metric_value: 80, metric_unit: '%' },
+            { metric_name: 'Tempo Médio de Conclusão', metric_value: 3.5, metric_unit: 'dias' }
+        ];
+
+        // Função para criar tabela formatada
+        function addMetricsTable(doc, data, startX, startY, title) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(title, startX, startY);
+            
+            let currentY = startY + 15;
+            
+            if (data.length === 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Nenhum dado disponível', startX, currentY);
+                return currentY + 10;
+            }
+            
+            // Determinar tipo de dados e criar cabeçalhos apropriados
+            const firstItem = data[0];
+            let headers = [];
+            let columnWidths = [];
+            
+            if (firstItem.board_id !== undefined) {
+                // Dados de projeto
+                headers = ['Projeto', 'Total Cards', 'Concluídos', 'Taxa (%)', 'Tempo Médio'];
+                columnWidths = [60, 25, 25, 20, 30];
+            } else if (firstItem.user_id !== undefined) {
+                // Dados de usuário
+                headers = ['Usuário', 'Total Cards', 'Concluídos', 'Taxa (%)', 'Tempo Médio'];
+                columnWidths = [60, 25, 25, 20, 30];
+            } else if (firstItem.metric_name !== undefined) {
+                // Dados de métrica
+                headers = ['Métrica', 'Valor', 'Unidade'];
+                columnWidths = [80, 30, 20];
+            }
+            
+            // Criar dados da tabela
+            const tableData = [headers];
+            
+            data.forEach(item => {
+                const row = [];
+                
+                if (item.board_id !== undefined) {
+                    row.push(item.board_name || `ID ${item.board_id}`);
+                    row.push(String(item.total_cards || 0));
+                    row.push(String(item.completed_cards || 0));
+                    row.push(`${item.completion_rate || 0}%`);
+                    row.push(item.avg_completion_days ? `${item.avg_completion_days} dias` : 'N/A');
+                } else if (item.user_id !== undefined) {
+                    row.push(item.nome_completo || item.username || `ID ${item.user_id}`);
+                    row.push(String(item.total_cards || 0));
+                    row.push(String(item.completed_cards || 0));
+                    row.push(`${item.completion_rate || 0}%`);
+                    row.push(item.avg_completion_days ? `${item.avg_completion_days} dias` : 'N/A');
+                } else if (item.metric_name !== undefined) {
+                    row.push(item.metric_name);
+                    row.push(String(item.metric_value || item.value || 'N/A'));
+                    row.push(item.metric_unit || '');
+                }
+                
+                tableData.push(row);
+            });
+            
+            // Desenhar tabela
+            doc.setFontSize(9);
+            
+            tableData.forEach((row, rowIndex) => {
+                let currentX = startX;
+                
+                row.forEach((cell, cellIndex) => {
+                    if (rowIndex === 0) {
+                        doc.setFont('helvetica', 'bold');
+                    } else {
+                        doc.setFont('helvetica', 'normal');
+                    }
+                    
+                    // Quebrar texto se necessário
+                    const cellWidth = columnWidths[cellIndex] || 50;
+                    const lines = doc.splitTextToSize(cell, cellWidth - 5);
+                    
+                    lines.forEach((line, lineIndex) => {
+                        doc.text(line, currentX, currentY + (lineIndex * 4));
+                    });
+                    
+                    currentX += cellWidth;
+                });
+                
+                currentY += 12;
+            });
+            
+            return currentY;
+        }
+
+        // Função para testar relatório de projetos
+        function testProjectReport() {
+            const resultDiv = document.getElementById('project-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de projetos...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Projetos', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Relatório de Performance e Métricas do Sistema', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 60);
+
+                let yPosition = 80;
+
+                // Resumo
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resumo:', 20, yPosition);
+                yPosition += 10;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Este relatório contém ${sampleProjectData.length} registros de projetos.`, 20, yPosition);
+                yPosition += 20;
+
+                // Tabela formatada
+                yPosition = addMetricsTable(doc, sampleProjectData, 20, yPosition, 'Dados dos Projetos');
+
+                // Salvar o PDF
+                doc.save(`relatorio_projetos_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de projetos gerado com formatação melhorada!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para testar relatório de usuários
+        function testUserReport() {
+            const resultDiv = document.getElementById('user-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de usuários...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Usuários', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Relatório de Performance e Métricas do Sistema', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 60);
+
+                let yPosition = 80;
+
+                // Resumo
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resumo:', 20, yPosition);
+                yPosition += 10;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Este relatório contém ${sampleUserData.length} registros de usuários.`, 20, yPosition);
+                yPosition += 20;
+
+                // Tabela formatada
+                yPosition = addMetricsTable(doc, sampleUserData, 20, yPosition, 'Dados dos Usuários');
+
+                // Salvar o PDF
+                doc.save(`relatorio_usuarios_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de usuários gerado com formatação melhorada!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para testar relatório de métricas
+        function testMetricsReport() {
+            const resultDiv = document.getElementById('metrics-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de métricas...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Métricas', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Relatório de Performance e Métricas do Sistema', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 60);
+
+                let yPosition = 80;
+
+                // Resumo
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resumo:', 20, yPosition);
+                yPosition += 10;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Este relatório contém ${sampleMetricsData.length} registros de métricas.`, 20, yPosition);
+                yPosition += 20;
+
+                // Tabela formatada
+                yPosition = addMetricsTable(doc, sampleMetricsData, 20, yPosition, 'Dados das Métricas');
+
+                // Salvar o PDF
+                doc.save(`relatorio_metricas_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de métricas gerado com formatação melhorada!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para testar relatório completo
+        function testCompleteReport() {
+            const resultDiv = document.getElementById('complete-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório completo...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório Completo', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Relatório de Performance e Métricas do Sistema', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 60);
+
+                let yPosition = 80;
+
+                // Resumo
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resumo:', 20, yPosition);
+                yPosition += 10;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Este relatório contém dados de projetos, usuários e métricas.`, 20, yPosition);
+                yPosition += 20;
+
+                // Tabela de projetos
+                yPosition = addMetricsTable(doc, sampleProjectData, 20, yPosition, 'Dados dos Projetos');
+                yPosition += 10;
+
+                // Nova página se necessário
+                if (yPosition > 200) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+
+                // Tabela de usuários
+                yPosition = addMetricsTable(doc, sampleUserData, 20, yPosition, 'Dados dos Usuários');
+                yPosition += 10;
+
+                // Nova página se necessário
+                if (yPosition > 200) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+
+                // Tabela de métricas
+                yPosition = addMetricsTable(doc, sampleMetricsData, 20, yPosition, 'Dados das Métricas');
+
+                // Salvar o PDF
+                doc.save(`relatorio_completo_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório completo gerado com formatação melhorada!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

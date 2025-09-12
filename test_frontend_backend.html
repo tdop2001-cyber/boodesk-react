@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Frontend vs Backend - Performance por Projeto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .debug-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste Frontend vs Backend - Performance por Projeto</h1>
+        <p>Este teste compara se o problema está no frontend ou no backend.</p>
+        
+        <div class="test-section">
+            <h3>🔑 Configuração da API</h3>
+            <input type="text" id="api-key-input" placeholder="Cole sua chave da API do Supabase aqui..." style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="updateApiKey()">Atualizar Chave da API</button>
+            <div id="api-key-status"></div>
+        </div>
+
+        <div class="comparison">
+            <div class="test-section">
+                <h3>🔧 Teste Backend (RPC Direto)</h3>
+                <p>Testa diretamente a função RPC no Supabase.</p>
+                <button onclick="testBackendRPC()">Testar RPC Direto</button>
+                <div id="backend-result"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>🎨 Teste Frontend (Database Service)</h3>
+                <p>Testa a chamada através do DatabaseService.</p>
+                <button onclick="testFrontendService()">Testar Database Service</button>
+                <div id="frontend-result"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Comparação de Resultados</h3>
+            <button onclick="runComparison()">Executar Comparação Completa</button>
+            <div id="comparison-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Debug Detalhado</h3>
+            <button onclick="runDetailedDebug()">Executar Debug Detalhado</button>
+            <div id="debug-result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        let supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.8QZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZq';
+        
+        let supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Função para atualizar a chave da API
+        window.updateApiKey = function() {
+            const newKey = document.getElementById('api-key-input').value.trim();
+            const statusDiv = document.getElementById('api-key-status');
+            
+            if (!newKey) {
+                statusDiv.innerHTML = '<div class="error">❌ Por favor, insira uma chave da API válida.</div>';
+                return;
+            }
+            
+            try {
+                supabaseKey = newKey;
+                supabase = createClient(supabaseUrl, supabaseKey);
+                statusDiv.innerHTML = '<div class="success">✅ Chave da API atualizada com sucesso!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Erro ao atualizar chave da API: ' + error.message + '</div>';
+            }
+        };
+
+        // Teste Backend RPC Direto
+        window.testBackendRPC = async function() {
+            const resultDiv = document.getElementById('backend-result');
+            resultDiv.innerHTML = '<div class="loading">Testando RPC direto...</div>';
+            
+            try {
+                const { data, error } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                let report = '<div class="debug-info">';
+                report += '<h4>🔧 Resultado RPC Direto:</h4>';
+                
+                if (error) {
+                    report += `<div class="error">❌ Erro na RPC: ${error.message}</div>`;
+                    report += `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    report += `<div class="success">✅ RPC executada com sucesso!</div>`;
+                    report += `<div class="info">📊 Dados retornados: ${data?.length || 0} registros</div>`;
+                    
+                    if (data && data.length > 0) {
+                        report += '<h5>Dados da RPC:</h5>';
+                        report += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                        
+                        const totalCards = data.reduce((sum, item) => sum + (item.total_cards || 0), 0);
+                        const totalCompleted = data.reduce((sum, item) => sum + (item.completed_cards || 0), 0);
+                        
+                        report += '<h5>📈 Resumo RPC:</h5>';
+                        report += `<div>Total de Cards: ${totalCards}</div>`;
+                        report += `<div>Cards Concluídos: ${totalCompleted}</div>`;
+                        report += `<div>Taxa Geral: ${totalCards > 0 ? Math.round((totalCompleted / totalCards) * 100) : 0}%</div>`;
+                    } else {
+                        report += '<div class="error">⚠️ Nenhum dado retornado pela RPC!</div>';
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${error.message}</div>`;
+            }
+        };
+
+        // Teste Frontend Database Service
+        window.testFrontendService = async function() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.innerHTML = '<div class="loading">Testando Database Service...</div>';
+            
+            try {
+                // Simular a chamada do DatabaseService
+                const { data, error } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                // Simular o processamento do DatabaseService
+                const processedData = (data || []).map((item) => ({
+                    ...item,
+                    board_id: item.board_id ? item.board_id.toString() : null
+                }));
+
+                let report = '<div class="debug-info">';
+                report += '<h4>🎨 Resultado Database Service:</h4>';
+                report += `<div class="success">✅ Database Service executado com sucesso!</div>`;
+                report += `<div class="info">📊 Dados processados: ${processedData?.length || 0} registros</div>`;
+                
+                if (processedData && processedData.length > 0) {
+                    report += '<h5>Dados Processados:</h5>';
+                    report += '<pre>' + JSON.stringify(processedData, null, 2) + '</pre>';
+                    
+                    const totalCards = processedData.reduce((sum, item) => sum + (item.total_cards || 0), 0);
+                    const totalCompleted = processedData.reduce((sum, item) => sum + (item.completed_cards || 0), 0);
+                    
+                    report += '<h5>📈 Resumo Database Service:</h5>';
+                    report += `<div>Total de Cards: ${totalCards}</div>`;
+                    report += `<div>Cards Concluídos: ${totalCompleted}</div>`;
+                    report += `<div>Taxa Geral: ${totalCards > 0 ? Math.round((totalCompleted / totalCards) * 100) : 0}%</div>`;
+                } else {
+                    report += '<div class="error">⚠️ Nenhum dado processado pelo Database Service!</div>';
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro no Database Service: ${error.message}</div>`;
+            }
+        };
+
+        // Comparação completa
+        window.runComparison = async function() {
+            const resultDiv = document.getElementById('comparison-result');
+            resultDiv.innerHTML = '<div class="loading">Executando comparação completa...</div>';
+            
+            try {
+                // Teste RPC
+                const { data: rpcData, error: rpcError } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                // Teste Database Service
+                let serviceData = null;
+                let serviceError = null;
+                
+                if (!rpcError) {
+                    serviceData = (rpcData || []).map((item) => ({
+                        ...item,
+                        board_id: item.board_id ? item.board_id.toString() : null
+                    }));
+                } else {
+                    serviceError = rpcError;
+                }
+
+                let report = '<div class="debug-info">';
+                report += '<h4>📊 Comparação Completa:</h4>';
+                
+                // Comparar resultados
+                if (rpcError) {
+                    report += `<div class="error">❌ Erro na RPC: ${rpcError.message}</div>`;
+                } else if (serviceError) {
+                    report += `<div class="error">❌ Erro no Database Service: ${serviceError.message}</div>`;
+                } else {
+                    const rpcCards = rpcData?.reduce((sum, item) => sum + (item.total_cards || 0), 0) || 0;
+                    const serviceCards = serviceData?.reduce((sum, item) => sum + (item.total_cards || 0), 0) || 0;
+                    
+                    report += `<div class="success">✅ Ambos os testes executaram com sucesso!</div>`;
+                    report += `<div>RPC - Total Cards: ${rpcCards}</div>`;
+                    report += `<div>Database Service - Total Cards: ${serviceCards}</div>`;
+                    
+                    if (rpcCards === serviceCards) {
+                        report += '<div class="success">✅ Resultados idênticos - Backend funcionando!</div>';
+                        report += '<div class="info">💡 O problema pode estar no frontend React ou na renderização dos dados.</div>';
+                    } else {
+                        report += '<div class="error">❌ Resultados diferentes - Problema no processamento!</div>';
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro na comparação: ${error.message}</div>`;
+            }
+        };
+
+        // Debug detalhado
+        window.runDetailedDebug = async function() {
+            const resultDiv = document.getElementById('debug-result');
+            resultDiv.innerHTML = '<div class="loading">Executando debug detalhado...</div>';
+            
+            try {
+                let report = '<div class="debug-info">';
+                report += '<h4>🔍 Debug Detalhado:</h4>';
+                
+                // 1. Verificar dados das tabelas
+                const { data: boardsData, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('id, name')
+                    .order('id');
+
+                const { data: cardsData, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('id, board_id, status')
+                    .order('id');
+
+                report += '<h5>1. Dados das Tabelas:</h5>';
+                if (boardsError || cardsError) {
+                    report += `<div class="error">❌ Erro ao acessar tabelas</div>`;
+                } else {
+                    report += `<div class="success">✅ Boards: ${boardsData?.length || 0}, Cards: ${cardsData?.length || 0}</div>`;
+                }
+
+                // 2. Testar RPC
+                const { data: rpcData, error: rpcError } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                report += '<h5>2. Teste RPC:</h5>';
+                if (rpcError) {
+                    report += `<div class="error">❌ Erro na RPC: ${rpcError.message}</div>`;
+                } else {
+                    report += `<div class="success">✅ RPC executada: ${rpcData?.length || 0} registros</div>`;
+                }
+
+                // 3. Análise do problema
+                report += '<h5>3. Análise do Problema:</h5>';
+                
+                if (boardsData && cardsData && rpcData) {
+                    const boardsWithCards = boardsData.filter(board => 
+                        cardsData.some(card => {
+                            const cleanBoardId = card.board_id?.replace('board-', '');
+                            return cleanBoardId == board.id;
+                        })
+                    );
+                    
+                    const boardsWithRpcData = rpcData.filter(rpc => rpc.total_cards > 0);
+                    
+                    report += `<div>Boards com cards: ${boardsWithCards.length}</div>`;
+                    report += `<div>Boards com dados na RPC: ${boardsWithRpcData.length}</div>`;
+                    
+                    if (boardsWithCards.length > 0 && boardsWithRpcData.length === 0) {
+                        report += '<div class="error">⚠️ PROBLEMA IDENTIFICADO: Há boards com cards, mas a RPC não retorna dados!</div>';
+                        report += '<div class="info">💡 Solução: Execute o script recreate_function_simple.sql</div>';
+                    } else if (boardsWithCards.length === 0) {
+                        report += '<div class="error">⚠️ PROBLEMA: Não há relacionamento entre boards e cards</div>';
+                    } else if (boardsWithRpcData.length > 0) {
+                        report += '<div class="success">✅ Backend funcionando - Problema no frontend React</div>';
+                        report += '<div class="info">💡 Verifique o console do navegador e a renderização dos dados</div>';
+                    }
+                }
+
+                report += '</div>';
+                resultDiv.innerHTML = report;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro no debug: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Circle, Clock, Flag, User, Calendar } from 'lucide-react';
+import { CheckCircle, Circle, Clock, Flag, User, Calendar, Edit3 } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -93,7 +93,11 @@ const SubtaskList: React.FC<SubtaskListProps> = ({
       {subtasks.map((subtask) => (
         <div
           key={subtask.id}
-          onClick={() => onSubtaskClick?.(subtask)}
+          onClick={() => {
+            // Aqui você pode adicionar lógica para abrir detalhes da subtask
+            // Por enquanto, mantemos o comportamento original
+            onSubtaskClick?.(subtask);
+          }}
           className={`
             border border-gray-200 rounded-lg p-3 transition-all duration-200
             ${onSubtaskClick ? 'cursor-pointer hover:border-gray-300 hover:shadow-sm' : ''}
@@ -113,10 +117,27 @@ const SubtaskList: React.FC<SubtaskListProps> = ({
               </h4>
             </div>
             
-            {/* Status Badge */}
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status, subtask.completed)}`}>
-              {getStatusText(subtask.status, subtask.completed)}
-            </span>
+            {/* Status Badge e Botão Modal */}
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status, subtask.completed)}`}>
+                {getStatusText(subtask.status, subtask.completed)}
+              </span>
+              
+              {/* Botão para abrir modal de subtasks */}
+              {onSubtaskClick && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSubtaskClick(subtask);
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  title="Abrir modal de subtarefa"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Description */}

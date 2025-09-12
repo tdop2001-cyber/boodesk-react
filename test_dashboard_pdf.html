@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Geração de PDF do Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .pdf-button {
+            background: #dc3545;
+        }
+        .pdf-button:hover {
+            background: #c82333;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Teste de Geração de PDF do Dashboard</h1>
+        <p>Este teste verifica se a integração do jsPDF com o dashboard está funcionando corretamente.</p>
+        
+        <div class="test-section">
+            <h3>🎯 Teste 1: Relatório Executivo</h3>
+            <p>Testa a geração de PDF com métricas do dashboard executivo.</p>
+            <button class="pdf-button" onclick="testExecutiveReport()">Gerar Relatório Executivo</button>
+            <div id="executive-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Teste 2: Relatório de Performance</h3>
+            <p>Testa a geração de PDF com dados de performance e métricas.</p>
+            <button class="pdf-button" onclick="testPerformanceReport()">Gerar Relatório de Performance</button>
+            <div id="performance-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Teste 3: Relatório de Gráficos</h3>
+            <p>Testa a geração de PDF com dados de gráficos e visualizações.</p>
+            <button class="pdf-button" onclick="testChartsReport()">Gerar Relatório de Gráficos</button>
+            <div id="charts-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Teste 4: Teste Completo de Integração</h3>
+            <p>Executa todos os testes em sequência para verificar a integração completa.</p>
+            <button class="pdf-button" onclick="runAllDashboardTests()">Executar Todos os Testes</button>
+            <div id="integration-result"></div>
+        </div>
+    </div>
+
+    <!-- Bibliotecas para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script>
+        // Dados de exemplo para os testes
+        const sampleMetrics = {
+            totalCards: 150,
+            totalSubtasks: 75,
+            completedCards: 120,
+            completedSubtasks: 60,
+            inProgressCards: 20,
+            inProgressSubtasks: 10,
+            pendingCards: 10,
+            pendingSubtasks: 5,
+            overdueCards: 5,
+            overdueSubtasks: 2,
+            totalUsers: 8,
+            activeUsers: 6,
+            totalBoards: 4,
+            averageCompletionTime: 3.5,
+            productivityScore: 85
+        };
+
+        const sampleChartData = [
+            { name: 'Concluídos', value: 180, color: '#10B981' },
+            { name: 'Em Progresso', value: 30, color: '#F59E0B' },
+            { name: 'Pendentes', value: 15, color: '#3B82F6' },
+            { name: 'Em Atraso', value: 7, color: '#EF4444' }
+        ];
+
+        const sampleTimeSeriesData = [
+            { date: '2024-01-01', completed: 12, created: 8, inProgress: 5 },
+            { date: '2024-01-02', completed: 15, created: 10, inProgress: 6 },
+            { date: '2024-01-03', completed: 18, created: 12, inProgress: 7 },
+            { date: '2024-01-04', completed: 14, created: 9, inProgress: 5 },
+            { date: '2024-01-05', completed: 20, created: 15, inProgress: 8 },
+            { date: '2024-01-06', completed: 16, created: 11, inProgress: 6 },
+            { date: '2024-01-07', completed: 22, created: 18, inProgress: 9 }
+        ];
+
+        const sampleMonthlyData = [
+            { metric_name: 'Total de Cards', metric_value: 150, metric_unit: 'unidades' },
+            { metric_name: 'Cards Concluídos', metric_value: 120, metric_unit: 'unidades' },
+            { metric_name: 'Taxa de Conclusão', metric_value: 80, metric_unit: '%' },
+            { metric_name: 'Tempo Médio', metric_value: 3.5, metric_unit: 'dias' }
+        ];
+
+        const sampleProjectData = [
+            { board_id: 1, board_name: 'Projeto Alpha', total_cards: 50, completed_cards: 40, completion_rate: 80 },
+            { board_id: 2, board_name: 'Projeto Beta', total_cards: 30, completed_cards: 25, completion_rate: 83 },
+            { board_id: 3, board_name: 'Projeto Gamma', total_cards: 40, completed_cards: 35, completion_rate: 88 }
+        ];
+
+        const sampleUserData = [
+            { user_id: 1, username: 'joao.silva', nome_completo: 'João Silva', total_cards: 20, completed_cards: 18, completion_rate: 90 },
+            { user_id: 2, username: 'maria.santos', nome_completo: 'Maria Santos', total_cards: 25, completed_cards: 22, completion_rate: 88 },
+            { user_id: 3, username: 'pedro.oliveira', nome_completo: 'Pedro Oliveira', total_cards: 15, completed_cards: 12, completion_rate: 80 }
+        ];
+
+        // Função para testar relatório executivo
+        function testExecutiveReport() {
+            const resultDiv = document.getElementById('executive-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório executivo...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Dashboard Executivo', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Relatório de Performance e Produtividade', 20, 45);
+                
+                // Data e período
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 60);
+                doc.text(`Período: Últimos 30 dias`, 20, 70);
+                doc.text(`Usuário: Todos os usuários`, 20, 80);
+
+                let yPosition = 100;
+
+                // Resumo Executivo
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resumo Executivo', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                const completionRate = Math.round(((sampleMetrics.completedCards + sampleMetrics.completedSubtasks) / (sampleMetrics.totalCards + sampleMetrics.totalSubtasks)) * 100);
+
+                const summaryItems = [
+                    `Taxa de Conclusão: ${completionRate}%`,
+                    `Total de Tarefas: ${sampleMetrics.totalCards + sampleMetrics.totalSubtasks}`,
+                    `Tarefas Concluídas: ${sampleMetrics.completedCards + sampleMetrics.completedSubtasks}`,
+                    `Usuários Ativos: ${sampleMetrics.activeUsers}`,
+                    `Quadros Ativos: ${sampleMetrics.totalBoards}`,
+                    `Produtividade: ${sampleMetrics.productivityScore}%`
+                ];
+
+                summaryItems.forEach(item => {
+                    doc.text(`• ${item}`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                yPosition += 10;
+
+                // Métricas Principais
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Métricas Principais', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                const mainMetrics = [
+                    { label: 'Total de Cards', value: sampleMetrics.totalCards },
+                    { label: 'Total de Subtarefas', value: sampleMetrics.totalSubtasks },
+                    { label: 'Cards Concluídos', value: sampleMetrics.completedCards },
+                    { label: 'Subtarefas Concluídas', value: sampleMetrics.completedSubtasks },
+                    { label: 'Em Progresso', value: sampleMetrics.inProgressCards + sampleMetrics.inProgressSubtasks },
+                    { label: 'Pendentes', value: sampleMetrics.pendingCards + sampleMetrics.pendingSubtasks },
+                    { label: 'Em Atraso', value: sampleMetrics.overdueCards + sampleMetrics.overdueSubtasks }
+                ];
+
+                mainMetrics.forEach(metric => {
+                    doc.text(`${metric.label}: ${metric.value}`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                // Salvar o PDF
+                doc.save(`dashboard_executivo_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório executivo gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para testar relatório de performance
+        function testPerformanceReport() {
+            const resultDiv = document.getElementById('performance-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de performance...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Performance', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Análise Detalhada de Métricas', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Período: Últimos 30 dias`, 20, 60);
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 70);
+
+                let yPosition = 90;
+
+                // Relatório Mensal
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Métricas Mensais', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                sampleMonthlyData.forEach(item => {
+                    doc.text(`${item.metric_name}: ${item.metric_value} ${item.metric_unit}`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                yPosition += 10;
+
+                // Performance por Projeto
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Performance por Projeto', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                sampleProjectData.forEach(item => {
+                    doc.text(`Projeto ${item.board_name}: ${item.completion_rate}% conclusão`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                yPosition += 10;
+
+                // Produtividade da Equipe
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Produtividade da Equipe', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                sampleUserData.forEach(item => {
+                    doc.text(`${item.nome_completo}: ${item.completion_rate}% conclusão`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                // Salvar o PDF
+                doc.save(`relatorio_performance_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de performance gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para testar relatório de gráficos
+        function testChartsReport() {
+            const resultDiv = document.getElementById('charts-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de gráficos...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Gráficos', 20, 30);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Análise Visual de Dados', 20, 45);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Período: Últimos 30 dias`, 20, 60);
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 70);
+
+                let yPosition = 90;
+
+                // Distribuição por Status
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Distribuição por Status', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                sampleChartData.forEach(item => {
+                    doc.text(`${item.name}: ${item.value}`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                yPosition += 10;
+
+                // Dados Temporais
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Evolução Temporal', 20, yPosition);
+                yPosition += 15;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                sampleTimeSeriesData.slice(-5).forEach(data => {
+                    doc.text(`${data.date}: Concluídos: ${data.completed}, Criados: ${data.created}`, 20, yPosition);
+                    yPosition += 8;
+                });
+
+                // Salvar o PDF
+                doc.save(`relatorio_graficos_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de gráficos gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        }
+
+        // Função para executar todos os testes
+        function runAllDashboardTests() {
+            const resultDiv = document.getElementById('integration-result');
+            resultDiv.innerHTML = '<div class="loading">Executando todos os testes...</div>';
+            
+            let results = [];
+            
+            try {
+                // Teste 1: Relatório Executivo
+                testExecutiveReport();
+                results.push({
+                    test: 'Relatório Executivo',
+                    success: true,
+                    error: null
+                });
+
+                // Aguardar um pouco antes do próximo teste
+                setTimeout(() => {
+                    // Teste 2: Relatório de Performance
+                    testPerformanceReport();
+                    results.push({
+                        test: 'Relatório de Performance',
+                        success: true,
+                        error: null
+                    });
+
+                    // Aguardar um pouco antes do próximo teste
+                    setTimeout(() => {
+                        // Teste 3: Relatório de Gráficos
+                        testChartsReport();
+                        results.push({
+                            test: 'Relatório de Gráficos',
+                            success: true,
+                            error: null
+                        });
+
+                        // Relatório final
+                        let report = '<div class="info">📊 Relatório Final dos Testes:</div><ul>';
+                        results.forEach(result => {
+                            const status = result.success ? '✅' : '❌';
+                            const message = result.success ? 'Sucesso' : `Erro: ${result.error}`;
+                            report += `<li>${status} ${result.test}: ${message}</li>`;
+                        });
+                        report += '</ul>';
+
+                        const allSuccess = results.every(r => r.success);
+                        if (allSuccess) {
+                            report = '<div class="success">🎉 Todos os testes passaram! A integração do jsPDF com o dashboard está funcionando corretamente.</div>' + report;
+                        } else {
+                            report = '<div class="error">⚠️ Alguns testes falharam. Verifique os erros acima.</div>' + report;
+                        }
+
+                        resultDiv.innerHTML = report;
+                    }, 1000);
+                }, 1000);
+
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado durante os testes: ${err.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -37,7 +37,9 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { db } from '../services/database';
+import PerformanceMetrics from '../components/PerformanceMetrics';
 import { Card, User, Board } from '../types';
+import { generateExecutivePDF, generatePerformancePDF, generateChartsPDF } from '../utils/dashboardPdfGenerator';
 
 interface DashboardMetrics {
   totalCards: number;
@@ -104,6 +106,12 @@ const ExecutiveDashboard: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30000); // 30 segundos
+  
+  // Estados para filtros de métricas
+  const [metricsStartDate, setMetricsStartDate] = useState<string>('');
+  const [metricsEndDate, setMetricsEndDate] = useState<string>('');
+  const [selectedBoardId, setSelectedBoardId] = useState<number | undefined>(undefined);
+  const [availableBoards, setAvailableBoards] = useState<Board[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Função para filtrar dados por usuário
@@ -282,8 +290,19 @@ const ExecutiveDashboard: React.FC = () => {
     }
   };
 
+  // Carregar boards disponíveis para filtros
+  const loadAvailableBoards = async () => {
+    try {
+      const boardsData = await db.getBoards();
+      setAvailableBoards(boardsData);
+    } catch (error) {
+      console.error('Erro ao carregar boards:', error);
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
+    loadAvailableBoards();
   }, [timeRange, selectedUserId]);
 
   // Atualização automática
@@ -300,6 +319,58 @@ const ExecutiveDashboard: React.FC = () => {
   // Função para atualização manual
   const handleManualRefresh = () => {
     loadDashboardData();
+  };
+
+  // Funções para exportação de PDF
+  const handleExportExecutivePDF = () => {
+    try {
+      const selectedUserName = selectedUserId === 'all' 
+        ? 'Todos os usuários' 
+        : users.find(u => u.id === selectedUserId)?.nome_completo || 
+          users.find(u => u.id === selectedUserId)?.username || 
+          users.find(u => u.id === selectedUserId)?.email || 
+          'Usuário desconhecido';
+
+      generateExecutivePDF(
+        metrics,
+        chartData,
+        timeSeriesData,
+        timeRange,
+        selectedUserName
+      );
+
+      addToast({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Relatório executivo gerado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao gerar relatório executivo: ' + (error as Error).message
+      });
+    }
+  };
+
+  const handleExportChartsPDF = () => {
+    try {
+      generateChartsPDF(chartData, timeSeriesData, timeRange);
+      
+      addToast({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Relatório de gráficos gerado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      addToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao gerar relatório de gráficos: ' + (error as Error).message
+      });
+    }
   };
 
   const MetricCard: React.FC<{
@@ -450,6 +521,71 @@ const ExecutiveDashboard: React.FC = () => {
                   <option value={300000} className="bg-slate-800 text-white">5min</option>
                 </select>
               </div>
+              
+              {/* Filtros de Métricas */}
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/70 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={metricsStartDate}
+                    onChange={(e) => setMetricsStartDate(e.target.value)}
+                    className="pl-10 pr-4 py-3 bg-white/15 border border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/20 transition-all duration-200"
+                    placeholder="Data início"
+                  />
+                </div>
+                
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/70 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={metricsEndDate}
+                    onChange={(e) => setMetricsEndDate(e.target.value)}
+                    className="pl-10 pr-4 py-3 bg-white/15 border border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/20 transition-all duration-200"
+                    placeholder="Data fim"
+                  />
+                </div>
+                
+                <div className="relative">
+                  <BarChart3 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/70 pointer-events-none" />
+                  <select
+                    value={selectedBoardId || ''}
+                    onChange={(e) => setSelectedBoardId(e.target.value ? parseInt(e.target.value) : undefined)}
+                    className="pl-10 pr-4 py-3 bg-white/15 border border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/20 transition-all duration-200 min-w-[150px] appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-slate-800 text-white">Todos os projetos</option>
+                    {availableBoards.map((board) => (
+                      <option key={board.id} value={board.id} className="bg-slate-800 text-white">
+                        {board.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Exportação PDF */}
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleExportExecutivePDF}
+                  className="flex items-center space-x-2 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 rounded-lg transition-all duration-200 text-red-100 font-medium shadow-sm hover:shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Relatório Executivo</span>
+                </button>
+                
+                <button
+                  onClick={handleExportChartsPDF}
+                  className="flex items-center space-x-2 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/50 rounded-lg transition-all duration-200 text-blue-100 font-medium shadow-sm hover:shadow-md"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Relatório de Gráficos</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -468,6 +604,14 @@ const ExecutiveDashboard: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* Métricas de Performance */}
+        <PerformanceMetrics
+          startDate={metricsStartDate}
+          endDate={metricsEndDate}
+          boardId={selectedBoardId}
+          className="mb-8"
+        />
         
         {/* Métricas Principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste das Correções de Métricas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste das Correções de Métricas</h1>
+        <p>Este teste verifica se as correções para os erros de métricas foram aplicadas corretamente.</p>
+        
+        <div class="test-section">
+            <h3>🔑 Configuração da API</h3>
+            <p>Insira sua chave da API do Supabase para executar os testes.</p>
+            <input type="text" id="api-key-input" placeholder="Cole sua chave da API do Supabase aqui..." style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="updateApiKey()">Atualizar Chave da API</button>
+            <div id="api-key-status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Teste 1: Função get_monthly_report</h3>
+            <p>Testa se a função get_monthly_report funciona sem conflitos de sobrecarga.</p>
+            <button onclick="testMonthlyReport()">Testar Relatório Mensal</button>
+            <div id="monthly-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Teste 2: Função get_project_performance</h3>
+            <p>Testa se a função get_project_performance funciona sem erros de overflow de integer.</p>
+            <button onclick="testProjectPerformance()">Testar Performance por Projeto</button>
+            <div id="project-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Teste 3: Verificação de Tipos de Dados</h3>
+            <p>Verifica se os tipos de dados estão corretos para evitar overflow.</p>
+            <button onclick="testDataTypes()">Verificar Tipos de Dados</button>
+            <div id="types-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Teste 4: Verificação de Compatibilidade de Tipos</h3>
+            <p>Testa especificamente o erro 42883 (bigint = character varying).</p>
+            <button onclick="testTypeCompatibility()">Testar Compatibilidade</button>
+            <div id="compatibility-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Teste 5: Teste Completo de Integração</h3>
+            <p>Executa todos os testes em sequência para verificar a integração completa.</p>
+            <button onclick="runAllTests()">Executar Todos os Testes</button>
+            <div id="integration-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📄 Geração de Relatórios em PDF</h3>
+            <p>Exporte os resultados dos testes e métricas para PDF.</p>
+            <button onclick="generateTestReportPDF()">📊 Gerar Relatório de Testes (PDF)</button>
+            <button onclick="generateMetricsReportPDF()">📈 Gerar Relatório de Métricas (PDF)</button>
+            <button onclick="generateFullPagePDF()">📋 Gerar PDF da Página Completa</button>
+            <div id="pdf-result"></div>
+        </div>
+    </div>
+
+    <!-- Bibliotecas para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        // Configuração do Supabase
+        const supabaseUrl = 'https://noxhoaarzezagzsbypsw.supabase.co';
+        let supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veGhvYWFyemV6YWd6c2J5cHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ4NzQsImV4cCI6MjA1MDU1MDg3NH0.8QZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZq';
+        
+        let supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Função para atualizar a chave da API
+        window.updateApiKey = function() {
+            const newKey = document.getElementById('api-key-input').value.trim();
+            const statusDiv = document.getElementById('api-key-status');
+            
+            if (!newKey) {
+                statusDiv.innerHTML = '<div class="error">❌ Por favor, insira uma chave da API válida.</div>';
+                return;
+            }
+            
+            try {
+                supabaseKey = newKey;
+                supabase = createClient(supabaseUrl, supabaseKey);
+                statusDiv.innerHTML = '<div class="success">✅ Chave da API atualizada com sucesso!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Erro ao atualizar chave da API: ' + error.message + '</div>';
+            }
+        };
+
+        // Função para testar get_monthly_report
+        window.testMonthlyReport = async function() {
+            const resultDiv = document.getElementById('monthly-result');
+            resultDiv.innerHTML = '<div class="loading">Testando função get_monthly_report...</div>';
+            
+            try {
+                const { data, error } = await supabase.rpc('get_monthly_report', {
+                    p_report_month: null
+                });
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Erro: ${error.message}</div><pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="success">✅ Sucesso! Função get_monthly_report funcionando corretamente.</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${err.message}</div>`;
+            }
+        };
+
+        // Função para testar get_project_performance
+        window.testProjectPerformance = async function() {
+            const resultDiv = document.getElementById('project-result');
+            resultDiv.innerHTML = '<div class="loading">Testando função get_project_performance...</div>';
+            
+            try {
+                const { data, error } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Erro: ${error.message}</div><pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    // Verificar se os board_ids estão sendo tratados corretamente
+                    const hasValidBoardIds = data.every(item => 
+                        item.board_id !== null && 
+                        !isNaN(parseInt(item.board_id.toString()))
+                    );
+                    
+                    if (hasValidBoardIds) {
+                        resultDiv.innerHTML = `<div class="success">✅ Sucesso! Função get_project_performance funcionando corretamente.</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">❌ Problema com board_ids: ${JSON.stringify(data, null, 2)}</div>`;
+                    }
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${err.message}</div>`;
+            }
+        };
+
+        // Função para verificar tipos de dados
+        window.testDataTypes = async function() {
+            const resultDiv = document.getElementById('types-result');
+            resultDiv.innerHTML = '<div class="loading">Verificando tipos de dados...</div>';
+            
+            try {
+                // Verificar estrutura das tabelas
+                const { data: boardsData, error: boardsError } = await supabase
+                    .from('boards')
+                    .select('id')
+                    .limit(1);
+
+                const { data: cardsData, error: cardsError } = await supabase
+                    .from('cards')
+                    .select('id, board_id')
+                    .limit(1);
+
+                if (boardsError || cardsError) {
+                    resultDiv.innerHTML = `<div class="error">❌ Erro ao verificar tabelas: ${boardsError?.message || cardsError?.message}</div>`;
+                    return;
+                }
+
+                let report = '<div class="info">📋 Relatório de Tipos de Dados:</div><ul>';
+                
+                // Verificar se os IDs são números válidos
+                if (boardsData && boardsData.length > 0) {
+                    const boardId = boardsData[0].id;
+                    const isInteger = Number.isInteger(boardId) && boardId >= -2147483648 && boardId <= 2147483647;
+                    report += `<li>Board ID: ${boardId} (${typeof boardId}) - ${isInteger ? '✅ Válido' : '⚠️ Pode causar overflow'}</li>`;
+                }
+
+                if (cardsData && cardsData.length > 0) {
+                    const cardId = cardsData[0].id;
+                    const boardId = cardsData[0].board_id;
+                    const cardIsInteger = Number.isInteger(cardId) && cardId >= -2147483648 && cardId <= 2147483647;
+                    const boardIsInteger = Number.isInteger(boardId) && boardId >= -2147483648 && boardId <= 2147483647;
+                    report += `<li>Card ID: ${cardId} (${typeof cardId}) - ${cardIsInteger ? '✅ Válido' : '⚠️ Pode causar overflow'}</li>`;
+                    report += `<li>Card Board ID: ${boardId} (${typeof boardId}) - ${boardIsInteger ? '✅ Válido' : '⚠️ Pode causar overflow'}</li>`;
+                }
+
+                report += '</ul>';
+                resultDiv.innerHTML = report;
+
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${err.message}</div>`;
+            }
+        };
+
+        // Função para testar compatibilidade de tipos
+        window.testTypeCompatibility = async function() {
+            const resultDiv = document.getElementById('compatibility-result');
+            resultDiv.innerHTML = '<div class="loading">Testando compatibilidade de tipos...</div>';
+            
+            try {
+                // Testar se a função executa sem erro 42883
+                const { data, error } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+
+                if (error) {
+                    if (error.code === '42883') {
+                        resultDiv.innerHTML = `<div class="error">❌ Erro 42883 detectado: ${error.message}<br><br>Execute o script fix_data_types_compatibility.sql para corrigir este problema.</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">❌ Outro erro: ${error.message}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="success">✅ Compatibilidade de tipos OK! Função executa sem erro 42883.</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado: ${err.message}</div>`;
+            }
+        };
+
+        // Função para executar todos os testes
+        window.runAllTests = async function() {
+            const resultDiv = document.getElementById('integration-result');
+            resultDiv.innerHTML = '<div class="loading">Executando todos os testes...</div>';
+            
+            let results = [];
+            
+            try {
+                // Teste 1: get_monthly_report
+                const { data: monthlyData, error: monthlyError } = await supabase.rpc('get_monthly_report', {
+                    p_report_month: null
+                });
+                results.push({
+                    test: 'get_monthly_report',
+                    success: !monthlyError,
+                    error: monthlyError?.message
+                });
+
+                // Teste 2: get_project_performance
+                const { data: projectData, error: projectError } = await supabase.rpc('get_project_performance', {
+                    p_start_date: null,
+                    p_end_date: null
+                });
+                results.push({
+                    test: 'get_project_performance',
+                    success: !projectError,
+                    error: projectError?.message
+                });
+
+                // Relatório final
+                let report = '<div class="info">📊 Relatório Final dos Testes:</div><ul>';
+                results.forEach(result => {
+                    const status = result.success ? '✅' : '❌';
+                    const message = result.success ? 'Sucesso' : `Erro: ${result.error}`;
+                    report += `<li>${status} ${result.test}: ${message}</li>`;
+                });
+                report += '</ul>';
+
+                const allSuccess = results.every(r => r.success);
+                if (allSuccess) {
+                    report = '<div class="success">🎉 Todos os testes passaram! As correções foram aplicadas com sucesso.</div>' + report;
+                } else {
+                    report = '<div class="error">⚠️ Alguns testes falharam. Verifique os erros acima.</div>' + report;
+                }
+
+                resultDiv.innerHTML = report;
+
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro inesperado durante os testes: ${err.message}</div>`;
+            }
+        };
+
+        // Variáveis para armazenar resultados dos testes
+        let testResults = [];
+        let metricsData = [];
+
+        // Função para gerar relatório de testes em PDF
+        window.generateTestReportPDF = function() {
+            const resultDiv = document.getElementById('pdf-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando relatório de testes em PDF...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Testes de Métricas', 20, 30);
+                
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 45);
+                
+                // Conteúdo dos testes
+                let yPosition = 70;
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Resultados dos Testes:', 20, yPosition);
+                yPosition += 15;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                const testInfo = [
+                    '1. Teste de Relatório Mensal - Função get_monthly_report',
+                    '2. Teste de Performance por Projeto - Função get_project_performance',
+                    '3. Verificação de Tipos de Dados',
+                    '4. Teste de Compatibilidade de Tipos',
+                    '5. Teste Completo de Integração'
+                ];
+                
+                testInfo.forEach((test, index) => {
+                    if (yPosition > 250) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(test, 20, yPosition);
+                    yPosition += 10;
+                });
+                
+                // Adicionar informações sobre o sistema
+                yPosition += 10;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Informações do Sistema:', 20, yPosition);
+                yPosition += 15;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`URL do Supabase: ${supabaseUrl}`, 20, yPosition);
+                yPosition += 10;
+                doc.text(`Data de Geração: ${new Date().toISOString()}`, 20, yPosition);
+                
+                // Salvar o PDF
+                doc.save(`relatorio_testes_metricas_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de testes gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        };
+
+        // Função para gerar relatório de métricas em PDF
+        window.generateMetricsReportPDF = async function() {
+            const resultDiv = document.getElementById('pdf-result');
+            resultDiv.innerHTML = '<div class="loading">Coletando dados e gerando relatório de métricas...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Cabeçalho
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Relatório de Métricas do Sistema', 20, 30);
+                
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 45);
+                
+                let yPosition = 70;
+                
+                // Coletar dados de métricas
+                try {
+                    const { data: monthlyData, error: monthlyError } = await supabase.rpc('get_monthly_report', {
+                        p_report_month: null
+                    });
+                    
+                    if (!monthlyError && monthlyData) {
+                        doc.setFontSize(14);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Relatório Mensal:', 20, yPosition);
+                        yPosition += 15;
+                        
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        const monthlyText = JSON.stringify(monthlyData, null, 2);
+                        const monthlyLines = doc.splitTextToSize(monthlyText, 170);
+                        doc.text(monthlyLines, 20, yPosition);
+                        yPosition += monthlyLines.length * 4 + 10;
+                    }
+                } catch (err) {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'italic');
+                    doc.text('Erro ao obter relatório mensal: ' + err.message, 20, yPosition);
+                    yPosition += 10;
+                }
+                
+                try {
+                    const { data: projectData, error: projectError } = await supabase.rpc('get_project_performance', {
+                        p_start_date: null,
+                        p_end_date: null
+                    });
+                    
+                    if (!projectError && projectData) {
+                        if (yPosition > 200) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        
+                        doc.setFontSize(14);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Performance por Projeto:', 20, yPosition);
+                        yPosition += 15;
+                        
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        const projectText = JSON.stringify(projectData, null, 2);
+                        const projectLines = doc.splitTextToSize(projectText, 170);
+                        doc.text(projectLines, 20, yPosition);
+                        yPosition += projectLines.length * 4 + 10;
+                    }
+                } catch (err) {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'italic');
+                    doc.text('Erro ao obter performance por projeto: ' + err.message, 20, yPosition);
+                    yPosition += 10;
+                }
+                
+                // Salvar o PDF
+                doc.save(`relatorio_metricas_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Relatório de métricas gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        };
+
+        // Função para gerar PDF da página completa
+        window.generateFullPagePDF = async function() {
+            const resultDiv = document.getElementById('pdf-result');
+            resultDiv.innerHTML = '<div class="loading">Gerando PDF da página completa...</div>';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const element = document.body;
+                
+                const canvas = await html2canvas(element, {
+                    scale: 1,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    width: element.scrollWidth,
+                    height: element.scrollHeight
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210; // A4 width in mm
+                const pageHeight = 295; // A4 height in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                
+                const doc = new jsPDF('p', 'mm', 'a4');
+                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, -heightLeft, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                doc.save(`pagina_completa_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                resultDiv.innerHTML = '<div class="success">✅ PDF da página completa gerado com sucesso!</div>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erro ao gerar PDF: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -11,8 +11,8 @@ interface LoginFormProps {
 const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) => {
   const { login, isLoading, error, clearError } = useAuth();
   const [credentials, setCredentials] = useState<LoginCredentials>({
-    username: 'admin',
-    password: 'admin123'
+    username: '',
+    password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
 
