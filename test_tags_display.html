@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Exibição de Tags</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 10px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+        .card-description {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            background: #e2e8f0;
+            color: #4a5568;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #cbd5e0;
+        }
+        .tag.mobile {
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tag-count {
+            background: #cbd5e0;
+            color: #4a5568;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .priority-normal { background: #e2e8f0; color: #4a5568; }
+        .priority-high { background: #fed7d7; color: #c53030; }
+        .priority-low { background: #c6f6d5; color: #2f855a; }
+        .members {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .member-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #4299e1;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .mobile-view {
+            display: block;
+        }
+        .desktop-view {
+            display: none;
+        }
+        @media (min-width: 640px) {
+            .mobile-view { display: none; }
+            .desktop-view { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Exibição de Tags nos Cards</h1>
+        <p>Este teste simula como as tags aparecem nos cards do Kanban, tanto em mobile quanto em desktop.</p>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h3>1. Cards com Tags (Simulação)</h3>
+            <p>Estes são exemplos de como os cards devem aparecer com tags:</p>
+            
+            <div class="grid">
+                <!-- Card 1: Com tags -->
+                <div class="card">
+                    <div class="card-title">Implementar Sistema de Login</div>
+                    <div class="card-description">Desenvolver sistema completo de autenticação</div>
+                    
+                    <div class="priority-badge priority-high">Alta</div>
+                    
+                    <!-- Tags - Mobile View -->
+                    <div class="mobile-view">
+                        <div class="tags-container">
+                            <span class="tag mobile">API</span>
+                            <span class="tag-count">+2</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tags - Desktop View -->
+                    <div class="desktop-view">
+                        <div class="tags-container">
+                            <span class="tag">API</span>
+                            <span class="tag">Frontend</span>
+                            <span class="tag-count">+1</span>
+                        </div>
+                    </div>
+                    
+                    <div class="members">
+                        <div class="member-avatar">A</div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Com muitas tags -->
+                <div class="card">
+                    <div class="card-title">Configurar Banco de Dados</div>
+                    <div class="card-description">Configurar PostgreSQL com migrations</div>
+                    
+                    <div class="priority-badge priority-normal">Normal</div>
+                    
+                    <!-- Tags - Mobile View -->
+                    <div class="mobile-view">
+                        <div class="tags-container">
+                            <span class="tag mobile">Backend</span>
+                            <span class="tag-count">+4</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tags - Desktop View -->
+                    <div class="desktop-view">
+                        <div class="tags-container">
+                            <span class="tag">Backend</span>
+                            <span class="tag">Database</span>
+                            <span class="tag-count">+3</span>
+                        </div>
+                    </div>
+                    
+                    <div class="members">
+                        <div class="member-avatar">B</div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Sem tags -->
+                <div class="card">
+                    <div class="card-title">Reunião de Planejamento</div>
+                    <div class="card-description">Definir próximos passos do projeto</div>
+                    
+                    <div class="priority-badge priority-low">Baixa</div>
+                    
+                    <!-- Sem tags -->
+                    
+                    <div class="members">
+                        <div class="member-avatar">C</div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Uma tag apenas -->
+                <div class="card">
+                    <div class="card-title">Documentar API</div>
+                    <div class="card-description">Criar documentação completa da API</div>
+                    
+                    <div class="priority-badge priority-normal">Normal</div>
+                    
+                    <!-- Tags - Mobile View -->
+                    <div class="mobile-view">
+                        <div class="tags-container">
+                            <span class="tag mobile">Documentação</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tags - Desktop View -->
+                    <div class="desktop-view">
+                        <div class="tags-container">
+                            <span class="tag">Documentação</span>
+                        </div>
+                    </div>
+                    
+                    <div class="members">
+                        <div class="member-avatar">D</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Teste de Dados Reais</h3>
+            <button onclick="loadRealCards()">Carregar Cards Reais</button>
+            <div id="real-cards-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Verificar Console</h3>
+            <p>Abra o console do navegador (F12) para ver os logs detalhados sobre o carregamento das tags.</p>
+            <button onclick="testConsoleLogs()">Testar Logs</button>
+            <div id="console-result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        // Configuração do Supabase
+        const supabaseUrl = 'https://your-project.supabase.co';
+        const supabaseKey = 'your-anon-key';
+        
+        // Substitua pelas suas credenciais reais
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        window.loadRealCards = async function() {
+            const resultDiv = document.getElementById('real-cards-result');
+            resultDiv.innerHTML = '<div class="info">Carregando cards reais...</div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('cards')
+                    .select('*')
+                    .eq('is_archived', false)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    let html = '<div class="success">✅ Cards carregados:</div><div class="grid">';
+                    
+                    data.forEach(card => {
+                        const hasTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0;
+                        const tags = hasTags ? card.tags : [];
+                        
+                        html += `
+                            <div class="card">
+                                <div class="card-title">${card.title || 'Sem título'}</div>
+                                <div class="card-description">${card.description || 'Sem descrição'}</div>
+                                
+                                <div class="priority-badge priority-${card.importance || 'normal'}">${card.importance || 'Normal'}</div>
+                                
+                                ${hasTags ? `
+                                    <!-- Tags - Mobile View -->
+                                    <div class="mobile-view">
+                                        <div class="tags-container">
+                                            <span class="tag mobile">${tags[0]}</span>
+                                            ${tags.length > 1 ? `<span class="tag-count">+${tags.length - 1}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tags - Desktop View -->
+                                    <div class="desktop-view">
+                                        <div class="tags-container">
+                                            ${tags.slice(0, 2).map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                            ${tags.length > 2 ? `<span class="tag-count">+${tags.length - 2}</span>` : ''}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="members">
+                                    <div class="member-avatar">${(card.title || 'C')[0].toUpperCase()}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="info">Nenhum card encontrado</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+
+        window.testConsoleLogs = function() {
+            const resultDiv = document.getElementById('console-result');
+            
+            // Simular logs como no código real
+            console.log('=== DATABASE: getCardsForBoard ===');
+            console.log('boardId: test-board');
+            console.log('Tipo do boardId: string');
+            
+            // Simular dados de resposta
+            const mockData = [
+                {
+                    id: 1,
+                    title: 'Card de Teste',
+                    tags: ['API', 'Frontend', 'Teste'],
+                    members: ['admin'],
+                    board_id: 'test-board'
+                },
+                {
+                    id: 2,
+                    title: 'Card sem Tags',
+                    tags: null,
+                    members: ['admin'],
+                    board_id: 'test-board'
+                }
+            ];
+            
+            console.log('Supabase response - data:', mockData);
+            console.log('Quantidade de cards retornados:', mockData.length);
+            
+            // Simular processamento
+            mockData.forEach((card, index) => {
+                console.log(`Card ${index + 1} (${card.title}) - board_id: ${card.board_id}, members:`, card.members, 'tipo:', typeof card.members);
+                console.log(`Card ${index + 1} - tags:`, card.tags, 'tipo:', typeof card.tags);
+                
+                // Processar tags
+                if (card.tags && typeof card.tags === 'string') {
+                    try {
+                        const parsedTags = JSON.parse(card.tags);
+                        console.log(`Card ${index + 1} - tags parsed:`, parsedTags);
+                        card.tags = parsedTags;
+                    } catch (e) {
+                        console.log(`Card ${index + 1} - erro ao fazer parse das tags:`, e);
+                        card.tags = [];
+                    }
+                } else if (!card.tags) {
+                    console.log(`Card ${index + 1} - definindo tags como array vazio`);
+                    card.tags = [];
+                }
+            });
+            
+            resultDiv.innerHTML = `
+                <div class="success">✅ Logs de teste enviados para o console</div>
+                <p>Abra o console do navegador (F12) para ver os logs detalhados.</p>
+                <p>Os logs mostram como as tags são processadas quando carregadas do banco de dados.</p>
+            `;
+        };
+    </script>
+</body>
+</html>

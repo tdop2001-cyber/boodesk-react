@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Responsividade dos Modais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos para scroll responsivo em modais */
+        .modal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+
+        .modal-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 3px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        /* Melhorias para mobile */
+        @media (max-width: 640px) {
+            .modal-scroll {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .modal-scroll::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        /* Animações suaves para scroll */
+        .modal-scroll {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .test-content {
+            background: white;
+            padding: 2rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-white mb-8 text-center">🧪 Teste de Responsividade dos Modais</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <button onclick="openModal('small')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                Modal Pequeno
+            </button>
+            <button onclick="openModal('medium')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                Modal Médio
+            </button>
+            <button onclick="openModal('large')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
+                Modal Grande
+            </button>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
+            <h2 class="text-xl font-semibold mb-4">📱 Instruções de Teste</h2>
+            <ul class="space-y-2 text-sm">
+                <li>• <strong>Desktop:</strong> Teste redimensionando a janela do navegador</li>
+                <li>• <strong>Mobile:</strong> Use as ferramentas de desenvolvedor (F12) para simular dispositivos móveis</li>
+                <li>• <strong>Tablet:</strong> Teste em resoluções intermediárias (768px - 1024px)</li>
+                <li>• <strong>Scroll:</strong> Verifique se o scroll funciona corretamente em todas as resoluções</li>
+                <li>• <strong>Padding:</strong> Observe como o padding se adapta (p-2 em mobile, p-4 em desktop)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal Pequeno -->
+    <div id="modal-small" class="modal hidden">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+                <div class="relative bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3 sm:space-x-4">
+                            <div class="p-2 sm:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                <div class="w-5 h-5 sm:w-6 sm:h-6 bg-white/30 rounded"></div>
+                            </div>
+                            <div>
+                                <h2 class="text-lg sm:text-xl lg:text-2xl font-bold">Modal Pequeno</h2>
+                                <p class="text-blue-100 text-xs sm:text-sm">Teste de responsividade</p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal('small')" class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] modal-scroll">
+                    <div class="space-y-4">
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 1</h3>
+                            <p>Este é um modal pequeno para testar a responsividade. Observe como o padding e o tamanho se adaptam em diferentes resoluções.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 2</h3>
+                            <p>Em dispositivos móveis, o padding deve ser menor (p-3) e em desktop maior (p-6).</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 3</h3>
+                            <p>O scroll deve funcionar suavemente em todas as resoluções.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Médio -->
+    <div id="modal-medium" class="modal hidden">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+                <div class="relative bg-gradient-to-r from-green-600 to-blue-600 p-4 sm:p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3 sm:space-x-4">
+                            <div class="p-2 sm:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                <div class="w-5 h-5 sm:w-6 sm:h-6 bg-white/30 rounded"></div>
+                            </div>
+                            <div>
+                                <h2 class="text-lg sm:text-xl lg:text-2xl font-bold">Modal Médio</h2>
+                                <p class="text-green-100 text-xs sm:text-sm">Teste de responsividade</p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal('medium')" class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] modal-scroll">
+                    <div class="space-y-4">
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 1</h3>
+                            <p>Este é um modal médio com mais conteúdo para testar o scroll responsivo.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 2</h3>
+                            <p>Em telas pequenas, o modal deve ocupar quase toda a altura da tela (95vh).</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 3</h3>
+                            <p>Em telas maiores, o modal deve ter uma altura máxima de 90vh.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 4</h3>
+                            <p>O scroll deve aparecer quando o conteúdo excede a altura disponível.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 5</h3>
+                            <p>Teste redimensionando a janela para ver como o modal se adapta.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 6</h3>
+                            <p>Em dispositivos móveis, o scroll deve ser mais suave e responsivo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Grande -->
+    <div id="modal-large" class="modal hidden">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+                <div class="relative bg-gradient-to-r from-purple-600 to-pink-600 p-4 sm:p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3 sm:space-x-4">
+                            <div class="p-2 sm:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                <div class="w-5 h-5 sm:w-6 sm:h-6 bg-white/30 rounded"></div>
+                            </div>
+                            <div>
+                                <h2 class="text-lg sm:text-xl lg:text-2xl font-bold">Modal Grande</h2>
+                                <p class="text-purple-100 text-xs sm:text-sm">Teste de responsividade</p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal('large')" class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] modal-scroll">
+                    <div class="space-y-4">
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 1</h3>
+                            <p>Este é um modal grande com muito conteúdo para testar o scroll responsivo em diferentes resoluções.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 2</h3>
+                            <p>O modal deve se adaptar perfeitamente a diferentes tamanhos de tela.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 3</h3>
+                            <p>Em mobile: padding menor, altura máxima de 95vh.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 4</h3>
+                            <p>Em desktop: padding maior, altura máxima de 90vh.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 5</h3>
+                            <p>O scroll deve funcionar suavemente em todas as resoluções.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 6</h3>
+                            <p>Teste em diferentes dispositivos para verificar a responsividade.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 7</h3>
+                            <p>O modal deve manter a usabilidade em todas as resoluções.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 8</h3>
+                            <p>Verifique se o scroll é suave e responsivo.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 9</h3>
+                            <p>Em dispositivos móveis, o scroll deve ser otimizado para touch.</p>
+                        </div>
+                        <div class="test-content">
+                            <h3 class="font-semibold mb-2">Conteúdo 10</h3>
+                            <p>Este é o último conteúdo para testar o scroll até o final.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(size) {
+            document.getElementById(`modal-${size}`).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(size) {
+            document.getElementById(`modal-${size}`).classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Fechar modal ao clicar fora
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0')) {
+                const modal = e.target.closest('.modal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            }
+        });
+
+        // Fechar modal com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const openModal = document.querySelector('.modal:not(.hidden)');
+                if (openModal) {
+                    openModal.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

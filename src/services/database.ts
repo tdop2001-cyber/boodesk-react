@@ -758,6 +758,7 @@ export class DatabaseService {
       if (data) {
         data.forEach((card, index) => {
           console.log(`Card ${index + 1} (${card.title}) - board_id: ${card.board_id}, members:`, card.members, 'tipo:', typeof card.members);
+          console.log(`Card ${index + 1} - tags:`, card.tags, 'tipo:', typeof card.tags);
           
           // Processar membros se for string
           if (card.members && typeof card.members === 'string') {
@@ -774,6 +775,27 @@ export class DatabaseService {
           } else if (!card.members) {
             // Se não há membros, definir como array vazio
             card.members = [];
+          }
+
+          // Processar tags (jsonb do Supabase)
+          if (card.tags && typeof card.tags === 'string') {
+            try {
+              const parsedTags = JSON.parse(card.tags);
+              console.log(`Card ${index + 1} - tags parsed:`, parsedTags);
+              // Atualizar o card com as tags parseadas
+              card.tags = parsedTags;
+            } catch (e) {
+              console.log(`Card ${index + 1} - erro ao fazer parse das tags:`, e);
+              // Se não conseguir fazer parse, definir como array vazio
+              card.tags = [];
+            }
+          } else if (card.tags && Array.isArray(card.tags)) {
+            // Tags já são um array (jsonb do Supabase)
+            console.log(`Card ${index + 1} - tags já são array:`, card.tags);
+          } else if (!card.tags) {
+            // Se não há tags, definir como array vazio
+            console.log(`Card ${index + 1} - definindo tags como array vazio`);
+            card.tags = [];
           }
         });
       }
@@ -806,6 +828,38 @@ export class DatabaseService {
       if (error) {
         console.error('Erro do Supabase:', error);
         throw error;
+      }
+
+      // Processar dados dos cards (membros e tags)
+      if (data) {
+        data.forEach((card, index) => {
+          // Processar membros se for string
+          if (card.members && typeof card.members === 'string') {
+            try {
+              const parsedMembers = JSON.parse(card.members);
+              card.members = parsedMembers;
+            } catch (e) {
+              card.members = [];
+            }
+          } else if (!card.members) {
+            card.members = [];
+          }
+
+          // Processar tags (jsonb do Supabase)
+          if (card.tags && typeof card.tags === 'string') {
+            try {
+              const parsedTags = JSON.parse(card.tags);
+              card.tags = parsedTags;
+            } catch (e) {
+              card.tags = [];
+            }
+          } else if (card.tags && Array.isArray(card.tags)) {
+            // Tags já são um array (jsonb do Supabase)
+            // Não precisa fazer nada
+          } else if (!card.tags) {
+            card.tags = [];
+          }
+        });
       }
 
       // Filtrar cards onde o usuário é membro

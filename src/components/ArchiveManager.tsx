@@ -514,8 +514,8 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white">
           <div className="flex items-center justify-between">
@@ -555,7 +555,7 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
           </div>
         </div>
 
-        <div className="flex h-[calc(95vh-120px)]">
+        <div className="flex h-[calc(95vh-120px)] sm:h-[calc(90vh-120px)]">
           {/* Sidebar - Pastas */}
           <div className="w-80 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -918,8 +918,8 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
 
         {/* Modal de Configurações */}
         {showSettings && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-2 sm:p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Configurações de Arquivamento</h3>
@@ -1007,8 +1007,8 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
 
         {/* Modal de Criar Pasta */}
         {showCreateFolder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-2 sm:p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Criar Nova Pasta</h3>

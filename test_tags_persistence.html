@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Persistência de Tags</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Persistência de Tags</h1>
+        <p>Este teste verifica se as tags estão sendo salvas e carregadas corretamente no banco de dados.</p>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h3>1. Verificar Estrutura da Tabela Cards</h3>
+            <button onclick="checkTableStructure()">Verificar Estrutura</button>
+            <div id="structure-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Testar Criação de Card com Tags</h3>
+            <input type="text" id="cardTitle" placeholder="Título do card" value="Teste Tags">
+            <input type="text" id="cardTags" placeholder="Tags (separadas por vírgula)" value="API,Frontend,Teste">
+            <button onclick="createCardWithTags()">Criar Card com Tags</button>
+            <div id="create-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Testar Atualização de Tags</h3>
+            <input type="number" id="cardId" placeholder="ID do card">
+            <input type="text" id="newTags" placeholder="Novas tags (separadas por vírgula)" value="API,Backend,Atualizado">
+            <button onclick="updateCardTags()">Atualizar Tags</button>
+            <div id="update-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Listar Cards com Tags</h3>
+            <button onclick="listCardsWithTags()">Listar Cards</button>
+            <div id="list-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Testar Carregamento de Tags no Frontend</h3>
+            <button onclick="testFrontendTags()">Testar Frontend</button>
+            <div id="frontend-result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        // Configuração do Supabase
+        const supabaseUrl = 'https://your-project.supabase.co';
+        const supabaseKey = 'your-anon-key';
+        
+        // Substitua pelas suas credenciais reais
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        window.checkTableStructure = async function() {
+            const resultDiv = document.getElementById('structure-result');
+            resultDiv.innerHTML = '<div class="info">Verificando estrutura da tabela...</div>';
+
+            try {
+                // Verificar se a coluna tags existe
+                const { data, error } = await supabase
+                    .from('information_schema.columns')
+                    .select('*')
+                    .eq('table_name', 'cards')
+                    .eq('column_name', 'tags');
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Coluna 'tags' encontrada na tabela 'cards'</div>
+                        <pre>${JSON.stringify(data[0], null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Coluna 'tags' NÃO encontrada na tabela 'cards'</div>
+                        <p>Execute o script fix_cards_tags_column.sql para adicionar a coluna.</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+
+        window.createCardWithTags = async function() {
+            const resultDiv = document.getElementById('create-result');
+            const title = document.getElementById('cardTitle').value;
+            const tagsInput = document.getElementById('cardTags').value;
+            const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+
+            resultDiv.innerHTML = '<div class="info">Criando card com tags...</div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('cards')
+                    .insert({
+                        title: title,
+                        description: 'Card criado para teste de tags',
+                        board_id: 'test-board',
+                        list_name: 'A Fazer',
+                        tags: tags,
+                        status: 'todo',
+                        importance: 'medium'
+                    })
+                    .select();
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    const card = data[0];
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Card criado com sucesso!</div>
+                        <p><strong>ID:</strong> ${card.id}</p>
+                        <p><strong>Título:</strong> ${card.title}</p>
+                        <p><strong>Tags:</strong> ${card.tags ? card.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : 'Nenhuma'}</p>
+                        <pre>${JSON.stringify(card, null, 2)}</pre>
+                    `;
+                    
+                    // Preencher o campo de ID para testes posteriores
+                    document.getElementById('cardId').value = card.id;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+
+        window.updateCardTags = async function() {
+            const resultDiv = document.getElementById('update-result');
+            const cardId = document.getElementById('cardId').value;
+            const newTagsInput = document.getElementById('newTags').value;
+            const newTags = newTagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+
+            if (!cardId) {
+                resultDiv.innerHTML = '<div class="error">Por favor, insira um ID de card válido</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="info">Atualizando tags do card...</div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('cards')
+                    .update({ tags: newTags })
+                    .eq('id', cardId)
+                    .select();
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    const card = data[0];
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Tags atualizadas com sucesso!</div>
+                        <p><strong>ID:</strong> ${card.id}</p>
+                        <p><strong>Título:</strong> ${card.title}</p>
+                        <p><strong>Tags:</strong> ${card.tags ? card.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : 'Nenhuma'}</p>
+                        <pre>${JSON.stringify(card, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="error">Card não encontrado</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+
+        window.listCardsWithTags = async function() {
+            const resultDiv = document.getElementById('list-result');
+            resultDiv.innerHTML = '<div class="info">Carregando cards com tags...</div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('cards')
+                    .select('id, title, tags, created_at')
+                    .not('tags', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    let html = '<div class="success">✅ Cards encontrados:</div>';
+                    data.forEach(card => {
+                        html += `
+                            <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <p><strong>ID:</strong> ${card.id} | <strong>Título:</strong> ${card.title}</p>
+                                <p><strong>Tags:</strong> ${card.tags && card.tags.length > 0 ? 
+                                    card.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : 
+                                    'Nenhuma'}</p>
+                                <p><strong>Criado:</strong> ${new Date(card.created_at).toLocaleString()}</p>
+                            </div>
+                        `;
+                    });
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="info">Nenhum card com tags encontrado</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+
+        window.testFrontendTags = async function() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.innerHTML = '<div class="info">Testando carregamento de tags no frontend...</div>';
+
+            try {
+                // Simular o carregamento de cards como no frontend
+                const { data, error } = await supabase
+                    .from('cards')
+                    .select('*')
+                    .eq('is_archived', false)
+                    .order('created_at')
+                    .limit(5);
+
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    let html = '<div class="success">✅ Teste de carregamento frontend:</div>';
+                    data.forEach(card => {
+                        const hasTags = card.tags && Array.isArray(card.tags) && card.tags.length > 0;
+                        html += `
+                            <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <p><strong>Card:</strong> ${card.title}</p>
+                                <p><strong>Tem tags:</strong> ${hasTags ? '✅ Sim' : '❌ Não'}</p>
+                                ${hasTags ? `<p><strong>Tags:</strong> ${card.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</p>` : ''}
+                                <p><strong>Tipo das tags:</strong> ${typeof card.tags} | <strong>Array:</strong> ${Array.isArray(card.tags)}</p>
+                            </div>
+                        `;
+                    });
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="info">Nenhum card encontrado</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
