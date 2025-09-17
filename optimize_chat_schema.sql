@@ -176,3 +176,7 @@ ON CONFLICT DO NOTHING;
 COMMENT ON TABLE chats IS 'Tabela de chats otimizada para plano gratuito - máximo 1000 mensagens por chat';
 COMMENT ON TABLE chat_messages IS 'Mensagens com limite de 1000 caracteres e limpeza automática';
 COMMENT ON FUNCTION cleanup_old_messages() IS 'Função para manter apenas mensagens recentes e economizar espaço';
+
+
+
+

@@ -51,3 +51,7 @@ Se mesmo com a chave correta ainda houver erros:
 2. Confirme se as funções foram criadas corretamente
 3. Execute os scripts SQL de correção novamente
 
+
+
+
+

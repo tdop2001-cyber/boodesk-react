@@ -196,3 +196,7 @@ BEGIN
     RAISE NOTICE '🧪 Teste usando test_metrics_fixes.html após as correções.';
 END $$;
 
+
+
+
+

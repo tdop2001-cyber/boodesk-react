@@ -859,7 +859,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
           </div>
         </div>
 
-        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(90vh-120px)]">
+        <div className="p-3 sm:p-6 overflow-y-scroll max-h-[calc(98vh-100px)] sm:max-h-[calc(90vh-120px)] modal-scroll">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="flex space-x-1 bg-brand-light-gray/30 rounded-lg p-1">
@@ -990,6 +990,135 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                              </div>
                        )}
 
+                       {/* Formulário de Criação de Subtarefa */}
+                       {showCreateSubtaskModal && (
+                         <div className="bg-white border border-brand-light-gray/30 rounded-lg p-4 mb-4">
+                           <div className="flex items-center justify-between mb-4">
+                             <div className="flex items-center space-x-2">
+                               <div className="p-2 bg-brand-green/10 rounded-lg">
+                                 <Plus className="w-4 h-4 text-brand-green" />
+                               </div>
+                               <h4 className="text-sm font-semibold text-brand-gray">Nova Subtarefa</h4>
+                             </div>
+                             <button
+                               onClick={() => setShowCreateSubtaskModal(false)}
+                               className="p-1 text-brand-gray/60 hover:text-brand-gray transition-colors"
+                             >
+                               <X className="w-4 h-4" />
+                             </button>
+                           </div>
+                           
+                           <div className="space-y-3">
+                             <div>
+                               <label className="block text-xs font-medium text-brand-gray mb-1">
+                                 Título da Subtarefa *
+                               </label>
+                               <input
+                                 type="text"
+                                 value={newSubtaskTitle}
+                                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                 placeholder="Digite o título da subtarefa..."
+                                 className="w-full px-3 py-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                               />
+                             </div>
+
+                             <div>
+                               <label className="block text-xs font-medium text-brand-gray mb-1">
+                                 Descrição
+                               </label>
+                               <textarea
+                                 value={newSubtaskDescription}
+                                 onChange={(e) => setNewSubtaskDescription(e.target.value)}
+                                 placeholder="Digite uma descrição (opcional)..."
+                                 rows={2}
+                                 className="w-full px-3 py-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
+                               />
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-3">
+                               <div>
+                                 <label className="block text-xs font-medium text-brand-gray mb-1">
+                                   Prioridade
+                                 </label>
+                                 <select
+                                   value={newSubtaskPriority}
+                                   onChange={(e) => setNewSubtaskPriority(e.target.value as 'low' | 'medium' | 'high')}
+                                   className="w-full px-3 py-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                                 >
+                                   <option value="low">Baixa</option>
+                                   <option value="medium">Normal</option>
+                                   <option value="high">Alta</option>
+                                 </select>
+                               </div>
+
+                               <div>
+                                 <label className="block text-xs font-medium text-brand-gray mb-1">
+                                   Data de Vencimento
+                                 </label>
+                                 <input
+                                   type="date"
+                                   value={newSubtaskDueDate}
+                                   onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                                   className="w-full px-3 py-2 text-sm border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                                 />
+                               </div>
+                             </div>
+
+                             <div>
+                               <label className="block text-xs font-medium text-brand-gray mb-1">
+                                 Membros da Subtarefa
+                               </label>
+                               <div className="space-y-1 subtask-modal-scroll" style={{
+                                 maxHeight: '120px',
+                                 overflowY: 'scroll',
+                                 overflowX: 'hidden',
+                                 scrollbarWidth: 'thin',
+                                 scrollbarColor: '#6b7280 #f3f4f6'
+                               }}>
+                                 {availableUsers.map((user) => (
+                                   <label key={user.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                     <input
+                                       type="checkbox"
+                                       checked={newSubtaskMembers.includes(user.id.toString())}
+                                       onChange={(e) => {
+                                         if (e.target.checked) {
+                                           setNewSubtaskMembers([...newSubtaskMembers, user.id.toString()]);
+                                         } else {
+                                           setNewSubtaskMembers(newSubtaskMembers.filter(id => id !== user.id.toString()));
+                                         }
+                                       }}
+                                       className="rounded border-brand-light-gray text-brand-blue focus:ring-brand-blue w-3 h-3"
+                                     />
+                                     <div className="flex items-center space-x-2">
+                                       <div className="w-5 h-5 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-medium">
+                                         {(user.nome_completo || user.username)?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                                       </div>
+                                       <span className="text-xs text-brand-gray truncate">{user.nome_completo || user.username || user.email}</span>
+                                     </div>
+                                   </label>
+                                 ))}
+                               </div>
+                             </div>
+
+                             <div className="flex items-center justify-end space-x-2 pt-2">
+                               <button
+                                 onClick={() => setShowCreateSubtaskModal(false)}
+                                 className="px-3 py-1 text-xs text-brand-gray/60 hover:text-brand-gray transition-colors"
+                               >
+                                 Cancelar
+                               </button>
+                               <button
+                                 onClick={handleCreateSubtask}
+                                 className="flex items-center space-x-1 px-3 py-1 bg-brand-green text-white rounded text-xs hover:bg-brand-green/90 transition-colors"
+                               >
+                                 <Plus className="w-3 h-3" />
+                                 <span>Criar</span>
+                               </button>
+                             </div>
+                           </div>
+                         </div>
+                       )}
+
                        <div className="space-y-3">
                          {subtasks.length === 0 ? (
                            <div className="text-center py-8 text-brand-gray/60">
@@ -1109,205 +1238,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         </div>
       </div>
 
-      <SubtaskModal
-        isOpen={showCreateSubtaskModal}
-        onClose={() => setShowCreateSubtaskModal(false)}
-        onSubmit={async (data) => {
-          try {
-            const cardNumericId = card.card_id || card.id;
-            if (!cardNumericId) {
-              addToast({
-                type: 'error',
-                title: 'Erro ao criar subtarefa',
-                message: 'Não foi possível obter o ID do card.'
-              });
-              return;
-            }
 
-            const newSubtaskData = {
-              card_id: typeof cardNumericId === 'string' ? parseInt(cardNumericId) : cardNumericId,
-              title: data.title,
-              description: data.description || 'Sem descrição',
-              priority: data.priority,
-              due_date: data.due_date || undefined,
-              members: data.members,
-              created_by: user?.id || 1
-            };
-            
-            const createdSubtask = await db.createSubtask(newSubtaskData);
-            
-            if (createdSubtask) {
-              let mappedStatus = createdSubtask.status || 'pending';
-              if (mappedStatus === 'pending') {
-                mappedStatus = 'todo';
-              }
-              
-              setSubtasks(prev => [...prev, {
-                id: createdSubtask.id.toString(),
-                title: createdSubtask.title,
-                description: createdSubtask.description || '',
-                completed: createdSubtask.status === 'completed',
-                priority: createdSubtask.priority || 'medium',
-                dueDate: createdSubtask.due_date || '',
-                estimatedTime: 0,
-                actualTime: 0,
-                importance: 'normal',
-                category: 'Geral',
-                tags: [],
-                status: mappedStatus,
-                createdAt: new Date()
-              }]);
-              
-              addToast({
-                type: 'success',
-                title: 'Subtarefa criada',
-                message: 'Subtarefa criada com sucesso!'
-              });
-            }
-          } catch (error) {
-            console.error('Erro ao criar subtarefa:', error);
-            addToast({
-              type: 'error',
-              title: 'Erro ao criar subtarefa',
-              message: 'Não foi possível criar a subtarefa.'
-            });
-          }
-        }}
-        cardId={card.id}
-        currentUserId={user?.id || 1}
-        cardMembers={(card.members || []).map(id => id.toString())}
-      />
-
-      {/* Modal para criar nova subtarefa */}
-      {showCreateSubtaskModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-brand-light-gray">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-brand-green/10 rounded-lg">
-                  <Plus className="w-5 h-5 text-brand-green" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-brand-gray">Nova Subtarefa</h3>
-                  <p className="text-sm text-brand-gray/60">Adicione uma nova subtarefa ao card</p>
-                </div>
-              </div>
-                <button
-                onClick={() => setShowCreateSubtaskModal(false)}
-                className="p-2 text-brand-gray/60 hover:text-brand-gray transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-brand-gray mb-2">
-                  Título da Subtarefa *
-                </label>
-                <input
-                  type="text"
-                  value={newSubtaskTitle}
-                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  placeholder="Digite o título da subtarefa..."
-                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-brand-gray mb-2">
-                  Descrição
-                </label>
-                <textarea
-                  value={newSubtaskDescription}
-                  onChange={(e) => setNewSubtaskDescription(e.target.value)}
-                  placeholder="Digite uma descrição (opcional)..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-brand-gray mb-2">
-                  Prioridade
-                </label>
-                <select
-                  value={newSubtaskPriority}
-                  onChange={(e) => setNewSubtaskPriority(e.target.value as 'low' | 'medium' | 'high')}
-                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                >
-                  <option value="low">Baixa</option>
-                  <option value="medium">Normal</option>
-                  <option value="high">Alta</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-brand-gray mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Data de Vencimento
-                </label>
-                <input
-                  type="date"
-                  value={newSubtaskDueDate}
-                  onChange={(e) => setNewSubtaskDueDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-brand-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                  placeholder="Selecione uma data"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-brand-gray mb-2">
-                  Membros da Subtarefa
-                </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto border border-brand-light-gray rounded-lg p-3">
-                  {availableUsers.map((user) => (
-                    <label key={user.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={newSubtaskMembers.includes(user.id.toString())}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewSubtaskMembers([...newSubtaskMembers, user.id.toString()]);
-                          } else {
-                            setNewSubtaskMembers(newSubtaskMembers.filter(id => id !== user.id.toString()));
-                          }
-                        }}
-                        className="rounded border-brand-light-gray text-brand-blue focus:ring-brand-blue"
-                      />
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-medium">
-                          {(user.nome_completo || user.username)?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <span className="text-sm text-brand-gray">{user.nome_completo || user.username || user.email}</span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-brand-gray/60 mt-1">
-                  Selecione os membros que terão acesso a esta subtarefa. Se nenhum for selecionado, apenas você terá acesso.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-brand-light-gray">
-                <button
-                onClick={() => setShowCreateSubtaskModal(false)}
-                className="px-4 py-2 text-brand-gray/60 hover:text-brand-gray transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCreateSubtask}
-                className="flex items-center space-x-2 px-4 py-2 bg-brand-green text-white rounded-lg hover:bg-brand-green/90 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Criar Subtarefa</span>
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Edição de Subtarefas */}
       <SubtaskModal

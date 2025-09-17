@@ -76,3 +76,7 @@ BEGIN
     RAISE NOTICE 'Teste das funções RPC concluído!';
 END $$;
 
+
+
+
+

@@ -228,7 +228,7 @@ const AutoArchiveMonitor: React.FC<AutoArchiveMonitorProps> = ({ isOpen, onClose
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+        <div className="p-6 overflow-y-scroll max-h-[calc(95vh-120px)] modal-scroll">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>

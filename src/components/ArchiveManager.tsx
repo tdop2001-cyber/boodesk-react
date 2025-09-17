@@ -557,7 +557,7 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
 
         <div className="flex h-[calc(95vh-120px)] sm:h-[calc(90vh-120px)]">
           {/* Sidebar - Pastas */}
-          <div className="w-80 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
+          <div className="w-80 bg-gray-50 border-r border-gray-200 p-4 overflow-y-scroll modal-scroll">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Pastas de Arquivo</h3>
               <button
@@ -795,7 +795,7 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
             </div>
 
             {/* Cards List */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-scroll p-4 modal-scroll">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -919,7 +919,7 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
         {/* Modal de Configurações */}
         {showSettings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-2 sm:p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-scroll modal-scroll">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Configurações de Arquivamento</h3>
@@ -1008,7 +1008,7 @@ const ArchiveManager: React.FC<ArchiveManagerProps> = ({
         {/* Modal de Criar Pasta */}
         {showCreateFolder && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-2 sm:p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-scroll modal-scroll">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Criar Nova Pasta</h3>

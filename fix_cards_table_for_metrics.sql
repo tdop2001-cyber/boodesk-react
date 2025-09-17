@@ -147,3 +147,7 @@ LIMIT 5;
 COMMENT ON FUNCTION update_card_completion_date IS 'Atualiza automaticamente a data de conclusão quando um card é marcado como concluído';
 COMMENT ON FUNCTION update_subtask_completion_date IS 'Atualiza automaticamente a data de conclusão quando uma subtask é marcada como concluída';
 
+
+
+
+

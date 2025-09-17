@@ -447,7 +447,7 @@ const BulkArchiveManager: React.FC<BulkArchiveManagerProps> = ({
           </div>
 
           {/* Cards List */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-scroll p-4 modal-scroll">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

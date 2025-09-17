@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Integrado - Criação de Subtarefa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .subtask-modal-scroll {
+            max-height: 120px !important;
+            overflow-y: scroll !important;
+            overflow-x: hidden !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: #6b7280 #f3f4f6 !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            background: white !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar {
+            width: 14px !important;
+            display: block !important;
+            visibility: visible !important;
+            -webkit-appearance: none !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-track {
+            background: #f3f4f6 !important;
+            border-radius: 7px !important;
+            border: 1px solid #e5e7eb !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-thumb {
+            background: #6b7280 !important;
+            border-radius: 7px !important;
+            border: 2px solid #f3f4f6 !important;
+            min-height: 30px !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #4b5563 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Modal Integrado - Criação de Subtarefa</h1>
+        
+        <!-- Simulação do CardDetailModal -->
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-red-100 rounded-lg">
+                        <div class="w-6 h-6 bg-red-500 rounded"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Detalhes do Card</h2>
+                        <p class="text-sm text-gray-600">Gerencie todas as informações do card</p>
+                    </div>
+                </div>
+                <button class="p-2 text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Tabs -->
+                <div class="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
+                    <button class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm">
+                        Detalhes
+                    </button>
+                    <button class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm">
+                        Subtarefas (3)
+                    </button>
+                </div>
+
+                <!-- Formulário de Criação de Subtarefa Integrado -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-sm font-semibold text-gray-900">Nova Subtarefa</h4>
+                        </div>
+                        <button class="p-1 text-gray-400 hover:text-gray-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                Título da Subtarefa *
+                            </label>
+                            <input type="text" placeholder="Digite o título da subtarefa..." 
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                Descrição
+                            </label>
+                            <textarea placeholder="Digite uma descrição (opcional)..." rows="2"
+                                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Prioridade
+                                </label>
+                                <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option>Normal</option>
+                                    <option>Alta</option>
+                                    <option>Baixa</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Data de Vencimento
+                                </label>
+                                <input type="date" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                Membros da Subtarefa
+                            </label>
+                            <div class="subtask-modal-scroll">
+                                <div class="space-y-1">
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">A</div>
+                                            <span class="text-xs text-gray-700 truncate">Administrador do Sistema</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-medium">M</div>
+                                            <span class="text-xs text-gray-700 truncate">Manager</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">T</div>
+                                            <span class="text-xs text-gray-700 truncate">Teste</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium">V</div>
+                                            <span class="text-xs text-gray-700 truncate">v123x911</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-medium">1</div>
+                                            <span class="text-xs text-gray-700 truncate">170220tom</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-medium">T</div>
+                                            <span class="text-xs text-gray-700 truncate">Thalles Daniel</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs">
+                                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white text-xs font-medium">U</div>
+                                            <span class="text-xs text-gray-700 truncate">user</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end space-x-2 pt-2">
+                            <button class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                                Cancelar
+                            </button>
+                            <button class="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                <span>Criar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Subtarefas Existentes -->
+                <div class="space-y-2">
+                    <div class="bg-white border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <div class="flex-1">
+                                <h5 class="text-sm font-medium text-gray-900">Implementar funcionalidade X</h5>
+                                <p class="text-xs text-gray-500">Descrição da subtarefa...</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-600 rounded-full">Normal</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <div class="flex-1">
+                                <h5 class="text-sm font-medium text-gray-900">Testar integração</h5>
+                                <p class="text-xs text-gray-500">Verificar se tudo funciona...</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs bg-red-100 text-red-600 rounded-full">Alta</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <div class="flex-1">
+                                <h5 class="text-sm font-medium text-gray-900">Documentar código</h5>
+                                <p class="text-xs text-gray-500">Adicionar comentários...</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs bg-green-100 text-green-600 rounded-full">Baixa</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instruções -->
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-3">✅ Modal Integrado Implementado!</h3>
+            <ul class="text-sm text-blue-800 space-y-2">
+                <li>• <strong>Modal separado removido:</strong> Não há mais modal sobreposto</li>
+                <li>• <strong>Formulário integrado:</strong> Criação de subtarefa dentro do modal principal</li>
+                <li>• <strong>Scroll funcional:</strong> Lista de membros com scroll visível</li>
+                <li>• <strong>Interface limpa:</strong> Tudo em um só lugar</li>
+                <li>• <strong>Melhor UX:</strong> Menos cliques e mais intuitivo</li>
+            </ul>
+        </div>
+
+        <!-- Benefícios -->
+        <div class="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                <span class="text-green-800 font-medium">Modal Integrado com Sucesso!</span>
+            </div>
+            <p class="text-green-700 text-sm mt-1">Agora a criação de subtarefas acontece diretamente no modal de detalhes do card, sem modais sobrepostos.</p>
+        </div>
+    </div>
+</body>
+</html>

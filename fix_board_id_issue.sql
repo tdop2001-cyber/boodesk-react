@@ -314,3 +314,7 @@ BEGIN
     RAISE NOTICE 'Teste das funções corrigidas concluído!';
 END $$;
 
+
+
+
+

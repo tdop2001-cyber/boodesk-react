@@ -142,3 +142,7 @@ FROM information_schema.columns
 WHERE column_name IN ('start_date', 'end_date', 'board_id', 'period_type', 'report_month')
 ORDER BY column_name, table_name;
 
+
+
+
+

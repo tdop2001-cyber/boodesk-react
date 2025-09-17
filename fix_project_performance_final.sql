@@ -187,3 +187,7 @@ BEGIN
     RAISE NOTICE '   3. Monitore os logs para confirmar que não há mais erros 42883';
 END $$;
 
+
+
+
+

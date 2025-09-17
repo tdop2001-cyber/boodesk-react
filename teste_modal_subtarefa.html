@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal de Subtarefa - Scroll</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Classe específica para modal de subtarefa */
+        .subtask-modal-scroll {
+            max-height: 160px !important;
+            overflow-y: scroll !important;
+            overflow-x: hidden !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: #6b7280 #f3f4f6 !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            background: white !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar {
+            width: 14px !important;
+            display: block !important;
+            visibility: visible !important;
+            -webkit-appearance: none !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-track {
+            background: #f3f4f6 !important;
+            border-radius: 7px !important;
+            border: 1px solid #e5e7eb !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-thumb {
+            background: #6b7280 !important;
+            border-radius: 7px !important;
+            border: 2px solid #f3f4f6 !important;
+            min-height: 30px !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #4b5563 !important;
+        }
+
+        .subtask-modal-scroll::-webkit-scrollbar-thumb:active {
+            background: #374151 !important;
+        }
+
+        /* Forçar scrollbar em Firefox */
+        @-moz-document url-prefix() {
+            .subtask-modal-scroll {
+                scrollbar-width: thin !important;
+                scrollbar-color: #6b7280 #f3f4f6 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Teste Modal de Subtarefa - Scroll</h1>
+        
+        <!-- Simulação do Modal de Subtarefa -->
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md mx-auto">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                            <div class="w-6 h-6 bg-white/30 rounded"></div>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Nova Subtarefa</h2>
+                            <p class="text-blue-100 text-sm">Adicione uma nova subtarefa ao card</p>
+                        </div>
+                    </div>
+                    <button class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 space-y-4">
+                <!-- Título -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Título da Subtarefa *
+                    </label>
+                    <input type="text" placeholder="Digite o título da subtarefa..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Descrição -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Descrição
+                    </label>
+                    <textarea placeholder="Digite uma descrição (opcional)..." rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+
+                <!-- Prioridade -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Prioridade
+                    </label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Normal</option>
+                        <option>Alta</option>
+                        <option>Baixa</option>
+                    </select>
+                </div>
+
+                <!-- Data de Vencimento -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Data de Vencimento
+                    </label>
+                    <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Membros da Subtarefa - COM SCROLL -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Membros da Subtarefa
+                    </label>
+                    <div class="subtask-modal-scroll">
+                        <div class="space-y-3">
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">A</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Administrador do Sistema</div>
+                                        <div class="text-xs text-gray-500">Admin</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium">M</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Manager</div>
+                                        <div class="text-xs text-gray-500">Manager</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">T</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Teste</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-medium">V</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">v123x911</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white text-sm font-medium">1</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">170220tom</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-medium">T</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Thalles Daniel</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white text-sm font-medium">U</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">user</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-medium">U</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Usuário Extra 1</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center text-white text-sm font-medium">U</div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Usuário Extra 2</div>
+                                        <div class="text-xs text-gray-500">User</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Selecione os membros que terão acesso a esta subtarefa. Se nenhum for selecionado, apenas você terá acesso.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+                <button class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">
+                    Cancelar
+                </button>
+                <button class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span>Criar Subtarefa</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Instruções -->
+        <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-yellow-900 mb-3">⚠️ Teste de Scroll:</h3>
+            <ul class="text-sm text-yellow-800 space-y-2">
+                <li>• <strong>SCROLLBAR DEVE ESTAR VISÍVEL</strong> na seção "Membros da Subtarefa"</li>
+                <li>• <strong>Teste com mouse:</strong> role a roda do mouse sobre a lista de membros</li>
+                <li>• <strong>Teste com teclado:</strong> use as setas ou Page Up/Down</li>
+                <li>• <strong>Teste em mobile:</strong> use o dedo para rolar</li>
+                <li>• <strong>Verifique:</strong> se a scrollbar cinza está visível na lateral direita</li>
+            </ul>
+        </div>
+
+        <!-- Status -->
+        <div class="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                <span class="text-green-800 font-medium">Modal de Subtarefa com Scroll Implementado!</span>
+            </div>
+            <p class="text-green-700 text-sm mt-1">A scrollbar deve estar visível e funcional na lista de membros.</p>
+        </div>
+    </div>
+</body>
+</html>

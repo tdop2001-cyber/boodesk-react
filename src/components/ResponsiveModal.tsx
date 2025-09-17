@@ -72,7 +72,7 @@ const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className={`p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] modal-scroll ${bodyClassName}`}>
+        <div className={`p-3 sm:p-6 overflow-y-scroll max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] modal-scroll ${bodyClassName}`}>
           {children}
         </div>
       </div>

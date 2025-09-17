@@ -131,3 +131,7 @@ SELECT '2. Execute: create_performance_metrics.sql para criar as funções' as p
 SELECT '3. Execute: test_performance_metrics.sql para testar o sistema' as passo3;
 SELECT '4. Reinicie a aplicação para carregar as novas funcionalidades' as passo4;
 
+
+
+
+

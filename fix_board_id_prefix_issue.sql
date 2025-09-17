@@ -170,3 +170,7 @@ BEGIN
     RAISE NOTICE '🧪 Teste na aplicação para confirmar que o erro 22P02 foi resolvido';
 END $$;
 
+
+
+
+

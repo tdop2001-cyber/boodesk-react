@@ -433,7 +433,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(98vh-140px)] sm:max-h-[calc(90vh-200px)]">
+        <div className="p-3 sm:p-6 overflow-y-scroll max-h-[calc(98vh-140px)] sm:max-h-[calc(90vh-200px)] modal-scroll">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -670,7 +670,13 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
                     <Users className="w-4 h-4 inline mr-2" />
                   Membros da Subtarefa
                 </label>
-                  <div className="space-y-3 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                  <div className="space-y-3 subtask-modal-scroll" style={{
+                    maxHeight: '160px',
+                    overflowY: 'scroll',
+                    overflowX: 'hidden',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#6b7280 #f3f4f6'
+                  }}>
                   {allUsers.map((user) => (
                       <label key={user.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                       <input

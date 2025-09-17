@@ -109,3 +109,7 @@ testSupabaseConnection().then(success => {
     console.log('\n❌ Problema com Supabase! Verifique as credenciais.');
   }
 });
+
+
+
+
