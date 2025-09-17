@@ -162,16 +162,31 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
       const validUsers = users.filter(user => 
         user && 
         user.id && 
-        (user.nome_completo || user.username || user.email) &&
-        !user.password_hash // Excluir se contém senha no nome
-      ).map(user => ({
-        ...user,
-        // Garantir que o nome seja apropriado
-        displayName: user.nome_completo || user.username || user.email,
-        // Limpar qualquer string que pareça ser senha/ID
-        nome_completo: user.nome_completo && !user.nome_completo.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.nome_completo : user.username,
-        username: user.username && !user.username.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.username : user.email
-      }));
+        (user.nome_completo || user.username || user.email)
+      ).map(user => {
+        // Verificar se nome_completo contém senha/ID
+        const isNomeCompletoValid = user.nome_completo && 
+          !user.nome_completo.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) && 
+          user.nome_completo.length > 2;
+        
+        // Verificar se username contém senha/ID
+        const isUsernameValid = user.username && 
+          !user.username.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) && 
+          user.username.length > 2;
+        
+        // Priorizar nome_completo válido, senão username válido, senão email
+        const displayName = isNomeCompletoValid ? user.nome_completo : 
+                           isUsernameValid ? user.username : 
+                           user.email;
+        
+        return {
+          ...user,
+          displayName: displayName,
+          // Limpar campos que contêm senhas/IDs
+          nome_completo: isNomeCompletoValid ? user.nome_completo : null,
+          username: isUsernameValid ? user.username : user.email
+        };
+      });
       setAllUsers(validUsers);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
