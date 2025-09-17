@@ -158,7 +158,21 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
   const loadUsers = async () => {
     try {
       const users = await db.getUsers();
-      setAllUsers(users);
+      // Filtrar usuários válidos e garantir que tenham nomes apropriados
+      const validUsers = users.filter(user => 
+        user && 
+        user.id && 
+        (user.nome_completo || user.username || user.email) &&
+        !user.password_hash // Excluir se contém senha no nome
+      ).map(user => ({
+        ...user,
+        // Garantir que o nome seja apropriado
+        displayName: user.nome_completo || user.username || user.email,
+        // Limpar qualquer string que pareça ser senha/ID
+        nome_completo: user.nome_completo && !user.nome_completo.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.nome_completo : user.username,
+        username: user.username && !user.username.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.username : user.email
+      }));
+      setAllUsers(validUsers);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     }
@@ -652,10 +666,10 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
                   {members.map((member) => (
                       <div key={member.id} className="flex items-center space-x-2 bg-blue-50 rounded-full px-4 py-2 border border-blue-200">
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {(member.nome_completo || member.username || member.email || 'U').charAt(0).toUpperCase()}
+                        {(member.displayName || member.nome_completo || member.username || member.email || 'U').charAt(0).toUpperCase()}
                       </div>
                         <span className="text-sm font-medium text-gray-700">
-                        {member.nome_completo || member.username || member.email}
+                        {member.displayName || member.nome_completo || member.username || member.email}
                       </span>
                     </div>
                   ))}
@@ -693,11 +707,11 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({
                       />
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {(user.nome_completo || user.username || user.email || 'U').charAt(0).toUpperCase()}
+                          {(user.displayName || user.nome_completo || user.username || user.email || 'U').charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {user.nome_completo || user.username || user.email}
+                              {user.displayName || user.nome_completo || user.username || user.email}
                             </div>
                             <div className="text-xs text-gray-500">{user.cargo || 'Sem cargo'}</div>
                           </div>

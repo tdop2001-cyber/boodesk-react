@@ -544,7 +544,21 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
         }
 
         const users = await db.getUsers();
-        setAvailableUsers(users);
+        // Filtrar usuários válidos e garantir que tenham nomes apropriados
+        const validUsers = users.filter(user => 
+          user && 
+          user.id && 
+          (user.nome_completo || user.username || user.email) &&
+          !user.password_hash // Excluir se contém senha no nome
+        ).map(user => ({
+          ...user,
+          // Garantir que o nome seja apropriado
+          displayName: user.nome_completo || user.username || user.email,
+          // Limpar qualquer string que pareça ser senha/ID
+          nome_completo: user.nome_completo && !user.nome_completo.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.nome_completo : user.username,
+          username: user.username && !user.username.match(/^\d+$|^[a-zA-Z0-9]{8,}$/) ? user.username : user.email
+        }));
+        setAvailableUsers(validUsers);
 
       } catch (error) {
         console.error('Erro ao carregar dados do card:', error);
@@ -1091,9 +1105,11 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({
                                      />
                                      <div className="flex items-center space-x-2">
                                        <div className="w-5 h-5 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                         {(user.nome_completo || user.username)?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                                         {(user.displayName || user.nome_completo || user.username)?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
                                        </div>
-                                       <span className="text-xs text-brand-gray truncate">{user.nome_completo || user.username || user.email}</span>
+                                       <span className="text-xs text-brand-gray truncate">
+                                         {user.displayName || user.nome_completo || user.username || user.email}
+                                       </span>
                                      </div>
                                    </label>
                                  ))}
